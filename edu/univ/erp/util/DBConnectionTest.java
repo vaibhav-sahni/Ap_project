@@ -1,9 +1,10 @@
 package edu.univ.erp.util;
 
-import edu.univ.erp.data.DBConnector;
 import java.sql.Connection;
 import java.sql.SQLException;
-// java -cp ".;..\..\..\lib\mysql-connector-j-9.4.0.jar" edu/univ/erp/util/DBConnectionTest.java
+
+import src.main.java.edu.univ.erp.data.DBConnector;
+
 public class DBConnectionTest {
 
     public static void main(String[] args) {

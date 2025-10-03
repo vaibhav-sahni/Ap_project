@@ -1,0 +1,58 @@
+src/main/java/
+└── edu/
+    └── univ/
+        └── erp/
+            ├── access/              // Authorization and Rule Checks
+            │   └── AccessControl.java // (isAllowed(), isMaintenanceOn())
+            │
+            ├── api/                 // Public Interface Layer (UI calls these)
+            │   ├── auth/            // Login, Logout, WhoAmI
+            │   │   └── AuthAPI.java
+            │   ├── student/         // Register, Drop, ViewGrades
+            │   ├── instructor/      // EnterScores, ComputeFinal
+            │   ├── admin/           // AddUser, CreateCourse, ToggleMaintenance
+            │   └── types/           // Shared request/response DTOs (e.g., CourseRow)
+            │
+            ├── auth/                // Authentication & Session Management (Talks to Auth DB)
+            │   ├── hash/            // Password hashing (e.g., PasswordHasher)
+            │   ├── session/         // SessionManager (stores current UserAuth)
+            │   └── store/           // Auth DB Data Access Object (DAO)
+            │       ├── AuthDAO.java
+            │       └── AuthDetails.java // (Internal holder for ID, Hash, Role)
+            │
+            ├── data/                // Database Connectors & ERP DAOs
+            │   ├── DbConnector.java // (getAuthConnection(), getErpConnection())
+            │   ├── StudentDAO.java
+            │   ├── CourseDAO.java
+            │   └── ... (other ERP DAOs)
+            │
+            ├── domain/              // Pure Data Models (DTOs/POJOs/Records)
+            │   ├── UserAuth.java    // (From Auth DB)
+            │   ├── Student.java     // (From ERP DB)
+            │   └── ... (Section, Course, Grade, Enrollment, Setting)
+            │
+            ├── service/             // Business Logic Layer (The "Brain")
+            │   ├── AuthService.java // (Core Login logic)
+            │   ├── StudentService.java
+            │   └── ... (InstructorService, AdminService)
+            │
+            ├── ui/                  // Swing UI Components
+            │   ├── auth/            // LoginDialog
+            │   ├── student/         // StudentDashboard, RegistrationPanel
+            │   ├── instructor/      // GradeEntryPanel
+            │   └── admin/           // ToggleMaintenanceButton
+            │
+            └── util/                // Shared Helpers
+                └── ... (Logger, Exporter, DateUtil)
+Key Roles
+domain: Defines what the data is. (No logic)
+
+data / auth/store: Defines how to talk to the two databases.
+
+access: Defines can this be done? (Authorization and rules)
+
+service: Defines why and when actions happen. (Business logic that calls access and data)
+
+api: A clean facade for the UI to call the services.
+
+ui: Defines how the information is presented.

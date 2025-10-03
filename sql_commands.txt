@@ -1,0 +1,99 @@
+
+
+CREATE DATABASE IF NOT EXISTS auth_db;
+CREATE DATABASE IF NOT EXISTS erp_db;
+
+
+CREATE USER 'auth_user'@'localhost' IDENTIFIED BY 'auth_pass'; 
+CREATE USER 'erp_user'@'localhost' IDENTIFIED BY 'erp_pass';
+
+-- Grant all permissions on the auth_db schema to the dbuser_auth user.
+GRANT ALL PRIVILEGES ON auth_db.* TO 'auth_user'@'localhost';
+
+-- Grant all permissions on the erp_db schema to the dbuser_erp user.
+GRANT ALL PRIVILEGES ON erp_db.* TO 'erp_user'@'localhost';
+
+FLUSH PRIVILEGES;
+
+-- ----------------------------------------------------------------------
+
+
+
+USE auth_db; 
+
+CREATE TABLE IF NOT EXISTS users_auth (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    role VARCHAR(20) NOT NULL COMMENT 'Admin, Instructor, Student',
+    password_hash VARCHAR(255) NOT NULL COMMENT 'Stores the secure password hash (e.g., BCrypt)',
+    status VARCHAR(10) DEFAULT 'ACTIVE',
+    last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+USE erp_db; 
+
+CREATE TABLE IF NOT EXISTS students (
+    user_id INT PRIMARY KEY, -- FK to users_auth
+    roll_no VARCHAR(20) UNIQUE NOT NULL,
+    program VARCHAR(50) NOT NULL,
+    year INT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS instructors (
+    user_id INT PRIMARY KEY, -- FK to users_auth
+    name VARCHAR(100) NOT NULL,
+    department VARCHAR(50) NOT NULL
+);
+
+-- Course Structure
+CREATE TABLE IF NOT EXISTS courses (
+    code VARCHAR(10) PRIMARY KEY, -- e.g., CS101
+    title VARCHAR(100) NOT NULL,
+    credits INT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sections (
+    section_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_code VARCHAR(10) NOT NULL,
+    instructor_id INT NOT NULL, -- FK to instructors.user_id
+    day_time VARCHAR(50) NOT NULL,
+    room VARCHAR(20),
+    capacity INT NOT NULL CHECK (capacity >= 0),
+    semester VARCHAR(20) NOT NULL,
+    year INT NOT NULL,
+    
+    FOREIGN KEY (course_code) REFERENCES courses(code),
+    FOREIGN KEY (instructor_id) REFERENCES instructors(user_id)
+);
+
+-- Enrollment and Grades
+CREATE TABLE IF NOT EXISTS enrollments (
+    enrollment_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL, -- FK to students.user_id
+    section_id INT NOT NULL,
+    status VARCHAR(20) NOT NULL COMMENT 'Registered, Dropped, Completed',
+    
+    UNIQUE KEY unique_enrollment (student_id, section_id), -- Prevents duplicate enrollment
+    FOREIGN KEY (student_id) REFERENCES students(user_id),
+    FOREIGN KEY (section_id) REFERENCES sections(section_id)
+);
+
+CREATE TABLE IF NOT EXISTS grades (
+    grade_id INT AUTO_INCREMENT PRIMARY KEY,
+    enrollment_id INT NOT NULL,
+    component VARCHAR(50) NOT NULL COMMENT 'Quiz, Midterm, EndSem, FinalGrade',
+    score DECIMAL(5, 2), -- Raw score for a component
+    final_grade VARCHAR(5) COMMENT 'Letter grade (A, B+, F)',
+    
+    FOREIGN KEY (enrollment_id) REFERENCES enrollments(enrollment_id),
+    UNIQUE KEY unique_component_per_enrollment (enrollment_id, component)
+);
+
+-- Application Settings
+CREATE TABLE IF NOT EXISTS settings (
+    setting_key VARCHAR(50) PRIMARY KEY, -- e.g., 'maintenance_on'
+    setting_value VARCHAR(255)
+);
+
+----------------------------------------------------------------------------------------

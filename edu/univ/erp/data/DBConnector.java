@@ -6,20 +6,14 @@ import java.sql.SQLException;
 
 public class DBConnector {
     // Configuration for AUTH DB
-    //create user 'auth_user'@'localhost' identified by 'auth_pass';
-    //grant all privileges on auth_db.* to 'auth_user'@'localhost';
-    //create user 'erp_user'@'localhost' identified by 'erp_pass';
-    //grant all privileges on erp_db.* to 'erp_user'@'localhost';
-    //flush privileges;
-
     private static final String AUTH_DB_URL = "jdbc:mysql://localhost:3306/auth_db";
-    private static final String AUTH_DB_USER = "auth_user";
-    private static final String AUTH_DB_PASS = "auth_pass";
+    private static final String AUTH_DB_USER = "dbuser_auth";
+    private static final String AUTH_DB_PASS = "authpass";
 
     // Configuration for ERP DB
     private static final String ERP_DB_URL = "jdbc:mysql://localhost:3306/erp_db";
-    private static final String ERP_DB_USER = "erp_user";
-    private static final String ERP_DB_PASS = "erp_pass";
+    private static final String ERP_DB_USER = "dbuser_erp";
+    private static final String ERP_DB_PASS = "erppass";
 
     /**
      * Gets a connection to the Auth Database.
