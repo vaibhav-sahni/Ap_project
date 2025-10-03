@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DBConnector {
-    // Configuration for AUTH DB
+    // Configuration for AUTH DB (login as root)
     //create user 'auth_user'@'localhost' identified by 'auth_pass';
     //grant all privileges on auth_db.* to 'auth_user'@'localhost';
     //create user 'erp_user'@'localhost' identified by 'erp_pass';

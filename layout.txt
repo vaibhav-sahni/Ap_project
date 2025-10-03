@@ -56,3 +56,10 @@ service: Defines why and when actions happen. (Business logic that calls access 
 api: A clean facade for the UI to call the services.
 
 ui: Defines how the information is presented.
+
+
+TIMELINE:
+
+1. CREATED databases
+2. CREATED CLASSES WITH GETTER SETTER METHODS TO DEFINE THE FIELDS IN THE DATABASE TABLES
+3. ESTABLISHED CONNECTION WITH MYSQL USING JDBC
