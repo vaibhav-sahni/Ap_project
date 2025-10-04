@@ -1,17 +1,27 @@
 package edu.univ.erp.domain;
 
-public class Instructor {
-    private final int user_id; 
-    private final String name; 
-    private final String dept;
-
-    public Instructor(int user_id, String name, String dept) {
-        this.user_id = user_id;
-        this.name = name;
-        this.dept = dept;
+/**
+ * Represents the full profile of an Instructor, inheriting identity from UserAuth 
+ * and adding fields from the erp_db.instructors table.
+ */
+public class Instructor extends UserAuth { 
+    
+    // Fields specific to the ERP profile
+    private final String name;         // <-- CORRECTED: Use 'name'
+    private final String department; 
+    
+    public Instructor(int userId, String username, String role, 
+                      String name, String department) { // <-- CORRECTED: Use 'name'
+        
+        // 1. Call the parent (UserAuth) constructor
+        super(userId, username, role); 
+        
+        // 2. Initialize the Instructor-specific fields
+        this.name = name;          // <-- CORRECTED
+        this.department = department;
     }
 
-    public int getuser_id() { return this.user_id; }
-    public String getName() { return this.name; }
-    public String getdept() { return this.dept; }
+    // --- Getters ---
+    public String getName() { return name; }       // <-- NEW Getter
+    public String getDepartment() { return department; }
 }

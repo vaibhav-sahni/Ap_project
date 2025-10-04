@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS grades (
 
 
 CREATE TABLE IF NOT EXISTS settings (
-    setting_key VARCHAR(50) PRIMARY KEY, -- e.g., 'maintenance_on'
+    setting_key VARCHAR(50) PRIMARY KEY,
     setting_value VARCHAR(255)
 );
 
