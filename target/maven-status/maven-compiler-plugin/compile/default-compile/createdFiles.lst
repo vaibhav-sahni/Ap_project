@@ -14,6 +14,7 @@ edu\univ\erp\ui\loginpage\swing\PasswordField$1.class
 edu\univ\erp\util\DBConnectionTest.class
 edu\univ\erp\domain\UserAuth.class
 edu\univ\erp\util\PasswordSeeder.class
+edu\univ\erp\ui\controller\DashboardController.class
 edu\univ\erp\data\InstructorDAO.class
 edu\univ\erp\ui\loginpage\login\CrossButton$1.class
 edu\univ\erp\ui\loginpage\fbr\FancyAnimation.class

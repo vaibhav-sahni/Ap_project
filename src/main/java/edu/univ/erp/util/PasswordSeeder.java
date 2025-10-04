@@ -33,7 +33,7 @@ SEEDING USERS.
 VALUES 
 ('admin', 'Admin', '$2a$12$R62RZ3S7clI1BuOa3BL60u3qxkfs5XgAvPaRT/xkuxQPR5o/dru/a'),
 ('instructor_1', 'Instructor', '$2a$12$1CrqjHJ2koDqkIJMReWFGOKJFw16qgC7awUo5IP2yQRky2aMxbD2O'),
-('student_1', 'Student', '/$2a$12$xcAOY55CS4AF8HgtC7K.feQETNsYd9/rpb02/tx5jpvtpZLJhRZFC');
+('student_1', 'Student', '$2a$12$xcAOY55CS4AF8HgtC7K.feQETNsYd9/rpb02/tx5jpvtpZLJhRZFC');
 
 
 
