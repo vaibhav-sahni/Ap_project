@@ -6,8 +6,10 @@ C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\Student.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\UserAuth.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\security\PasswordHasher.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\server\ClientHandler.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\server\ServerMain.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\server\session\SessionManager.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\service\auth\AuthService.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\util\DBConnectionTest.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\util\PasswordSeeder.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\util\ThrowingRunnable.java

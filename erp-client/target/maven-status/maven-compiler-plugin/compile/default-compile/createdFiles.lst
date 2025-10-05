@@ -18,6 +18,7 @@ edu\univ\erp\ui\loginpage\login\CrossButton.class
 edu\univ\erp\ui\loginpage\login\Background$3.class
 edu\univ\erp\ui\loginpage\main\Login$1.class
 edu\univ\erp\ui\loginpage\fbr\FancyBorderRadius.class
+edu\univ\erp\api\auth\AuthAPI.class
 edu\univ\erp\ui\loginpage\fbr\Border.class
 edu\univ\erp\ui\loginpage\login\Background$1.class
 edu\univ\erp\ui\loginpage\swing\TextField.class
@@ -27,5 +28,6 @@ edu\univ\erp\ui\loginpage\swing\RippleEffect$1.class
 edu\univ\erp\ui\loginpage\swing\PasswordField.class
 edu\univ\erp\ui\loginpage\swing\TextField$2.class
 edu\univ\erp\ui\loginpage\shadow\GraphicsUtilities.class
+edu\univ\erp\api\ClientRequest.class
 edu\univ\erp\ui\loginpage\main\Login.class
 edu\univ\erp\ui\loginpage\swing\PasswordField$2.class

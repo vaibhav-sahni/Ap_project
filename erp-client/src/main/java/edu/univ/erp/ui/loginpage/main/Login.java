@@ -7,7 +7,7 @@ import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.ui.controller.DashboardController;
 
 public class Login extends javax.swing.JFrame {
-
+    edu.univ.erp.api.auth.AuthAPI authApi = new edu.univ.erp.api.auth.AuthAPI();
     /**
      * Creates new form Login
      */
@@ -120,7 +120,33 @@ public class Login extends javax.swing.JFrame {
     private void cmdLoginActionPerformed(java.awt.event.ActionEvent evt) {//LOGIN BUTTON
         String username = txtUser.getText();
         String password = String.valueOf(txtPassword.getPassword());
+        try {
+        // 1. CALL THE NETWORK API (sends request to server)
+        edu.univ.erp.domain.UserAuth user = authApi.login(username, password);
+        
+        // 2. SUCCESS HANDLING
+        System.out.println("Client LOG: Login SUCCESS. User Role: " + user.getRole());
+        
+        // Close current login window
+        this.dispose(); 
+        
+        // Initialize the main dashboard controller with the authenticated user data
+        // Assumes DashboardController has a public constructor: new DashboardController(UserAuth user)
+        new edu.univ.erp.ui.controller.DashboardController(user).initDashboard(); // or whatever your launching method is
 
+    } catch (Exception ex) {
+        // 3. FAILURE HANDLING (Catches Network error OR Server-side Auth failure message)
+        
+        // Display the specific error message relayed from the Server/API
+        String errorMessage = "Login Failed: " + ex.getMessage();
+        System.err.println("Client ERROR: " + errorMessage);
+        
+        // Show the error to the user using a standard Swing dialog
+        javax.swing.JOptionPane.showMessageDialog(this, 
+                                                 ex.getMessage(), // Show only the relayed error message
+                                                 "Login Failed", 
+                                                 javax.swing.JOptionPane.ERROR_MESSAGE);
+    }
     }//GEN-LAST:event_cmdLoginActionPerformed
 
     /**
