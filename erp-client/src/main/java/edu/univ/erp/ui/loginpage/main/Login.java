@@ -3,14 +3,11 @@ package edu.univ.erp.ui.loginpage.main;
 import java.awt.Color;
 
 import javax.swing.JOptionPane;
-
-import edu.univ.erp.api.auth.AuthAPI;
 import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.ui.controller.DashboardController;
 
 public class Login extends javax.swing.JFrame {
 
-    private final AuthAPI authAPI = new AuthAPI(); 
     /**
      * Creates new form Login
      */
@@ -123,29 +120,6 @@ public class Login extends javax.swing.JFrame {
     private void cmdLoginActionPerformed(java.awt.event.ActionEvent evt) {//LOGIN BUTTON
         String username = txtUser.getText();
         String password = String.valueOf(txtPassword.getPassword());
-
-         try {
-            // 1. Call the secure authentication API
-            UserAuth user = authAPI.login(username, password); 
-            
-            // 2. SUCCESS: Close the current login frame
-            this.dispose(); 
-            
-            // 3. Hand off control to the DashboardController for role-based routing
-            DashboardController.startDashboard(user); 
-
-        } catch (Exception ex) {
-            // 4. FAILURE: Show error message
-            JOptionPane.showMessageDialog(
-                this, 
-                "Login Failed: " + ex.getMessage(), 
-                "Authentication Error", 
-                JOptionPane.ERROR_MESSAGE
-            );
-            
-            // 5. Clear the password field for security
-            txtPassword.setText("");
-        }
 
     }//GEN-LAST:event_cmdLoginActionPerformed
 

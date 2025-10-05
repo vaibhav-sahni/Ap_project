@@ -1,0 +1,15 @@
+edu\univ\erp\domain\Instructor.class
+edu\univ\erp\server\ServerMain.class
+org\mindrot\jbcrypt\BCrypt.class
+edu\univ\erp\dao\instructor\InstructorDAO.class
+edu\univ\erp\domain\Student.class
+edu\univ\erp\server\session\SessionManager.class
+edu\univ\erp\dao\auth\AuthDAO.class
+edu\univ\erp\util\ThrowingRunnable.class
+edu\univ\erp\security\PasswordHasher.class
+edu\univ\erp\util\DBConnectionTest.class
+edu\univ\erp\dao\db\DBConnector.class
+edu\univ\erp\domain\UserAuth.class
+edu\univ\erp\util\PasswordSeeder.class
+edu\univ\erp\dao\auth\AuthDAO$AuthDetails.class
+edu\univ\erp\dao\student\StudentDAO.class
