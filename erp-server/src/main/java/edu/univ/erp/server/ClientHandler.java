@@ -49,7 +49,7 @@ public class ClientHandler implements Runnable {
             // --- CRITICAL STEP 1: Maintenance Mode Check (Rule #3) ---
             if (settingDAO.isMaintenanceModeOn()) {
                 // List all commands that MUST be blocked during maintenance
-                if (command.equals("REGISTER") || command.equals("DROP_SECTION") || // DROP_SECTION is correctly listed
+                if (command.equals("REGISTER") || command.equals("DROP_SECTION") || 
                     command.equals("ENTER_SCORE") || command.equals("ADMIN:CREATE_USER") ||
                     command.equals("ADMIN:TOGGLE_MAINTENANCE")) { 
                     
@@ -66,24 +66,83 @@ public class ClientHandler implements Runnable {
                     return handleGetGrades(parts);
                 case "GET_CATALOG": 
                     return handleGetCatalog();
+                case "GET_TIMETABLE": // <-- NEW ROUTE: Get Student Schedule
+                    return handleGetTimetable(parts);
                 case "REGISTER": 
                     return handleRegisterCourse(parts);
-                case "DROP_SECTION": // <-- NEW ROUTE: Course Drop
+                case "DROP_SECTION": 
                     return handleDropCourse(parts);
                 case "CHANGE_PASSWORD": 
                     return handleChangePassword(parts); 
+                // --- NEW: Route the transcript command to the handler ---
+                case "DOWNLOAD_TRANSCRIPT":
+                    return handleDownloadTranscript(parts);
+                // --------------------------------------------------------
                 default:
                     return "ERROR:UNKNOWN_COMMAND";
             }
         } catch (Exception e) {
-            // Catches exceptions thrown by services (e.g., business rules like "Drop deadline passed.")
+            // Catches exceptions thrown by services (e.g., business rules, DAO errors)
+            System.err.println("SERVER EXCEPTION: " + e.getMessage());
             return "ERROR:" + e.getMessage();
         }
     }
     
     // ----------------------------------------------------------------------
-    // --- NEW HANDLER: DROP_SECTION ----------------------------------------
+    // --- NEW HANDLER: DOWNLOAD_TRANSCRIPT ---------------------------------
     // ----------------------------------------------------------------------
+    
+    /**
+     * Handles the DOWNLOAD_TRANSCRIPT command. Calls the StudentService to generate the CSV.
+     * Command format: DOWNLOAD_TRANSCRIPT:userId
+     */
+    private String handleDownloadTranscript(String[] parts) throws Exception {
+       if (parts.length < 2) throw new Exception("Missing user ID for transcript request.");
+    
+    try {
+        int userId = Integer.parseInt(parts[1]);
+        StudentService studentService = new StudentService(); 
+        
+        // The service now returns HTML content
+        String htmlContent = studentService.downloadTranscript(userId);
+        
+        // CRITICAL CHANGE: Set Content-Type to text/html and extension to .html
+        return "FILE_DOWNLOAD:text/html:transcript_" + userId + ".html:" + htmlContent;
+
+    } catch (NumberFormatException e) {
+        throw new Exception("Invalid user ID format provided.");
+    } catch (Exception e) {
+        // Handle service-level exception
+        return "ERROR:" + e.getMessage();
+    }
+    }
+    
+
+    // ----------------------------------------------------------------------
+    // --- EXISTING HANDLERS ------------------------------------------------
+    // ----------------------------------------------------------------------
+    
+    /**
+     * Handles the GET_TIMETABLE command. Calls the StudentService to fetch the schedule.
+     * Command format: GET_TIMETABLE:userId
+     */
+    private String handleGetTimetable(String[] parts) throws Exception {
+        if (parts.length < 2) throw new Exception("Missing user ID for timetable request.");
+        
+        try {
+            int userId = Integer.parseInt(parts[1]);
+            
+            StudentService studentService = new StudentService();
+            List<CourseCatalog> schedule = studentService.fetchTimetable(userId);
+            
+            String scheduleJson = gson.toJson(schedule);
+            return "SUCCESS:" + scheduleJson;
+            
+        } catch (NumberFormatException e) {
+            throw new Exception("Invalid user ID format provided.");
+        }
+    }
+
     /**
      * Handles the DROP_SECTION command. Calls the StudentService to perform the course drop.
      * Command format: DROP_SECTION:userId:sectionId
@@ -106,10 +165,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // ----------------------------------------------------------------------
-    // --- EXISTING HANDLERS ------------------------------------------------
-    // ----------------------------------------------------------------------
-    
     /**
      * Handles the REGISTER command. Calls the StudentService to perform enrollment.
      * Command format: REGISTER:userId:sectionId

@@ -13,8 +13,11 @@ import edu.univ.erp.domain.Grade;
 public class StudentAPI { 
     private final Gson gson = new Gson();
 
+    // NEW COMMAND: Used to fetch the transcript CSV file content.
+    private static final String CMD_DOWNLOAD_TRANSCRIPT = "DOWNLOAD_TRANSCRIPT";
+
     // ----------------------------------------------------------------------
-    // --- 1. ENROLLMENT / DROP FEATURES (UPDATED) --------------------------
+    // --- 1. ENROLLMENT / DROP FEATURES (EXISTING) -------------------------
     // ----------------------------------------------------------------------
     
     /**
@@ -67,7 +70,31 @@ public class StudentAPI {
 
 
     // ----------------------------------------------------------------------
-    // --- 2. COURSE CATALOG FEATURE (EXISTING) -----------------------------
+    // --- 2. TIMETABLE FEATURE (EXISTING) ----------------------------------
+    // ----------------------------------------------------------------------
+
+    /**
+     * Sends a request to the server to fetch the student's current course schedule.
+     * Command: GET_TIMETABLE:userId
+     * @param userId The ID of the student.
+     * @return A list of CourseCatalog objects representing the student's schedule.
+     */
+    public List<CourseCatalog> getTimetable(int userId) throws Exception {
+        String request = "GET_TIMETABLE:" + userId; 
+        String response = ClientRequest.send(request);
+
+        if (response.startsWith("SUCCESS:")) {
+            String scheduleJson = response.substring("SUCCESS:".length());
+            Type listType = new TypeToken<List<CourseCatalog>>() {}.getType();
+            return gson.fromJson(scheduleJson, listType);
+        } 
+        
+        throw new Exception("Failed to retrieve timetable from server.");
+    }
+
+
+    // ----------------------------------------------------------------------
+    // --- 3. COURSE CATALOG FEATURE (EXISTING) -----------------------------
     // ----------------------------------------------------------------------
     
     /**
@@ -88,7 +115,7 @@ public class StudentAPI {
     }
 
     // ----------------------------------------------------------------------
-    // --- 3. GRADES FEATURE (EXISTING) -------------------------------------
+    // --- 4. GRADES FEATURE (EXISTING) -------------------------------------
     // ----------------------------------------------------------------------
 
     public List<Grade> getMyGrades(int userId) throws Exception {
@@ -102,4 +129,49 @@ public class StudentAPI {
         } 
         throw new Exception("Failed to receive grades from server.");
     }
-}
+
+    // ----------------------------------------------------------------------
+    // --- 5. DOWNLOAD TRANSCRIPT FEATURE (NEW) -----------------------------
+    // ----------------------------------------------------------------------
+
+    /**
+     * Requests the full student transcript as a CSV string.
+     * Command: DOWNLOAD_TRANSCRIPT:userId
+     * @param userId The ID of the student.
+     * @return The entire transcript content as a raw CSV string.
+     */
+    public String downloadTranscript(int userId) throws Exception {
+        String request = "DOWNLOAD_TRANSCRIPT:" + userId; 
+        
+        // The server sends back a single raw string containing the file content or error.
+        String response = ClientRequest.send(request);
+        
+        if (response.startsWith("ERROR:")) {
+            // Propagate the specific error message sent by the server
+            throw new Exception(response.substring("ERROR:".length()).trim());
+            
+        } else if (response.startsWith("FILE_DOWNLOAD:")) { // CRITICAL FIX: Look for FILE_DOWNLOAD protocol
+            
+            // The response format is: FILE_DOWNLOAD:content_type:filename:file_content
+            // We need to find the third colon (the end of the header) and return everything after it.
+            
+            int firstColon = response.indexOf(':');
+            int secondColon = response.indexOf(':', firstColon + 1);
+            int thirdColon = response.indexOf(':', secondColon + 1);
+            
+            if (thirdColon == -1) {
+                // Should not happen if server follows protocol, but handles malformed response
+                throw new Exception("Malformed FILE_DOWNLOAD response (missing file content).");
+            }
+
+            // Return the raw file content (HTML string) after the third colon
+            return response.substring(thirdColon + 1);
+
+        } else {
+            // Generic failure if the response format is totally unexpected (not ERROR or FILE_DOWNLOAD)
+            throw new Exception("Failed to download transcript from server. Unexpected format: " + response);
+        }
+        }
+        
+        
+    }

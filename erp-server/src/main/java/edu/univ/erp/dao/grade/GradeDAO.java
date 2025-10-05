@@ -22,14 +22,15 @@ public class GradeDAO {
     // SQL to fetch course title, final letter grade, AND the enrollment ID
     private static final String FIND_RAW_GRADES_SQL = 
         "SELECT " +
-        "    e.enrollment_id, " + 
-        "    c.title AS course_title, " +
-        "    g.final_grade " +
-        "FROM grades g " +
-        "JOIN enrollments e ON g.enrollment_id = e.enrollment_id " +
+        "e.enrollment_id, " + 
+        "c.title AS course_title, " +
+        "g.final_grade " +
+        "FROM enrollments e " + // **START HERE: Get ALL enrollments first**
         "JOIN sections s ON e.section_id = s.section_id " +
         "JOIN courses c ON s.course_code = c.code " +
-        "WHERE e.student_id = ? AND g.component = 'FinalGrade'";
+        // **LEFT JOIN: Attach the grade ONLY IF it exists, otherwise g.final_grade is NULL**
+        "LEFT JOIN grades g ON e.enrollment_id = g.enrollment_id AND g.component = 'FinalGrade' " +
+        "WHERE e.student_id = ?"; 
 
     // SQL to fetch all assessment components (raw scores)
     private static final String FIND_COMPONENTS_SQL = 

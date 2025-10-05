@@ -2,6 +2,7 @@ edu\univ\erp\server\ServerMain.class
 edu\univ\erp\server\ClientHandler.class
 edu\univ\erp\dao\instructor\InstructorDAO.class
 edu\univ\erp\domain\CourseCatalog.class
+edu\univ\erp\domain\GradeComponent.class
 edu\univ\erp\server\session\SessionManager.class
 edu\univ\erp\dao\auth\AuthDAO.class
 edu\univ\erp\security\PasswordHasher.class
@@ -23,4 +24,5 @@ edu\univ\erp\dao\auth\AuthDAO$AuthDetails.class
 edu\univ\erp\dao\grade\GradeDAO.class
 edu\univ\erp\dao\settings\SettingDAO.class
 edu\univ\erp\service\auth\AuthService.class
+edu\univ\erp\util\TranscriptFormatter.class
 edu\univ\erp\dao\enrollment\EnrollmentDAO.class

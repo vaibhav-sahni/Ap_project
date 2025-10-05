@@ -2,7 +2,7 @@ package edu.univ.erp.service.student;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.List; // <-- NEW IMPORT: Required for drop deadline check
+import java.util.List; 
 
 import edu.univ.erp.dao.course.CourseDAO;
 import edu.univ.erp.dao.enrollment.EnrollmentDAO; 
@@ -11,6 +11,7 @@ import edu.univ.erp.dao.grade.GradeDAO.RawGradeResult;
 import edu.univ.erp.domain.AssessmentComponent;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.Grade;
+import edu.univ.erp.util.TranscriptFormatter; 
 
 public class StudentService {
     
@@ -19,7 +20,7 @@ public class StudentService {
     private final EnrollmentDAO enrollmentDAO = new EnrollmentDAO();
 
     // ----------------------------------------------------------------------
-    // --- 1. COURSE DROP FEATURE (NEW) -------------------------------------
+    // --- 1. COURSE DROP FEATURE (EXISTING) --------------------------------
     // ----------------------------------------------------------------------
 
     /**
@@ -34,19 +35,15 @@ public class StudentService {
         }
         
         // --- 1. Check Drop Deadline (Rule #1) ---
-        // Hardcoded Placeholder: Use a mock deadline for demonstration.
-        // In a real system, this date would be fetched from a configuration table.
         LocalDate dropDeadline = LocalDate.of(2025, 10, 31); 
         if (LocalDate.now().isAfter(dropDeadline)) {
             throw new Exception("The official course drop deadline has passed (" + dropDeadline + "). Drop failed.");
         }
         
         // --- 2. Execute the Drop (Rule #2 enforced in DAO) ---
-        // The DAO method attempts to update status from 'Registered' to 'Dropped'.
         int affectedRows = enrollmentDAO.dropStudent(userId, sectionId);
         
         if (affectedRows == 0) {
-            // This happens if the student was never registered, already dropped, or the IDs were invalid.
             throw new Exception("Enrollment record not found or course was not in 'Registered' status.");
         }
         
@@ -79,7 +76,7 @@ public class StudentService {
 
         // --- 3. Check Prerequisites (Placeholder for future feature) ---
         // if (!PrerequisiteDAO.check(userId, sectionId)) {
-        //     throw new Exception("Prerequisites not met for this course.");
+        //      throw new Exception("Prerequisites not met for this course.");
         // }
 
         // --- 4. Check Time Conflict (Simplified Logic) ---
@@ -91,7 +88,7 @@ public class StudentService {
         List<String> currentScheduleTimes = enrollmentDAO.getStudentScheduleDayTimes(userId);
         String newSectionDayTime = targetSection.getDayTime();
 
-        // SIMPLIFIED CONFLICT CHECK: Check if the new time overlaps with any existing time string
+        // SIMPLIFIED CONFLICT CHECK
         for (String existingTime : currentScheduleTimes) {
             if (hasTimeConflict(existingTime, newSectionDayTime)) {
                 throw new Exception("Time conflict detected with an existing course: " + existingTime);
@@ -113,7 +110,29 @@ public class StudentService {
     }
     
     // ----------------------------------------------------------------------
-    // --- 3. COURSE CATALOG FEATURE (EXISTING) -----------------------------
+    // --- 3. TIMETABLE FEATURE (NEW) ---------------------------------------
+    // ----------------------------------------------------------------------
+
+    /**
+     * Fetches the current course schedule/timetable for the specified student.
+     * @param userId The ID of the student.
+     * @return A list of CourseCatalog objects representing the student's schedule.
+     */
+    public List<CourseCatalog> fetchTimetable(int userId) throws Exception {
+        if (userId <= 0) {
+            throw new Exception("Invalid user ID provided for timetable request.");
+        }
+        System.out.println("SERVER LOG: Fetching timetable for student " + userId);
+        
+        List<CourseCatalog> schedule = courseDAO.getStudentTimetable(userId);
+        
+        System.out.println("SERVER LOG: Timetable retrieved. Contains " + schedule.size() + " sections.");
+        return schedule;
+    }
+
+
+    // ----------------------------------------------------------------------
+    // --- 4. COURSE CATALOG FEATURE (EXISTING) -----------------------------
     // ----------------------------------------------------------------------
 
     public List<CourseCatalog> fetchCourseCatalog() throws Exception {
@@ -125,7 +144,7 @@ public class StudentService {
 
 
     // ----------------------------------------------------------------------
-    // --- 4. GRADES FEATURE (EXISTING) -------------------------------------
+    // --- 5. GRADES FEATURE (EXISTING) -------------------------------------
     // ----------------------------------------------------------------------
     
     public List<Grade> fetchGrades(int userId) throws Exception {
@@ -145,5 +164,22 @@ public class StudentService {
             ));
         }
         return finalGrades;
+    }
+
+    // ----------------------------------------------------------------------
+    // --- 6. DOWNLOAD TRANSCRIPT FEATURE (NEW) -----------------------------
+    // ----------------------------------------------------------------------
+
+    /**
+     * Fetches all student grades and formats them into a CSV string for export.
+     * @param userId The ID of the student.
+     * @return The entire transcript formatted as a CSV string.
+     */
+    public String downloadTranscript(int userId) throws Exception {
+        List<Grade> grades = fetchGrades(userId); // Uses your existing, working data fetch method
+
+    // CRITICAL CHANGE: Instantiate and call the HTML generator method
+        TranscriptFormatter formatter = new TranscriptFormatter();
+        return formatter.generateHtml(grades, userId);
     }
 }

@@ -12,25 +12,39 @@ import edu.univ.erp.domain.CourseCatalog;
 
 public class CourseDAO {
 
-    // SQL to fetch all necessary course, section, and instructor details.
-    // It also counts current enrollments.
+    // --- 1. SQL for the full Course Catalog (Fixed/Confirmed) ---
+    // Uses LEFT JOIN enrollments to ensure sections with 0 students still appear.
     private static final String GET_CATALOG_SQL = 
         "SELECT " +
-        "    c.code AS course_code, c.title, c.credits, " +
-        "    s.section_id, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, " +
-        "    i.name AS instructor_name, " +
-        "    COUNT(e.student_id) AS enrolled_count " +
+        "    c.code AS course_code, c.title, c.credits, " +
+        "    s.section_id, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, " +
+        "    i.name AS instructor_name, " +
+        "    COUNT(e.student_id) AS enrolled_count " +
         "FROM courses c " +
         "JOIN sections s ON c.code = s.course_code " +
         "JOIN instructors i ON s.instructor_id = i.user_id " +
         "LEFT JOIN enrollments e ON s.section_id = e.section_id AND e.status = 'Registered' " +
-        "GROUP BY s.section_id " +
+        "GROUP BY s.section_id, c.code, c.title, c.credits, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, i.name " + // Added explicit grouping for safety
         "ORDER BY c.code, s.day_time";
         
-    // --- NEW SQL QUERY: To fetch a single catalog item by section ID ---
-    // Note: We use the existing complex JOIN query structure to ensure all data for the CourseCatalog POJO is fetched.
-    private static final String GET_CATALOG_BY_SECTION_ID_SQL = GET_CATALOG_SQL + 
-        " HAVING s.section_id = ?"; // Use HAVING since we are grouping by s.section_id
+    // --- 2. SQL to fetch a single catalog item by section ID ---
+    private static final String GET_CATALOG_BY_SECTION_ID_SQL = 
+        GET_CATALOG_SQL.replace("ORDER BY c.code, s.day_time", "WHERE s.section_id = ?"); // Use WHERE after JOINS, before GROUP BY
+
+    // --- 3. NEW SQL QUERY: To fetch a student's Timetable (Registered sections only) ---
+    private static final String GET_TIMETABLE_SQL = 
+        "SELECT " +
+        "    c.code AS course_code, c.title, c.credits, " +
+        "    s.section_id, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, " +
+        "    i.name AS instructor_name, " +
+        "    1 AS enrolled_count " + // We know they are enrolled, so capacity check isn't strictly needed here.
+        "FROM enrollments er " +
+        "JOIN sections s ON er.section_id = s.section_id " +
+        "JOIN courses c ON s.course_code = c.code " +
+        "JOIN instructors i ON s.instructor_id = i.user_id " +
+        "WHERE er.student_id = ? AND er.status = 'Registered' " +
+        "ORDER BY s.day_time, c.code";
+
 
     /**
      * Fetches the entire course catalog including section and enrollment details.
@@ -52,7 +66,30 @@ public class CourseDAO {
         return catalog;
     }
     
-    // --- NEW METHOD: Used by StudentService for time conflict checks ---
+    // --- NEW METHOD: Get Student's Timetable ---
+    /**
+     * Fetches all actively 'Registered' sections for a given student ID.
+     * @param studentId The ID of the student.
+     * @return A list of CourseCatalog objects (representing the student's schedule).
+     */
+    public List<CourseCatalog> getStudentTimetable(int studentId) throws SQLException {
+        List<CourseCatalog> schedule = new ArrayList<>();
+
+        try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(GET_TIMETABLE_SQL)) {
+            
+            stmt.setInt(1, studentId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    schedule.add(mapResultSetToCourseCatalog(rs));
+                }
+                return schedule;
+            }
+        }
+    }
+
+
     /**
      * Fetches a single CourseCatalog item by its unique Section ID.
      * @param sectionId The unique ID of the section.
@@ -75,6 +112,7 @@ public class CourseDAO {
     
     // Helper method to reduce code duplication
     private CourseCatalog mapResultSetToCourseCatalog(ResultSet rs) throws SQLException {
+        // NOTE: We rely on the SQL to provide all necessary columns for the CourseCatalog POJO
         return new CourseCatalog(
             rs.getString("course_code"),
             rs.getString("title"),
@@ -83,7 +121,7 @@ public class CourseDAO {
             rs.getString("day_time"),
             rs.getString("room"),
             rs.getInt("capacity"),
-            rs.getInt("enrolled_count"),
+            rs.getInt("enrolled_count"), // This is calculated by the SQL or hardcoded to 1 in the timetable query
             rs.getString("semester"),
             rs.getInt("year"),
             rs.getInt("instructor_id"),
