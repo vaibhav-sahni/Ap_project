@@ -1,9 +1,13 @@
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\auth\AuthDAO.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\course\CourseDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\db\DBConnector.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\enrollment\EnrollmentDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\grade\GradeDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\instructor\InstructorDAO.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\settings\SettingDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\student\StudentDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\AssessmentComponent.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\CourseCatalog.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\Grade.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\Instructor.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\Student.java

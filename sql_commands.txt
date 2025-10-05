@@ -95,3 +95,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 ----------------------------------------------------------------------------------------
+use auth_db;
+ALTER TABLE users_auth
+ADD COLUMN failed_attempts INT DEFAULT 0,
+ADD COLUMN locked_until DATETIME NULL
