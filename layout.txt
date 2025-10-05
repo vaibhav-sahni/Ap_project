@@ -1,65 +1,57 @@
-src/main/java/
-└── edu/
-    └── univ/
-        └── erp/
-            ├── access/              // Authorization and Rule Checks
-            │   └── AccessControl.java // (isAllowed(), isMaintenanceOn())
-            │
-            ├── api/                 // Public Interface Layer (UI calls these)
-            │   ├── auth/            // Login, Logout, WhoAmI
-            │   │   └── AuthAPI.java
-            │   ├── student/         // Register, Drop, ViewGrades
-            │   ├── instructor/      // EnterScores, ComputeFinal
-            │   ├── admin/           // AddUser, CreateCourse, ToggleMaintenance
-            │   └── types/           // Shared request/response DTOs (e.g., CourseRow)
-            │
-            ├── auth/                // Authentication & Session Management (Talks to Auth DB)
-            │   ├── hash/            // Password hashing (e.g., PasswordHasher)
-            │   ├── session/         // SessionManager (stores current UserAuth)
-            │   └── store/           // Auth DB Data Access Object (DAO)
-            │       ├── AuthDAO.java
-            │       └── AuthDetails.java // (Internal holder for ID, Hash, Role)
-            │
-            ├── data/                // Database Connectors & ERP DAOs
-            │   ├── DbConnector.java // (getAuthConnection(), getErpConnection())
-            │   ├── StudentDAO.java
-            │   ├── CourseDAO.java
-            │   └── ... (other ERP DAOs)
-            │
-            ├── domain/              // Pure Data Models (DTOs/POJOs/Records)
-            │   ├── UserAuth.java    // (From Auth DB)
-            │   ├── Student.java     // (From ERP DB)
-            │   └── ... (Section, Course, Grade, Enrollment, Setting)
-            │
-            ├── service/             // Business Logic Layer (The "Brain")
-            │   ├── AuthService.java // (Core Login logic)
-            │   ├── StudentService.java
-            │   └── ... (InstructorService, AdminService)
-            │
-            ├── ui/                  // Swing UI Components
-            │   ├── auth/            // LoginDialog
-            │   ├── student/         // StudentDashboard, RegistrationPanel
-            │   ├── instructor/      // GradeEntryPanel
-            │   └── admin/           // ToggleMaintenanceButton
-            │
-            └── util/                // Shared Helpers
-                └── ... (Logger, Exporter, DateUtil)
-Key Roles
-domain: Defines what the data is. (No logic)
-
-data / auth/store: Defines how to talk to the two databases.
-
-access: Defines can this be done? (Authorization and rules)
-
-service: Defines why and when actions happen. (Business logic that calls access and data)
-
-api: A clean facade for the UI to call the services.
-
-ui: Defines how the information is presented.
+ERPSystem/
+├── ERPSystem-Client/
+│   ├── pom.xml
+│   └── src/main/java/edu/univ/erp/
+│       ├── api/                                 # Network API Layer
+│       │   ├── ClientRequest.java               # Modular Sender (The Socket Handler)
+│       │   ├── auth/
+│       │   │   └── AuthAPI.java                 # Login API
+│       │   └── grade/
+│       │       └── GradeAPI.java                # Grades API
+│       ├── domain/                              # Data Models (POJOs)
+│       │   ├── UserAuth.java
+│       │   ├── Grade.java
+│       │   └── AssessmentComponent.java
+│       ├── ui/
+│       │   ├── controller/                      # Client-Side Logic
+│       │   │   └── DashboardController.java     # Manages UI state and button clicks
+│       │   └── loginpage/main/
+│       │       └── Login.java                   # Main UI Entry Point (The Login Screen)
+│       └── MainClient.java                      # (If using a separate main launcher)
+│
+└── ERPSystem-Server/
+    ├── pom.xml
+    └── src/main/java/edu/univ/erp/
+        ├── domain/                              # Data Models (Identical to Client)
+        │   ├── UserAuth.java
+        │   ├── Grade.java
+        │   └── AssessmentComponent.java
+        ├── server/                              # Server Core (Router)
+        │   ├── ServerMain.java                  # Main Listener (Binds to Port 9090)
+        │   └── ClientHandler.java               # Request Router/Processor
+        ├── service/                             # Business Logic Layer
+        │   ├── auth/
+        │   │   └── AuthService.java             # Auth rules
+        │   └── student/
+        │       └── StudentService.java          # Student-specific logic (e.g., Grade Aggregation)
+        ├── dao/                                 # Data Access Object Layer
+        │   ├── db/
+        │   │   └── DBConnector.java             # Database Connection Management
+        │   ├── auth/
+        │   │   └── AuthDAO.java                 # Users_auth table access
+        │   └── grade/
+        │       └── GradeDAO.java                # Grades, Enrollments, Courses access
+        └── security/
+            └── PasswordHasher.java              # Password Hashing Logic
 
 
-TIMELINE:
 
-1. CREATED databases
-2. CREATED CLASSES WITH GETTER SETTER METHODS TO DEFINE THE FIELDS IN THE DATABASE TABLES
-3. ESTABLISHED CONNECTION WITH MYSQL USING JDBC
+
+
+
+
+
+
+
+
+
