@@ -1,8 +1,12 @@
 package edu.univ.erp.dao.student;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet; // Assuming Student is defined separately
+import java.sql.SQLException;
+
 import edu.univ.erp.dao.db.DBConnector;
 import edu.univ.erp.domain.Student;
-import edu.univ.erp.domain.UserAuth; // Assuming Student is defined separately
-import java.sql.*;
+import edu.univ.erp.domain.UserAuth;
 
 /**
  * Data Access Object (DAO) for retrieving Student profile information 
@@ -46,5 +50,26 @@ public class StudentDAO {
             e.printStackTrace();
         }
         return null; // Profile not found or a database error occurred
+    }
+
+    private static final String GET_ROLL_NO_SQL = 
+        "SELECT roll_no FROM students WHERE user_id = ?";
+
+    public static String getStudentRollNo(int userId) {
+         try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(GET_ROLL_NO_SQL)) {
+            
+            stmt.setInt(1, userId);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("roll_no");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("DB Error during Roll No lookup for ID: " + userId);
+            e.printStackTrace();
+        }
+        return null;
     }
 }

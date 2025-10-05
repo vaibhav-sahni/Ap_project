@@ -3,7 +3,7 @@ package edu.univ.erp.util;
 import java.util.List;
 
 import edu.univ.erp.domain.AssessmentComponent;
-import edu.univ.erp.domain.Grade; // <-- FIXED TYPE HERE
+import edu.univ.erp.domain.Grade;
 
 /**
  * Generates a fully styled, print-ready HTML document for the student transcript.
@@ -33,15 +33,15 @@ public class TranscriptFormatter {
 
     /**
      * Generates a full HTML document from the List<Grade> data.
-     * @param grades The complete list of course grades.
-     * @param studentId The ID of the student.
+     * * @param grades The complete list of course grades.
+     * @param studentRollNo The student's official Roll Number (String).
      * @return A string containing the full HTML document.
      */
-    public String generateHtml(List<Grade> grades, int studentId) {
+    public String generateHtml(List<Grade> grades, String studentRollNo) { // UPDATED SIGNATURE
         StringBuilder html = new StringBuilder();
         
         // Start HTML structure and styling for both screen and print
-        html.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Official Transcript - Student ").append(studentId).append("</title>");
+        html.append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Official Transcript - Roll No: ").append(studentRollNo).append("</title>");
         html.append("<style>");
         html.append("body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; background-color: #f7f9fc; color: #333; }");
         html.append(".container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); }");
@@ -59,7 +59,7 @@ public class TranscriptFormatter {
         
         html.append("<div class=\"container\">");
         html.append("<h1>Official Academic Transcript</h1>");
-        html.append("<p><strong>Student ID:</strong> ").append(studentId).append("</p>");
+        html.append("<p><strong>Student Roll Number:</strong> ").append(studentRollNo).append("</p>"); // UPDATED HERE
         html.append("<p><em>To save this document as a PDF, please use your browser's Print function (Ctrl+P or Cmd+P) and select 'Save as PDF'.</em></p>");
         html.append("<hr style=\"margin-bottom: 30px;\">");
 

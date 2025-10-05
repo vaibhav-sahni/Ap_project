@@ -8,6 +8,7 @@ import edu.univ.erp.dao.course.CourseDAO;
 import edu.univ.erp.dao.enrollment.EnrollmentDAO; 
 import edu.univ.erp.dao.grade.GradeDAO;
 import edu.univ.erp.dao.grade.GradeDAO.RawGradeResult;
+import edu.univ.erp.dao.student.StudentDAO;
 import edu.univ.erp.domain.AssessmentComponent;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.Grade;
@@ -180,6 +181,7 @@ public class StudentService {
 
     // CRITICAL CHANGE: Instantiate and call the HTML generator method
         TranscriptFormatter formatter = new TranscriptFormatter();
-        return formatter.generateHtml(grades, userId);
+        String rollno = StudentDAO.getStudentRollNo(userId);
+        return formatter.generateHtml(grades, rollno);
     }
 }

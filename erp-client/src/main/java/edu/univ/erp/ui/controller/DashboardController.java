@@ -279,7 +279,6 @@ public class DashboardController {
         try {
             System.out.println("\n--- ATTEMPTING TRANSCRIPT DOWNLOAD (CSV) ---");
             
-            // 1. Call the API to fetch the CSV content
             String csvContent = studentApi.downloadTranscript(user.getUserId());
             
             // 2. Setup and show the file chooser dialog
@@ -287,7 +286,7 @@ public class DashboardController {
             fileChooser.setDialogTitle("Save Student Transcript");
             
             // Suggest a default filename
-            String defaultFileName = "transcript_" + user.getUsername() + "_" + System.currentTimeMillis() + ".csv";
+            String defaultFileName = "transcript_" + user.getUsername() + "_" + System.currentTimeMillis() + ".html";
             fileChooser.setSelectedFile(new File(defaultFileName));
 
             int userSelection = fileChooser.showSaveDialog(null);
