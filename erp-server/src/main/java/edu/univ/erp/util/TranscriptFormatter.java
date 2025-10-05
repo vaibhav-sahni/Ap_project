@@ -5,10 +5,7 @@ import java.util.List;
 import edu.univ.erp.domain.AssessmentComponent;
 import edu.univ.erp.domain.Grade;
 
-/**
- * Generates a fully styled, print-ready HTML document for the student transcript.
- * This HTML can be saved as a PDF using the browser's native print function.
- */
+
 public class TranscriptFormatter {
 
     // Helper method to generate the HTML for component scores
@@ -59,8 +56,7 @@ public class TranscriptFormatter {
         
         html.append("<div class=\"container\">");
         html.append("<h1>Official Academic Transcript</h1>");
-        html.append("<p><strong>Student Roll Number:</strong> ").append(studentRollNo).append("</p>"); // UPDATED HERE
-        html.append("<p><em>To save this document as a PDF, please use your browser's Print function (Ctrl+P or Cmd+P) and select 'Save as PDF'.</em></p>");
+        html.append("<p><strong>Student Roll Number:</strong> ").append(studentRollNo).append("</p>"); 
         html.append("<hr style=\"margin-bottom: 30px;\">");
 
         if (grades == null || grades.isEmpty()) {

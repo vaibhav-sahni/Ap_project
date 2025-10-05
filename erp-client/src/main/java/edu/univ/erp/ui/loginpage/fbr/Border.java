@@ -1,9 +1,4 @@
 package edu.univ.erp.ui.loginpage.fbr;
-
-/**
- *
- * @author Raven
- */
 public class Border {
 
     public Point getTop() {
