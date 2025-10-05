@@ -1,35 +1,61 @@
 package edu.univ.erp.ui.controller;
 
-import edu.univ.erp.domain.UserAuth; 
+import java.util.List;
+
+import edu.univ.erp.api.grade.GradeAPI;
+import edu.univ.erp.domain.Grade;
+import edu.univ.erp.domain.UserAuth;
 
 public class DashboardController {
-
-    // 1. Declare a private field to store the user data (the state)
+    
     private final UserAuth user;
 
-    // 2. Add the required constructor (the fix for the error)
     public DashboardController(UserAuth user) {
-        this.user = user; // Store the authenticated user data
+        this.user = user; 
     }
 
-    /**
-     * Placeholder method to launch the main application dashboard 
-     * based on the authenticated user's role.
-     */
     public void initDashboard() {
-        // --- REAL DASHBOARD LOGIC GOES HERE LATER ---
-        
         System.out.println("\n=============================================");
-        System.out.println("✅ AUTHENTICATION SUCCESSFUL! (Controller Instance)");
-        System.out.println("User ID: " + user.getUserId());
-        System.out.println("User Logged In: " + user.getUsername());
-        System.out.println("Role Determined: " + user.getRole());
+        System.out.println("✅ Dashboard Initializing for: " + user.getUsername());
+        System.out.println("Role: " + user.getRole());
         System.out.println("=============================================");
         
-        // In the final version, you would use:
-        // if (this.user.getRole().equals("Admin")) { new AdminDashboard(this.user).setVisible(true); }
-        // ... etc.
+        // --- FEATURE TEST: FETCH GRADES ---
+        if ("Student".equals(user.getRole())) {
+            fetchAndDisplayGrades();
+        }
         
-        System.out.println("LOG: Dashboard opening logic skipped for testing.");
+        // Final UI implementation would launch the Swing/JavaFX window here.
+        System.out.println("LOG: Main Dashboard UI launched.");
+    }
+
+    private void fetchAndDisplayGrades() {
+        GradeAPI gradeApi = new GradeAPI();
+        
+        try {
+            List<Grade> grades = gradeApi.getMyGrades(this.user.getUserId());
+            
+            System.out.println("\n--- DETAILED GRADES RECEIVED ---");
+            if (grades.isEmpty()) {
+                System.out.println("No grade data received.");
+                return;
+            } 
+            
+            grades.forEach(g -> {
+                System.out.println("\nCourse: " + g.getCourseName() + " (Final Grade: " + g.getFinalGrade() + ")");
+                System.out.println("  Components:");
+                if (g.getComponents().isEmpty()) {
+                    System.out.println("    - No components recorded.");
+                } else {
+                    g.getComponents().forEach(c -> 
+                        System.out.printf("    - %-20s: %.2f\n", c.getComponentName(), c.getScore())
+                    );
+                }
+            });
+            System.out.println("--------------------------------\n");
+
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to fetch grades via API: " + e.getMessage());
+        }
     }
 }

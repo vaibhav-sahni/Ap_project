@@ -1,3 +1,4 @@
+edu\univ\erp\api\grade\GradeAPI$1.class
 edu\univ\erp\ui\loginpage\fbr\Border$Point.class
 edu\univ\erp\ui\loginpage\swing\Button.class
 edu\univ\erp\ui\loginpage\login\Background$2.class
@@ -10,6 +11,7 @@ edu\univ\erp\ui\loginpage\swing\TextField$1.class
 edu\univ\erp\ui\loginpage\swing\PasswordField$1.class
 edu\univ\erp\domain\UserAuth.class
 edu\univ\erp\ui\controller\DashboardController.class
+edu\univ\erp\domain\AssessmentComponent.class
 edu\univ\erp\ui\loginpage\login\CrossButton$1.class
 edu\univ\erp\ui\loginpage\fbr\FancyAnimation.class
 edu\univ\erp\domain\Instructor.class
@@ -22,11 +24,13 @@ edu\univ\erp\api\auth\AuthAPI.class
 edu\univ\erp\ui\loginpage\fbr\Border.class
 edu\univ\erp\ui\loginpage\login\Background$1.class
 edu\univ\erp\ui\loginpage\swing\TextField.class
+edu\univ\erp\domain\Grade.class
 edu\univ\erp\domain\Student.class
 edu\univ\erp\ui\loginpage\login\LogoComponent.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect$1.class
 edu\univ\erp\ui\loginpage\swing\PasswordField.class
 edu\univ\erp\ui\loginpage\swing\TextField$2.class
+edu\univ\erp\api\grade\GradeAPI.class
 edu\univ\erp\ui\loginpage\shadow\GraphicsUtilities.class
 edu\univ\erp\api\ClientRequest.class
 edu\univ\erp\ui\loginpage\main\Login.class

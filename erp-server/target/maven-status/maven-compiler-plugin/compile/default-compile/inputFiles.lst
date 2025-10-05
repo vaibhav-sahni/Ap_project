@@ -1,7 +1,10 @@
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\auth\AuthDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\db\DBConnector.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\grade\GradeDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\instructor\InstructorDAO.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\dao\student\StudentDAO.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\AssessmentComponent.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\Grade.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\Instructor.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\Student.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\domain\UserAuth.java
@@ -10,6 +13,7 @@ C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\server\ServerMain.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\server\session\SessionManager.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\service\auth\AuthService.java
+C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\service\student\StudentService.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\util\DBConnectionTest.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\util\PasswordSeeder.java
 C:\Users\sahni\Documents\GitHub\Ap_project\erp-server\src\main\java\edu\univ\erp\util\ThrowingRunnable.java

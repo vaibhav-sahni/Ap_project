@@ -11,11 +11,10 @@ public class ServerMain {
             System.out.println("✅ ERP SERVER STARTED. Listening on port " + PORT + "...");
             
             while (true) {
-                // Blocks until a client connects
                 Socket clientSocket = serverSocket.accept(); 
                 System.out.println("SERVER LOG: New client connected: " + clientSocket.getInetAddress().getHostAddress());
                 
-                // Handle the client in a new thread using the ClientHandler
+                // Handle the client request in a new thread
                 new Thread(new ClientHandler(clientSocket)).start(); 
             }
         } catch (Exception e) {

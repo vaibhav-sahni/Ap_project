@@ -1,0 +1,36 @@
+
+ INSERT INTO users_auth (username, role, password_hash) 
+VALUES 
+('admin', 'Admin', '$2a$12$R62RZ3S7clI1BuOa3BL60u3qxkfs5XgAvPaRT/xkuxQPR5o/dru/a'),
+('instructor_1', 'Instructor', '$2a$12$1CrqjHJ2koDqkIJMReWFGOKJFw16qgC7awUo5IP2yQRky2aMxbD2O'),
+('student_1', 'Student', '$2a$12$xcAOY55CS4AF8HgtC7K.feQETNsYd9/rpb02/tx5jpvtpZLJhRZFC');
+
+
+
+INSERT INTO instructors (user_id, name, department) 
+VALUES (2, 'Sambuddho Chakravarty', 'Computer Science');
+
+INSERT INTO students (user_id, roll_no, program, year) 
+VALUES (3, '2024596', 'CSE', 2);
+
+INSERT INTO settings (setting_key, setting_value) 
+VALUES ('maintenance_on', 'false');
+
+USE erp_db;
+
+INSERT INTO courses (code, title, credits) VALUES
+('MTH101', 'Linear Algebra', 4),
+('CSE201', 'Advanced Programming', 4);
+
+INSERT INTO sections (course_code, instructor_id, day_time, room, capacity, semester, year) VALUES
+( 'CSE201', 2, 'TTh 11:30-13:00', 'Lab B305', 25, 'Fall', 2025);
+
+INSERT INTO enrollments (student_id, section_id, status) VALUES
+(3, 1, 'Completed');
+
+INSERT INTO grades (enrollment_id, component, score, final_grade) 
+VALUES 
+(1, 'Quiz 1', 9.50, NULL),
+(1, 'Midterm Exam', 82.00, NULL),
+(1, 'Final Project', 91.50, NULL),
+(1, 'FinalGrade', NULL, 'A-');
