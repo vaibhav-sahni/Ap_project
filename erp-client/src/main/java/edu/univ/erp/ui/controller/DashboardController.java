@@ -7,8 +7,9 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.swing.JFileChooser;
-import javax.swing.JOptionPane; 
+import javax.swing.JOptionPane;
 
+import edu.univ.erp.api.admin.AdminAPI;
 import edu.univ.erp.api.auth.AuthAPI;
 import edu.univ.erp.api.instructor.InstructorAPI;
 import edu.univ.erp.api.student.StudentAPI;
@@ -16,6 +17,7 @@ import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.EnrollmentRecord;
 import edu.univ.erp.domain.Grade;
 import edu.univ.erp.domain.Section;
+import edu.univ.erp.domain.Student;
 import edu.univ.erp.domain.UserAuth;
 
 public class DashboardController {
@@ -25,50 +27,250 @@ public class DashboardController {
   private final StudentAPI studentApi = new StudentAPI();
   private final AuthAPI authApi = new AuthAPI();
   private final InstructorAPI instructorApi = new InstructorAPI(); 
+  private final AdminAPI adminApi = new AdminAPI();
 
   public DashboardController(UserAuth user) {
     this.user = user; 
   }
 
   public void initDashboard() {
-    System.out.println("\n=============================================");
-    System.out.println("✅ Dashboard Initializing for: " + user.getUsername());
-    System.out.println("Role: " + user.getRole());
-    System.out.println("=============================================");
+        System.out.println("\n=============================================");
+        System.out.println("✅ Dashboard Initializing for: " + user.getUsername());
+        System.out.println("Role: " + user.getRole());
+        System.out.println("=============================================");
 
-    if ("Student".equals(user.getRole())) {
-        fetchAndDisplayGrades();
-        fetchAndDisplayCatalog(); 
-        fetchAndDisplayTimetable(); 
+        switch (user.getRole()) {
+            case "Student":
+                fetchAndDisplayGrades();
+                fetchAndDisplayCatalog();
+                fetchAndDisplayTimetable();
+                handleDownloadTranscriptClick();
+                //handleChangePasswordClick();
+                //handleRegisterCourseClick(sectionId);
+                //handleDropCourseClick(sectionId);
+              
+                
+                break;
 
-        // --- Feature Test (Simulated Button Click) ---
-        // Uncomment to test transcript download
-        // handleDownloadTranscriptClick();
+            case "Instructor":
+                List<Section> assignedSections = fetchAndDisplayAssignedSections();
+                if (!assignedSections.isEmpty()) {
+                    int testSectionId = assignedSections.get(0).getSectionId();
+                    handleViewRosterClick(testSectionId);
+                    //computeFinalGradesForSection(testSectionId);
+                    
+                }
+                break;
 
-        // Uncomment to test course registration/drop
-        // handleRegisterCourseClick(1);
-        // handleDropCourseClick(1);
+            case "Admin":
+                fetchAndDisplayAllStudents();
+                fetchAndDisplayAllCourses();
+                //handleCreateStudentClick();
+                //handleCreateCourseClick();
+                break;
 
-    } else if ("Instructor".equals(user.getRole())) {
-        // Load assigned sections
-        List<Section> assignedSections = fetchAndDisplayAssignedSections();
+            default:
+                System.out.println("Unknown role. Dashboard not initialized.");
+        }
 
-        if (!assignedSections.isEmpty()) {
-            int testSectionId = assignedSections.get(1).getSectionId();
+        System.out.println("LOG: Dashboard UI initialized successfully.");
+    }
 
-            System.out.println("\nLOG: Testing roster view for section ID: " + testSectionId);
-            handleViewRosterClick(testSectionId); // Just view roster
+    // ==================== ADMIN METHODS ====================
 
-            System.out.println("\nLOG: Testing final grade computation for section ID: " + testSectionId);
-            computeFinalGradesForSection(testSectionId); // Compute final grades with confirmation
+    /**
+     * Fetches and prints all students.
+     */
+    public void fetchAndDisplayAllStudents() {
+        if (!"Admin".equals(user.getRole())) return;
 
-        } else {
-            System.out.println("\nLOG: Instructor has no assigned sections. Skipping tests.");
+        try {
+            List<Student> students = adminApi.getAllStudents();
+            System.out.println("\n--- ALL STUDENTS ---");
+            if (students.isEmpty()) {
+                System.out.println("No students found.");
+                return;
+            }
+
+            System.out.printf("%-10s %-30s %-15s %-20s\n", "ID", "ROLL_NO", "USERNAME","PROGRAM");
+            System.out.println("---------------------------------------------------------------------");
+            for (Student s : students) {
+                System.out.printf("%-10d %-30s %-15s %-20s\n",
+                        s.getUserId(),
+                        s.getRollNo(),
+                        s.getUsername(),
+                        s.getProgram()
+                        );
+            }
+            System.out.println("--------------------------------\n");
+
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to fetch students via API: " + e.getMessage());
         }
     }
 
-    System.out.println("LOG: Dashboard UI initialized successfully.");
-  }
+    /**
+     * Fetches and prints all courses/sections.
+     */
+    public void fetchAndDisplayAllCourses() {
+        if (!"Admin".equals(user.getRole())) return;
+
+        try {
+            List<CourseCatalog> courses = adminApi.getAllCourses();
+            System.out.println("\n--- ALL COURSES / SECTIONS ---");
+            if (courses.isEmpty()) {
+                System.out.println("No courses found.");
+                return;
+            }
+
+            System.out.printf("%-10s %-40s %-15s %-10s %-10s\n",
+                    "CODE", "TITLE", "INSTRUCTOR", "CAPACITY", "SECTION ID");
+            System.out.println("---------------------------------------------------------------------");
+            for (CourseCatalog c : courses) {
+                System.out.printf("%-10s %-40s %-15s %-10d %-10d\n",
+                        c.getCourseCode(),
+                        c.getCourseTitle(),
+                        c.getInstructorName(),
+                        c.getCapacity(),
+                        c.getSectionId());
+            }
+            System.out.println("--------------------------------\n");
+
+        } catch (Exception e) {
+            System.err.println("ERROR: Failed to fetch courses via API: " + e.getMessage());
+        }
+    }
+
+    public void handleCreateStudentClick() {
+    try {
+        // Prompt for inputs
+
+        String userIdStr = JOptionPane.showInputDialog(null, "Enter User ID:");
+        if (userIdStr == null) return;
+        int userId = Integer.parseInt(userIdStr);
+
+        String username = JOptionPane.showInputDialog(null, "Enter Username:");
+        if (username == null) return;
+
+        String role = "Student"; // fixed
+        String rollNo = JOptionPane.showInputDialog(null, "Enter Roll Number:");
+        if (rollNo == null) return;
+
+        String program = JOptionPane.showInputDialog(null, "Enter Program Name:");
+        if (program == null) return;
+
+        String yearStr = JOptionPane.showInputDialog(null, "Enter Year of Study:");
+        if (yearStr == null) return;
+        int year = Integer.parseInt(yearStr);
+
+        String password = JOptionPane.showInputDialog(null, "Enter Initial Password:");
+        if (password == null) return;
+
+        // Construct immutable Student object
+        Student newStudent = new Student(userId, username, role, rollNo, program, year);
+        
+
+      
+        String successMsg = adminApi.createStudent(newStudent, password);
+
+        JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+
+    } catch (NumberFormatException nfe) {
+        JOptionPane.showMessageDialog(null, "Invalid number entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(null, e.getMessage(), "Student Creation Failed", JOptionPane.ERROR_MESSAGE);
+        System.err.println("CLIENT ERROR: " + e.getMessage());
+    }
+}
+
+    public void handleCreateCourseClick() {
+    try {
+        // Prompt for inputs
+        String code = JOptionPane.showInputDialog(null, "Enter Course Code:");
+        if (code == null) return;
+
+        String title = JOptionPane.showInputDialog(null, "Enter Course Title:");
+        if (title == null) return;
+
+        String creditsStr = JOptionPane.showInputDialog(null, "Enter Credits:");
+        if (creditsStr == null) return;
+        int credits = Integer.parseInt(creditsStr);
+
+
+        String dayTime = JOptionPane.showInputDialog(null, "Enter Day/Time (e.g., Mon 9-11):");
+        if (dayTime == null) dayTime = "";
+
+        String room = JOptionPane.showInputDialog(null, "Enter Room:");
+        if (room == null) room = "";
+
+        String capacityStr = JOptionPane.showInputDialog(null, "Enter Capacity:");
+        if (capacityStr == null) return;
+        int capacity = Integer.parseInt(capacityStr);
+
+        String enrolledCountStr = JOptionPane.showInputDialog(null, "Enter Enrolled Count:");
+        if (enrolledCountStr == null) return;
+        int enrolledCount = Integer.parseInt(enrolledCountStr);
+
+        String semester = JOptionPane.showInputDialog(null, "Enter Semester:");
+        if (semester == null) semester = "";
+
+        String yearStr = JOptionPane.showInputDialog(null, "Enter Year:");
+        if (yearStr == null) return;
+        int year = Integer.parseInt(yearStr);
+
+        String instructorID = JOptionPane.showInputDialog(null, "Enter Instructor ID:");
+        if (instructorID == null) return;
+        int instrid = Integer.parseInt(instructorID);
+
+        String instr_name = JOptionPane.showInputDialog(null, "Enter Instructor Name:");
+        if (instr_name == null) semester = "";
+
+
+        // Construct immutable CourseCatalog object
+        CourseCatalog course = new CourseCatalog(
+                code, title, credits, 0, dayTime, room, capacity,
+                enrolledCount, semester, year, instrid, instr_name
+        );
+
+        // Call AdminAPI
+        String successMsg = adminApi.createCourseAndSection(course);
+
+        JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+
+    } catch (NumberFormatException nfe) {
+        JOptionPane.showMessageDialog(null, "Invalid number entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(null, e.getMessage(), "Course Creation Failed", JOptionPane.ERROR_MESSAGE);
+        System.err.println("CLIENT ERROR: " + e.getMessage());
+    }
+}
+
+
+    /**
+     * Toggles maintenance mode (ON/OFF) using AdminAPI.
+     */
+    public void handleToggleMaintenanceClick() {
+        if (!"Admin".equals(user.getRole())) return;
+
+        try {
+            int choice = JOptionPane.showConfirmDialog(null,
+                    "Do you want to TURN ON maintenance mode? (Cancel will turn OFF)",
+                    "Maintenance Mode", JOptionPane.YES_NO_CANCEL_OPTION);
+
+            boolean on = choice == JOptionPane.YES_OPTION;
+            String response = adminApi.toggleMaintenance(on);
+
+            JOptionPane.showMessageDialog(null,
+                    "Maintenance mode updated: " + response,
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null,
+                    "Failed to toggle maintenance mode: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: Toggle Maintenance: " + e.getMessage());
+        }
+    }
   // ----------------------------------------------------------------------
   // --- 1. COURSE DROP FEATURE (EXISTING) --------------------------------
   // ----------------------------------------------------------------------

@@ -1,5 +1,6 @@
 package edu.univ.erp.access;
 
+import edu.univ.erp.dao.auth.AuthDAO;
 import edu.univ.erp.dao.instructor.InstructorDAO;
 
 /**
@@ -8,10 +9,9 @@ import edu.univ.erp.dao.instructor.InstructorDAO;
  * (e.g., is the correct instructor for a section) before sensitive actions.
  */
 public class AccessChecker {
-    
+
     private final InstructorDAO instructorDAO = new InstructorDAO();
-    // In a complete system, we would instantiate AuthDAO here:
-    // private final AuthDAO authDAO = new AuthDAO(); 
+    private final AuthDAO authDAO = new AuthDAO();
 
     /**
      * Checks if the given instructor ID is assigned to teach the specified section.
@@ -37,15 +37,17 @@ public class AccessChecker {
             return false; // Fail safe on error
         }
     }
-    
+
     /**
      * Checks if the given user ID has the 'ADMIN' role.
-     * NOTE: This is placeholder logic. In a complete system, this method 
-     * MUST call the AuthDAO to verify the user's role from the database.
      */
     public boolean isAdmin(int userId) {
-        // Placeholder for testing the future AdminService authorization.
-        // It should be replaced with: return authDAO.getUserRole(userId).equals("ADMIN");
-        return userId == 9999; 
+        try {
+            AuthDAO.AuthDetails details = authDAO.findUserByUserId(userId);
+            return details != null && "ADMIN".equalsIgnoreCase(details.role());
+        } catch (Exception e) {
+            System.err.println("AccessChecker error in isAdmin for userId " + userId + ": " + e.getMessage());
+            return false;
+        }
     }
 }

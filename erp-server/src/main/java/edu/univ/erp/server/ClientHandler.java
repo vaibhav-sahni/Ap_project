@@ -11,20 +11,23 @@ import com.google.gson.Gson;
 
 import edu.univ.erp.dao.settings.SettingDAO; 
 import edu.univ.erp.domain.CourseCatalog;
+import edu.univ.erp.domain.EnrollmentRecord;
 import edu.univ.erp.domain.Grade;
+import edu.univ.erp.domain.Section;
+import edu.univ.erp.domain.Student; // NEW: Instructor's list of sections
 import edu.univ.erp.domain.UserAuth;
-import edu.univ.erp.domain.Section; // NEW: Instructor's list of sections
-import edu.univ.erp.domain.EnrollmentRecord; // NEW: Instructor's student roster data
+import edu.univ.erp.service.admin.AdminService; // NEW: Instructor's student roster data
 import edu.univ.erp.service.auth.AuthService;
+import edu.univ.erp.service.instructor.InstructorService;
 import edu.univ.erp.service.student.StudentService;
-import edu.univ.erp.service.instructor.InstructorService; // NEW: Instructor's business logic
 
 public class ClientHandler implements Runnable {
 private final Socket clientSocket;
 private final Gson gson = new Gson();
 private final SettingDAO settingDAO = new SettingDAO(); 
-    // New Service Initialization
-    private final InstructorService instructorService = new InstructorService();
+    
+private final InstructorService instructorService = new InstructorService();
+private final AdminService adminService = new AdminService();
 
 public ClientHandler(Socket socket) { this.clientSocket = socket; }
  @Override
@@ -95,6 +98,17 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
                 case "COMPUTE_FINAL_GRADE":
                     return handleComputeFinalGrade(parts);
                 // -----------------------------
+
+        case "CREATE_STUDENT":
+        return handleCreateStudent(parts);
+    case "CREATE_COURSE_SECTION":
+        return handleCreateCourseSection(parts);
+    case "TOGGLE_MAINTENANCE":
+        return handleToggleMaintenance(parts);
+    case "GET_ALL_COURSES":
+        return handleGetAllCourses();
+    case "GET_ALL_STUDENTS":
+        return handleGetAllStudents();
                 
         default:
           return "ERROR:UNKNOWN_COMMAND";
@@ -310,4 +324,86 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       return "ERROR:Failed to change password (Service returned false).";
     }
   }
+
+
+
+  private String handleCreateStudent(String[] parts) throws Exception {
+    if (parts.length < 2) throw new Exception("Missing student payload.");
+    
+    
+    // parts[0] = CREATE_STUDENT
+    int userId = Integer.parseInt(parts[1]);
+    String username = parts[2];
+    String role = parts[3];
+    String rollNo = parts[4];
+    String program = parts[5];
+    int year = Integer.parseInt(parts[6]);
+    String password = parts[7];
+
+    // Construct the Student domain object manually
+    Student student = new Student(userId, username, role, rollNo, program, year);
+
+    // Call the service
+    String message = adminService.createStudent(student, password);
+
+    return "SUCCESS:" + message;
+
+    
+}
+private String handleCreateCourseSection(String[] parts) throws Exception {
+    if (parts.length < 2) throw new Exception("Missing course/section payload.");
+    
+    /*String request = String.format("CREATE_COURSE_SECTION:%s:%s:%d:%d:%s:%d:%s:%d:%s:%d:%s:%d",
+            course.getCourseCode(),
+            course.getCourseTitle(),
+            course.getCredits(),
+            course.getSectionId(),
+            course.getRoom(),
+            course.getCapacity(),
+            course.getDayTime(),
+            course.getEnrolledCount(),
+            course.getSemester(),
+            course.getInstructorId(),
+            course.getInstructorName(),
+            course.getYear() */
+    String code = parts[1];
+    String title = parts[2];
+    int credits = Integer.parseInt(parts[3]);
+    int sectionID = Integer.parseInt(parts[4]);
+    String room = parts[5];
+    int capacity = Integer.parseInt(parts[6]);
+    String dayTime = parts[7];
+    int enrolledCount = Integer.parseInt(parts[8]);
+    String semester = parts[9];
+    int instructorId = Integer.parseInt(parts[10]);
+    String instructor = parts[11];
+    int year = Integer.parseInt(parts[12]);
+
+    CourseCatalog course = new CourseCatalog(code,title,credits,sectionID,dayTime,room,capacity,enrolledCount,semester,year,instructorId,instructor);
+    String message = adminService.createCourseAndSection(course);
+    return "SUCCESS:" + message;
+}
+
+private String handleToggleMaintenance(String[] parts) throws Exception {
+    if (parts.length < 2) throw new Exception("Missing maintenance toggle parameter.");
+    
+    boolean on = parts[1].equalsIgnoreCase("ON");
+    adminService.toggleMaintenance(on);
+    
+    return "SUCCESS:Maintenance mode turned " + (on ? "ON" : "OFF");
+}
+
+private String handleGetAllCourses() throws Exception {
+    List<CourseCatalog> courses = adminService.getAllCourses();
+    String json = gson.toJson(courses);
+    return "SUCCESS:" + json;
+}
+
+
+private String handleGetAllStudents() throws Exception {
+    List<Student> students = adminService.getAllStudents();
+    String json = gson.toJson(students);
+    return "SUCCESS:" + json;
+}
+
 }

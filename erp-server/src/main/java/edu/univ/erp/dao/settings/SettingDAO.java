@@ -9,13 +9,17 @@ import edu.univ.erp.dao.db.DBConnector;
 
 /**
  * Data Access Object for handling global system settings.
- * Primarily used to check the status of Maintenance Mode.
+ * Primarily used to check or update the status of Maintenance Mode.
  */
 public class SettingDAO {
 
     // SQL to fetch a specific setting value
     private static final String GET_SETTING_SQL = 
-        "SELECT setting_value FROM GlobalSettings WHERE setting_key = ?";
+        "SELECT setting_value FROM settings WHERE setting_key = ?";
+
+    // SQL to update a specific setting value
+    private static final String UPDATE_SETTING_SQL =
+        "UPDATE GlobalSettings SET setting_value = ? WHERE setting_key = ?";
 
     /**
      * Retrieves the value of a specific global setting key.
@@ -49,9 +53,24 @@ public class SettingDAO {
             return status != null && status.equalsIgnoreCase("ON");
         } catch (SQLException e) {
             System.err.println("SettingDAO: Error checking maintenance mode. Defaulting to OFF. " + e.getMessage());
-            // Fail-safe: if DB access fails, we assume maintenance is OFF 
-            // to avoid blocking all traffic unintentionally.
             return false;
+        }
+    }
+
+    /**
+     * Sets the maintenance mode in the database.
+     * @param on true to turn maintenance ON, false to turn OFF.
+     */
+    public void setMaintenanceMode(boolean on) {
+        try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(UPDATE_SETTING_SQL)) {
+            
+            stmt.setString(1, on ? "ON" : "OFF");
+            stmt.setString(2, "MAINTENANCE_MODE");
+            stmt.executeUpdate();
+            
+        } catch (SQLException e) {
+            System.err.println("SettingDAO: Error updating maintenance mode. " + e.getMessage());
         }
     }
 }

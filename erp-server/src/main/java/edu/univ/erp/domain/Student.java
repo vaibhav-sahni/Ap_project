@@ -6,9 +6,9 @@ package edu.univ.erp.domain;
 public class Student extends edu.univ.erp.domain.UserAuth { 
     
     // Fields specific to the ERP profile
-    private final String rollNo;
-    private final String program;
-    private final int year;
+    private  String rollNo;
+    private  String program;
+    private  int year;
     
     /**
      * Constructor for a Student profile.
@@ -19,6 +19,7 @@ public class Student extends edu.univ.erp.domain.UserAuth {
      * @param program The student's enrolled program (e.g., "Computer Engineering").
      * @param year The student's current year of study.
      */
+    public Student(){}
     public Student(int userId, String username, String role, 
                    String rollNo, String program, int year) {
         
