@@ -8,6 +8,7 @@ import edu.univ.erp.dao.course.CourseDAO;
 import edu.univ.erp.dao.enrollment.EnrollmentDAO; 
 import edu.univ.erp.dao.grade.GradeDAO;
 import edu.univ.erp.dao.grade.GradeDAO.RawGradeResult;
+import edu.univ.erp.dao.settings.SettingDAO;
 import edu.univ.erp.dao.student.StudentDAO;
 import edu.univ.erp.domain.AssessmentComponent;
 import edu.univ.erp.domain.CourseCatalog;
@@ -19,6 +20,7 @@ public class StudentService {
     private final GradeDAO gradeDAO = new GradeDAO();
     private final CourseDAO courseDAO = new CourseDAO();
     private final EnrollmentDAO enrollmentDAO = new EnrollmentDAO();
+    private final SettingDAO settingDAO = new SettingDAO();
 
     // ----------------------------------------------------------------------
     // --- 1. COURSE DROP FEATURE (EXISTING) --------------------------------
@@ -31,12 +33,22 @@ public class StudentService {
      * @return A success message.
      */
     public String dropCourse(int userId, int sectionId) throws Exception {
+        if (settingDAO.isMaintenanceModeOn()) {
+            throw new Exception("The system is currently under maintenance. Please try later.");
+        }
         if (userId <= 0 || sectionId <= 0) {
             throw new IllegalArgumentException("Invalid Student ID or Section ID provided.");
         }
         
         // --- 1. Check Drop Deadline (Rule #1) ---
-        LocalDate dropDeadline = LocalDate.of(2025, 10, 31); 
+        String deadlineStr = settingDAO.getSetting("DROP_DEADLINE"); // e.g., "2025-10-31"
+        LocalDate dropDeadline;
+        if (deadlineStr != null) {
+            dropDeadline = LocalDate.parse(deadlineStr); // expects YYYY-MM-DD format
+        } else {
+            dropDeadline = LocalDate.of(2025, 10, 31); // fallback
+        }
+
         if (LocalDate.now().isAfter(dropDeadline)) {
             throw new Exception("The official course drop deadline has passed (" + dropDeadline + "). Drop failed.");
         }
@@ -60,6 +72,9 @@ public class StudentService {
      * Registers a student in a specific course section, applying all business rules.
      */
     public String registerCourse(int userId, int sectionId) throws Exception {
+        if (settingDAO.isMaintenanceModeOn()) {
+            throw new Exception("The system is currently under maintenance. Please try later.");
+        }
         if (userId <= 0 || sectionId <= 0) {
             throw new IllegalArgumentException("Invalid Student ID or Section ID.");
         }

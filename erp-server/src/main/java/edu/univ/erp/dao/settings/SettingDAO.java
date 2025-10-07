@@ -7,28 +7,51 @@ import java.sql.SQLException;
 
 import edu.univ.erp.dao.db.DBConnector;
 
+/**
+ * Data Access Object for handling global system settings.
+ * Primarily used to check the status of Maintenance Mode.
+ */
 public class SettingDAO {
 
-    private static final String GET_MAINTENANCE_SQL = 
-        "SELECT setting_value FROM settings WHERE setting_key = 'maintenance_on'";
+    // SQL to fetch a specific setting value
+    private static final String GET_SETTING_SQL = 
+        "SELECT setting_value FROM GlobalSettings WHERE setting_key = ?";
 
     /**
-     * Checks the current status of the maintenance mode flag in the ERP DB.
-     * @return true if maintenance mode is 'true', false otherwise.
+     * Retrieves the value of a specific global setting key.
+     * @param settingKey The key (e.g., "MAINTENANCE_MODE").
+     * @return The setting value as a String, or null if not found.
+     */
+    public String getSetting(String settingKey) throws SQLException {
+        String value = null;
+        try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(GET_SETTING_SQL)) {
+            
+            stmt.setString(1, settingKey);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    value = rs.getString("setting_value");
+                }
+            }
+        }
+        return value;
+    }
+    
+    /**
+     * Checks if the system is currently in maintenance mode.
+     * @return true if maintenance mode is "ON", false otherwise.
      */
     public boolean isMaintenanceModeOn() {
-        try (Connection conn = DBConnector.getErpConnection(); // Use ERP Connection
-             PreparedStatement stmt = conn.prepareStatement(GET_MAINTENANCE_SQL);
-             ResultSet rs = stmt.executeQuery()) {
-
-            if (rs.next()) {
-                String status = rs.getString("setting_value");
-                return "true".equalsIgnoreCase(status);
-            }
+        try {
+            String status = getSetting("MAINTENANCE_MODE");
+            // Case-insensitive check for "ON"
+            return status != null && status.equalsIgnoreCase("ON");
         } catch (SQLException e) {
-            System.err.println("DB Error accessing settings table: " + e.getMessage());
-            // Fail safe: If the table or setting isn't found, assume maintenance is OFF
+            System.err.println("SettingDAO: Error checking maintenance mode. Defaulting to OFF. " + e.getMessage());
+            // Fail-safe: if DB access fails, we assume maintenance is OFF 
+            // to avoid blocking all traffic unintentionally.
+            return false;
         }
-        return false; 
     }
 }
