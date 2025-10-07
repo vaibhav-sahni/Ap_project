@@ -13,6 +13,7 @@ import edu.univ.erp.dao.settings.SettingDAO;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.EnrollmentRecord;
 import edu.univ.erp.domain.Grade;
+import edu.univ.erp.domain.Instructor;
 import edu.univ.erp.domain.Section;
 import edu.univ.erp.domain.Student; // NEW: Instructor's list of sections
 import edu.univ.erp.domain.UserAuth;
@@ -109,6 +110,9 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
         return handleGetAllCourses();
     case "GET_ALL_STUDENTS":
         return handleGetAllStudents();
+    case "CREATE_INSTRUCTOR":
+        return handleCreateInstructor(parts);
+
                 
         default:
           return "ERROR:UNKNOWN_COMMAND";
@@ -406,4 +410,20 @@ private String handleGetAllStudents() throws Exception {
     return "SUCCESS:" + json;
 }
 
+private String handleCreateInstructor(String[] parts) throws Exception {
+    if (parts.length < 7) throw new Exception("Incomplete instructor creation request.");
+
+    int userId = Integer.parseInt(parts[1]);
+    String username = parts[2];
+    String role = parts[3];
+    String name = parts[4];
+    String department = parts[5];
+    String password = parts[6];
+
+    Instructor instructor = new Instructor(userId, username, role, department);
+    instructor.setName(name);
+
+    String message = adminService.createInstructor(instructor, password);
+    return "SUCCESS:" + message;
+}
 }

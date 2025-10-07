@@ -16,6 +16,7 @@ import edu.univ.erp.api.student.StudentAPI;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.EnrollmentRecord;
 import edu.univ.erp.domain.Grade;
+import edu.univ.erp.domain.Instructor;
 import edu.univ.erp.domain.Section;
 import edu.univ.erp.domain.Student;
 import edu.univ.erp.domain.UserAuth;
@@ -67,6 +68,7 @@ public class DashboardController {
                 fetchAndDisplayAllCourses();
                 //handleCreateStudentClick();
                 //handleCreateCourseClick();
+                //handleCreateInstructorClick();
                 break;
 
             default:
@@ -182,6 +184,39 @@ public class DashboardController {
         System.err.println("CLIENT ERROR: " + e.getMessage());
     }
 }
+
+
+public void handleCreateInstructorClick() {
+    try {
+        // Prompt for inputs
+
+        String userIdStr = JOptionPane.showInputDialog(null, "Enter User ID:");
+        if (userIdStr == null) return;
+        int userId = Integer.parseInt(userIdStr);
+
+        String username = JOptionPane.showInputDialog(null, "Enter Username:");
+        if (username == null) return;
+
+        String role = "Instructor"; // fixed
+
+        String password = JOptionPane.showInputDialog(null, "Enter Initial Password:");
+        if (password == null) return;
+
+        
+        Instructor instructor = new  Instructor(0, username, role, password);
+        String successMsg = adminApi.createInstructor(instructor, password);
+
+        JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+
+    } catch (NumberFormatException nfe) {
+        JOptionPane.showMessageDialog(null, "Invalid number entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(null, e.getMessage(), "Student Creation Failed", JOptionPane.ERROR_MESSAGE);
+        System.err.println("CLIENT ERROR: " + e.getMessage());
+    }
+}
+
+
 
     public void handleCreateCourseClick() {
     try {

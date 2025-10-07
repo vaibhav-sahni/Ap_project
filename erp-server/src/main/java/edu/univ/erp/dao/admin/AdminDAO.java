@@ -9,7 +9,9 @@ import java.util.List;
 
 import edu.univ.erp.dao.db.DBConnector;
 import edu.univ.erp.domain.CourseCatalog;
+import edu.univ.erp.domain.Instructor;
 import edu.univ.erp.domain.Student;
+import edu.univ.erp.security.PasswordHasher;
 
 public class AdminDAO {
 
@@ -25,7 +27,7 @@ public class AdminDAO {
      * Creates a new student record in both auth_db and erp_db.
      * Assumes passwordHash is pre-hashed (e.g., BCrypt) before calling this method.
      */
-    public boolean createStudent(Student student, String passwordHash) {
+    public boolean createStudent(Student student, String password) {
         try (Connection conn = DBConnector.getErpConnection()) {
             conn.setAutoCommit(false); // Transaction for both DBs
 
@@ -34,7 +36,7 @@ public class AdminDAO {
                 stmtAuth.setInt(1, student.getUserId());
                 stmtAuth.setString(2, student.getUsername());
                 stmtAuth.setString(3, student.getRole());
-                stmtAuth.setString(4, passwordHash);
+                stmtAuth.setString(4, PasswordHasher.hashPassword(password));
                 stmtAuth.executeUpdate();
             }
 
@@ -165,4 +167,39 @@ public class AdminDAO {
         }
         return students;
     }
+
+    public boolean createInstructor(Instructor instructor, String password) {
+    String insertUser = "INSERT INTO auth_db.users_auth (user_id, username, password_hash, role) VALUES (?, ?, ?, ?)";
+    String insertInstructor = "INSERT INTO erp_db.instructors (user_id, name, department_name) VALUES (?, ?, ?)";
+
+    try (Connection conn = DBConnector.getErpConnection()) {
+        conn.setAutoCommit(false);
+
+        try (PreparedStatement psUser = conn.prepareStatement(insertUser);
+             PreparedStatement psInstr = conn.prepareStatement(insertInstructor)) {
+            
+            psUser.setInt(1, instructor.getUserId());
+            psUser.setString(2, instructor.getUsername());
+            psUser.setString(3, PasswordHasher.hashPassword(password));
+            psUser.setString(4, instructor.getRole());
+            psUser.executeUpdate();
+
+            psInstr.setInt(1, instructor.getUserId());
+            psInstr.setString(2, instructor.getName());
+            psInstr.setString(3, instructor.getDepartmentName());
+            psInstr.executeUpdate();
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            conn.rollback();
+            e.printStackTrace();
+            return false;
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
 }

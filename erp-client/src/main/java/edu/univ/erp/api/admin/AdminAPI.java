@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken;
 
 import edu.univ.erp.api.ClientRequest;
 import edu.univ.erp.domain.CourseCatalog;
+import edu.univ.erp.domain.Instructor;
 import edu.univ.erp.domain.Student;
 
 public class AdminAPI {
@@ -107,4 +108,24 @@ public class AdminAPI {
         }
         throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error fetching students");
     }
+
+    public String createInstructor(Instructor instructor, String password) throws Exception {
+    
+    String request = String.format(
+    "CREATE_INSTRUCTOR:%d:%s:%s:%s:%s:%s",
+    instructor.getUserId(),
+    instructor.getUsername(),
+    instructor.getRole(),
+    instructor.getName(),
+    instructor.getDepartmentName(),
+    password
+);
+String response = ClientRequest.send(request);
+
+
+    if (response.startsWith("SUCCESS:")) {
+        return response.substring("SUCCESS:".length());
+    }
+    throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating instructor");
+}
 }

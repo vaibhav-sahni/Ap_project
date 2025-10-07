@@ -5,6 +5,7 @@ import java.util.List;
 import edu.univ.erp.dao.admin.AdminDAO;
 import edu.univ.erp.dao.settings.SettingDAO;
 import edu.univ.erp.domain.CourseCatalog;
+import edu.univ.erp.domain.Instructor;
 import edu.univ.erp.domain.Student;
 
 public class AdminService {
@@ -65,4 +66,13 @@ public class AdminService {
     public List<Student> getAllStudents() throws Exception {
         return adminDAO.fetchAllStudents();
     }
+
+    public String createInstructor(Instructor instructor, String passwordHash) throws Exception {
+    if (instructor == null) throw new Exception("Instructor object cannot be null.");
+    if (instructor.getUserId() == 0) throw new Exception("Instructor must have a valid user ID.");
+
+    boolean created = adminDAO.createInstructor(instructor, passwordHash);
+    if (!created) throw new Exception("Failed to create instructor. Check DB constraints.");
+    return "Instructor created successfully: " + instructor.getName();
+}
 }

@@ -3,7 +3,7 @@ package edu.univ.erp.domain;
  * Represents the full profile of a Student, inheriting identity from UserAuth 
  * and adding fields from the erp_db.students table.
  */
-public class Student extends edu.univ.erp.domain.UserAuth { 
+public class Student extends UserAuth { 
     
     // Fields specific to the ERP profile
     private String rollNo;
