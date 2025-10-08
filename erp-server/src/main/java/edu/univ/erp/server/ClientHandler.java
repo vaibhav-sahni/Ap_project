@@ -106,6 +106,8 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
         return handleCreateCourseSection(parts);
     case "TOGGLE_MAINTENANCE":
         return handleToggleMaintenance(parts);
+    case "CHECK_MAINTENANCE":
+        return handleCheckMaintenance();
     case "GET_ALL_COURSES":
         return handleGetAllCourses();
     case "GET_ALL_STUDENTS":
@@ -395,6 +397,11 @@ private String handleToggleMaintenance(String[] parts) throws Exception {
     adminService.toggleMaintenance(on);
     
     return "SUCCESS:Maintenance mode turned " + (on ? "ON" : "OFF");
+}
+
+private String handleCheckMaintenance(){
+  boolean status = adminService.isMaintenanceModeOn();
+  return "SUCCESS:" + (status ? "ON" : "OFF");
 }
 
 private String handleGetAllCourses() throws Exception {

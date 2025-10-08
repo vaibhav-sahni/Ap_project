@@ -56,7 +56,7 @@ public class DashboardController {
             case "Instructor":
                 List<Section> assignedSections = fetchAndDisplayAssignedSections();
                 if (!assignedSections.isEmpty()) {
-                    int testSectionId = assignedSections.get(0).getSectionId();
+                    int testSectionId = assignedSections.get(1).getSectionId();
                     handleViewRosterClick(testSectionId);
                     //computeFinalGradesForSection(testSectionId);
                     
@@ -69,6 +69,7 @@ public class DashboardController {
                 //handleCreateStudentClick();
                 //handleCreateCourseClick();
                 //handleCreateInstructorClick();
+                handleToggleMaintenanceClick();
                 break;
 
             default:

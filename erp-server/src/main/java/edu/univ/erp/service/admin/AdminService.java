@@ -53,6 +53,10 @@ public class AdminService {
         }
     }
 
+    public boolean isMaintenanceModeOn() {
+    return settingDAO.isMaintenanceModeOn();
+    }
+
     // --------------------------
     // 4. FETCH ALL COURSES
     // --------------------------

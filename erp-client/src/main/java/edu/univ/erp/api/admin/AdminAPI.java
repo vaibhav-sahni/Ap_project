@@ -79,6 +79,11 @@ public class AdminAPI {
         throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error toggling maintenance");
     }
 
+    public boolean checkMaintenanceMode() throws Exception{
+        String response = ClientRequest.send("CHECK_MAINTENANCE");
+        if (response.startsWith("SUCCESS:")) return true;
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error toggling maintenance");
+    }
     // ----------------------------------------------------------------------
     // --- 4. GET ALL COURSES / SECTIONS (Optional helper for admin UI) ---
     // ----------------------------------------------------------------------

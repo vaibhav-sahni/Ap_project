@@ -19,7 +19,7 @@ public class SettingDAO {
 
     // SQL to update a specific setting value
     private static final String UPDATE_SETTING_SQL =
-        "UPDATE GlobalSettings SET setting_value = ? WHERE setting_key = ?";
+        "UPDATE settings SET setting_value = ? WHERE setting_key = ?";
 
     /**
      * Retrieves the value of a specific global setting key.
@@ -49,7 +49,6 @@ public class SettingDAO {
     public boolean isMaintenanceModeOn() {
         try {
             String status = getSetting("MAINTENANCE_MODE");
-            // Case-insensitive check for "ON"
             return status != null && status.equalsIgnoreCase("ON");
         } catch (SQLException e) {
             System.err.println("SettingDAO: Error checking maintenance mode. Defaulting to OFF. " + e.getMessage());
@@ -57,10 +56,6 @@ public class SettingDAO {
         }
     }
 
-    /**
-     * Sets the maintenance mode in the database.
-     * @param on true to turn maintenance ON, false to turn OFF.
-     */
     public void setMaintenanceMode(boolean on) {
         try (Connection conn = DBConnector.getErpConnection();
              PreparedStatement stmt = conn.prepareStatement(UPDATE_SETTING_SQL)) {
