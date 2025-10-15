@@ -250,6 +250,22 @@ public class InstructorService {
 
         StringBuilder summary = new StringBuilder();
         summary.append("Imported and applied updates for ").append(processed).append(" rows.");
+
+        // Audit logging: record a minimal fingerprint of the imported CSV and who performed the import.
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(csvContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) hex.append(String.format("%02x", b));
+            String csvSha = hex.toString();
+
+            String auditLine = String.format("%s | actor=%d | instructor=%d | section=%d | rows=%d | sha256=%s\n",
+                    java.time.Instant.now().toString(), /* actorUserId to be filled by caller? */ -1, instructorId, sectionId, processed, csvSha);
+            java.nio.file.Files.write(java.nio.file.Path.of("import_audit.log"), auditLine.getBytes(java.nio.charset.StandardCharsets.UTF_8), java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ex) {
+            // don't fail the import because audit logging failed; just log it server-side
+            java.util.logging.Logger.getLogger(InstructorService.class.getName()).warning("Failed to write import audit log: " + ex.getMessage());
+        }
         return summary.toString();
     }
 
