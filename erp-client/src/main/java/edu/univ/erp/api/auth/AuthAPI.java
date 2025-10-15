@@ -3,7 +3,9 @@ package edu.univ.erp.api.auth;
 import com.google.gson.Gson;
 
 import edu.univ.erp.api.ClientRequest;
-import edu.univ.erp.domain.UserAuth; 
+import edu.univ.erp.domain.UserAuth;
+import edu.univ.erp.net.ClientConnection;
+import edu.univ.erp.net.ClientSession; 
 
 public class AuthAPI {
     private final Gson gson = new Gson();
@@ -12,17 +14,29 @@ public class AuthAPI {
         // 1. Build the specific command for this API
         String request = "LOGIN:" + username + ":" + password;
 
-        // 2. Use the generic sender
-        String response = ClientRequest.send(request);
+        // For per-connection session model, open a persistent connection and send LOGIN over it.
+        ClientConnection conn = null;
+        String response;
+        try {
+            conn = new ClientConnection("localhost", 9090);
+            response = conn.send(request);
+        } catch (Exception e) {
+            if (conn != null) try { conn.close(); } catch (Exception ex) { /* ignore */ }
+            throw e;
+        }
 
         // 3. Process the SUCCESS response
         if (response.startsWith("SUCCESS:")) {
             String userJson = response.substring("SUCCESS:".length());
             // Deserialize the JSON string back into a UserAuth object
-            return gson.fromJson(userJson, UserAuth.class); 
+            UserAuth user = gson.fromJson(userJson, UserAuth.class);
+            // Persist the connection for this client session
+            ClientSession.setConnection(conn);
+            return user;
         } 
         
-        // Note: ClientRequest.send() handles throwing the 'ERROR:' exception.
+        // any unexpected path: close connection if opened
+        if (conn != null) try { conn.close(); } catch (Exception ex) { /* ignore */ }
         throw new Exception("Unexpected response during login.");
     }
 
@@ -47,5 +61,20 @@ public class AuthAPI {
         
         // This is a safety net, as ClientRequest.send() should handle errors
         throw new Exception("Password change failed due to an unexpected client error."); 
+    }
+
+    /**
+     * Logout: closes persistent connection and clears client-side session.
+     */
+    public String logout() throws Exception {
+        // Send LOGOUT over persistent connection if present
+        edu.univ.erp.net.ClientConnection conn = edu.univ.erp.net.ClientSession.getConnection();
+        if (conn != null) {
+            String resp = conn.send("LOGOUT");
+            // clear local session
+            edu.univ.erp.net.ClientSession.clear();
+            return resp.startsWith("SUCCESS:") ? resp.substring("SUCCESS:".length()) : resp;
+        }
+        return "SUCCESS:No active session";
     }
 }

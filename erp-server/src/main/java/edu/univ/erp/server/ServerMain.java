@@ -19,7 +19,7 @@ public class ServerMain {
             }
         } catch (Exception e) {
             System.err.println("❌ Server critical exception: " + e.getMessage());
-            e.printStackTrace();
+            java.util.logging.Logger.getLogger(ServerMain.class.getName()).log(java.util.logging.Level.SEVERE, null, e);
         }
     }
 }

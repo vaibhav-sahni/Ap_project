@@ -46,10 +46,28 @@ public class AdminService {
     // --------------------------
     public void toggleMaintenance(boolean on) throws Exception {
         try {
-            // Call the existing DAO method (throws SQLException)
+            // Call the DAO which now throws SQLException on failure
             settingDAO.setMaintenanceMode(on);
         } catch (Exception e) {
             throw new Exception("Failed to update maintenance mode: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Sets the global drop deadline in settings (expects YYYY-MM-DD).
+     */
+    public void setDropDeadline(String isoDate) throws Exception {
+        // basic validation
+        try {
+            java.time.LocalDate.parse(isoDate);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new Exception("Invalid date format for drop deadline. Expected YYYY-MM-DD.", e);
+        }
+
+        try {
+            settingDAO.setSetting("DROP_DEADLINE", isoDate);
+        } catch (Exception e) {
+            throw new Exception("Failed to update drop deadline: " + e.getMessage(), e);
         }
     }
 

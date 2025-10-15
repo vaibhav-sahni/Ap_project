@@ -17,7 +17,7 @@ import edu.univ.erp.domain.Instructor;
 import edu.univ.erp.domain.Section;
 import edu.univ.erp.domain.Student; // NEW: Instructor's list of sections
 import edu.univ.erp.domain.UserAuth;
-import edu.univ.erp.service.admin.AdminService; // NEW: Instructor's student roster data
+import edu.univ.erp.service.admin.AdminService;
 import edu.univ.erp.service.auth.AuthService;
 import edu.univ.erp.service.instructor.InstructorService;
 import edu.univ.erp.service.student.StudentService;
@@ -30,6 +30,31 @@ private final SettingDAO settingDAO = new SettingDAO();
 private final InstructorService instructorService = new InstructorService();
 private final AdminService adminService = new AdminService();
 
+  // Per-connection authenticated user (replaces global SessionManager usage inside this handler)
+  private edu.univ.erp.domain.UserAuth currentUser = null;
+
+  // ----------------- Session / Authorization helpers -----------------
+  private edu.univ.erp.domain.UserAuth requireAuthenticated() throws Exception {
+    if (this.currentUser == null) {
+      throw new Exception("NOT_AUTHENTICATED:Login required to perform this action.");
+    }
+    return this.currentUser;
+  }
+
+  private void requireAdmin(edu.univ.erp.domain.UserAuth current) throws Exception {
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (!checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only admins may perform this action.");
+    }
+  }
+
+  private void requireSameUserOrAdmin(edu.univ.erp.domain.UserAuth current, int userId) throws Exception {
+    if (current.getUserId() != userId) {
+      requireAdmin(current);
+    }
+  }
+
+
 public ClientHandler(Socket socket) { this.clientSocket = socket; }
  @Override
   public void run() { 
@@ -38,14 +63,16 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     ) {
       // Keep reading requests until null
              String request;
-             while ((request = in.readLine()) != null) {
-                 String response = processRequest(request);
-                 out.println(response);
-             }
+       while ((request = in.readLine()) != null) {
+         String response = processRequest(request);
+         out.println(response);
+       }
 
     } catch (IOException e) {
       System.err.println("SERVER LOG: ClientHandler network error: " + e.getMessage());
     } finally {
+      // clear per-connection session on exit
+      this.currentUser = null;
       try { clientSocket.close(); } catch (IOException e) { /* ignored */ }
     }
   }
@@ -59,11 +86,11 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       
       // --- CRITICAL STEP 1: Maintenance Mode Check (Rule #3) ---
       if (settingDAO.isMaintenanceModeOn()) {
-        // Added Instructor write commands to the blocked list
+        // Block write operations during maintenance. Note: admin creation commands
+        // are represented as top-level commands (CREATE_STUDENT, CREATE_INSTRUCTOR, CREATE_COURSE_SECTION).
         if (command.equals("REGISTER") || command.equals("DROP_SECTION") || 
-          command.equals("RECORD_SCORE") || command.equals("COMPUTE_FINAL_GRADE") || // ADDED INSTRUCTOR GRADING
-          command.equals("ADMIN:CREATE_USER") || 
-          command.equals("ADMIN:TOGGLE_MAINTENANCE")) { 
+          command.equals("RECORD_SCORE") || command.equals("COMPUTE_FINAL_GRADE") || // instructor grading
+          command.equals("CREATE_STUDENT") || command.equals("CREATE_INSTRUCTOR") || command.equals("CREATE_COURSE_SECTION")) {
           
           System.out.println("SERVER LOG: ACCESS DENIED: Command " + command + " blocked due to maintenance.");
           return "ERROR:MAINTENANCE_ON:The system is currently undergoing maintenance. Enrollment changes and grading operations are disabled.";
@@ -74,6 +101,8 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       switch (command) {
         case "LOGIN":
           return handleLogin(parts);
+        case "LOGOUT":
+          return handleLogout(parts);
         case "GET_GRADES":
           return handleGetGrades(parts);
         case "GET_CATALOG": 
@@ -106,6 +135,8 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
         return handleCreateCourseSection(parts);
     case "TOGGLE_MAINTENANCE":
         return handleToggleMaintenance(parts);
+  case "SET_DROP_DEADLINE":
+    return handleSetDropDeadline(parts);
     case "CHECK_MAINTENANCE":
         return handleCheckMaintenance();
     case "GET_ALL_COURSES":
@@ -136,16 +167,22 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
      */
     private String handleGetInstructorSections(String[] parts) throws Exception {
         if (parts.length < 2) throw new Exception("Missing instructor ID.");
-        
-        try {
-            int instructorId = Integer.parseInt(parts[1]);
-            List<Section> sections = instructorService.getAssignedSections(instructorId);
-            
-            String jsonSections = gson.toJson(sections);
-            return "SUCCESS:" + jsonSections;
-        } catch (NumberFormatException e) {
-            throw new Exception("Invalid instructor ID format provided.");
-        }
+    // Require authenticated session and ensure caller is the instructor or an admin
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int instructorId;
+    try {
+      instructorId = Integer.parseInt(parts[1]);
+    } catch (NumberFormatException e) {
+      throw new Exception("Invalid instructor ID format provided.");
+    }
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the instructor or admins may view assigned sections.");
+    }
+
+    List<Section> sections = instructorService.getAssignedSections(instructorId);
+    String jsonSections = gson.toJson(sections);
+    return "SUCCESS:" + jsonSections;
     }
 
     /**
@@ -154,19 +191,24 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
      */
     private String handleGetRoster(String[] parts) throws Exception {
         if (parts.length < 3) throw new Exception("Missing section ID or instructor ID for roster request.");
-        
-        try {
-            int instructorId = Integer.parseInt(parts[1]);
-            int sectionId = Integer.parseInt(parts[2]);
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int instructorId;
+    int sectionId;
+    try {
+      instructorId = Integer.parseInt(parts[1]);
+      sectionId = Integer.parseInt(parts[2]);
+    } catch (NumberFormatException e) {
+      throw new Exception("Invalid ID format provided.");
+    }
+    // Only the assigned instructor or admin can view roster
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId()) && !checker.isInstructorOfSection(instructorId, sectionId)) {
+      throw new Exception("NOT_AUTHORIZED:Only the instructor or admins may view the roster.");
+    }
 
-            // Authorization check is performed inside the service before fetching data.
-            List<EnrollmentRecord> rosterRecords = instructorService.getSectionRoster(instructorId, sectionId);
-            
-            String jsonRoster = gson.toJson(rosterRecords);
-            return "SUCCESS:" + jsonRoster;
-        } catch (NumberFormatException e) {
-            throw new Exception("Invalid ID format provided.");
-        }
+    List<EnrollmentRecord> rosterRecords = instructorService.getSectionRoster(instructorId, sectionId);
+    String jsonRoster = gson.toJson(rosterRecords);
+    return "SUCCESS:" + jsonRoster;
     }
 
     /**
@@ -175,20 +217,27 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
      */
     private String handleRecordScore(String[] parts) throws Exception {
         if (parts.length < 5) throw new Exception("Missing one or more required parameters for grade recording.");
-        
-        try {
-            int instructorId = Integer.parseInt(parts[1]);
-            int enrollmentId = Integer.parseInt(parts[2]);
-            String componentName = parts[3];
-            double score = Double.parseDouble(parts[4]);
-            
-            // Maintenance mode check and Authorization happen inside the service.
-            instructorService.recordScore(instructorId, enrollmentId, componentName, score);
-            
-            return "SUCCESS:Score recorded successfully for " + componentName + ".";
-        } catch (NumberFormatException e) {
-            throw new Exception("Invalid ID or score format provided.");
-        }
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int instructorId;
+    int enrollmentId;
+    String componentName;
+    double score;
+    try {
+      instructorId = Integer.parseInt(parts[1]);
+      enrollmentId = Integer.parseInt(parts[2]);
+      componentName = parts[3];
+      score = Double.parseDouble(parts[4]);
+    } catch (NumberFormatException e) {
+      throw new Exception("Invalid ID or score format provided.");
+    }
+
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId()) && !checker.isInstructorOfEnrollment(instructorId, enrollmentId)) {
+      throw new Exception("NOT_AUTHORIZED:Only the instructor for this enrollment or admins may record scores.");
+    }
+
+    instructorService.recordScore(instructorId, enrollmentId, componentName, score);
+    return "SUCCESS:Score recorded successfully for " + componentName + ".";
     }
 
     /**
@@ -197,18 +246,23 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
      */
     private String handleComputeFinalGrade(String[] parts) throws Exception {
         if (parts.length < 3) throw new Exception("Missing enrollment ID or instructor ID.");
-        
-        try {
-            int instructorId = Integer.parseInt(parts[1]);
-            int enrollmentId = Integer.parseInt(parts[2]);
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int instructorId;
+    int enrollmentId;
+    try {
+      instructorId = Integer.parseInt(parts[1]);
+      enrollmentId = Integer.parseInt(parts[2]);
+    } catch (NumberFormatException e) {
+      throw new Exception("Invalid ID format provided.");
+    }
 
-            // Service handles maintenance check, calculation, and recording.
-            String finalGrade = instructorService.computeAndRecordFinalGrade(instructorId, enrollmentId); 
-            
-            return "SUCCESS:Final grade (" + finalGrade + ") computed and recorded successfully.";
-        } catch (NumberFormatException e) {
-            throw new Exception("Invalid ID format provided.");
-        }
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId()) && !checker.isInstructorOfEnrollment(instructorId, enrollmentId)) {
+      throw new Exception("NOT_AUTHORIZED:Only the instructor for this enrollment or admins may compute final grades.");
+    }
+
+    String finalGrade = instructorService.computeAndRecordFinalGrade(instructorId, enrollmentId);
+    return "SUCCESS:Final grade (" + finalGrade + ") computed and recorded successfully.";
     }
     
   // ----------------------------------------------------------------------
@@ -217,69 +271,87 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
   
   private String handleDownloadTranscript(String[] parts) throws Exception {
    if (parts.length < 2) throw new Exception("Missing user ID for transcript request.");
-  
-      try {
-      int userId = Integer.parseInt(parts[1]);
-      StudentService studentService = new StudentService(); 
-      
-      String htmlContent = studentService.downloadTranscript(userId);
-      
-      return "FILE_DOWNLOAD:text/html:transcript_" + userId + ".html:" + htmlContent;
-
-      } catch (NumberFormatException e) {
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int userId;
+    try {
+      userId = Integer.parseInt(parts[1]);
+    } catch (NumberFormatException e) {
       throw new Exception("Invalid user ID format provided.");
-      }
+    }
+    // Allow either the user themselves or an admin to download the transcript
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the student or admins may download this transcript.");
+    }
+
+    StudentService studentService = new StudentService(); 
+    String htmlContent = studentService.downloadTranscript(userId);
+    return "FILE_DOWNLOAD:text/html:transcript_" + userId + ".html:" + htmlContent;
   }
   
   private String handleGetTimetable(String[] parts) throws Exception {
     if (parts.length < 2) throw new Exception("Missing user ID for timetable request.");
-    
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int userId;
     try {
-      int userId = Integer.parseInt(parts[1]);
-      
-      StudentService studentService = new StudentService();
-      List<CourseCatalog> schedule = studentService.fetchTimetable(userId);
-      
-      String scheduleJson = gson.toJson(schedule);
-      return "SUCCESS:" + scheduleJson;
-      
+      userId = Integer.parseInt(parts[1]);
     } catch (NumberFormatException e) {
       throw new Exception("Invalid user ID format provided.");
-      }
+    }
+    // allow owner or admin
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the user or admins may fetch the timetable.");
+    }
+
+    StudentService studentService = new StudentService();
+    List<CourseCatalog> schedule = studentService.fetchTimetable(userId);
+    String scheduleJson = gson.toJson(schedule);
+    return "SUCCESS:" + scheduleJson;
   }
 
   private String handleDropCourse(String[] parts) throws Exception {
     if (parts.length < 3) throw new Exception("Missing user ID or section ID for drop request.");
-    
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int userId;
+    int sectionId;
     try {
-      int userId = Integer.parseInt(parts[1]);
-      int sectionId = Integer.parseInt(parts[2]);
-      
-      StudentService studentService = new StudentService();
-      String message = studentService.dropCourse(userId, sectionId);
-      
-      return "SUCCESS:" + message;
-      
+      userId = Integer.parseInt(parts[1]);
+      sectionId = Integer.parseInt(parts[2]);
     } catch (NumberFormatException e) {
       throw new Exception("Invalid ID format provided.");
-      }
+    }
+    // only the same student or admin may drop
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the student or admins may drop a course.");
+    }
+
+    StudentService studentService = new StudentService();
+    String message = studentService.dropCourse(userId, sectionId);
+    return "SUCCESS:" + message;
   }
 
   private String handleRegisterCourse(String[] parts) throws Exception {
     if (parts.length < 3) throw new Exception("Missing user ID or section ID for registration.");
-    
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int userId;
+    int sectionId;
     try {
-      int userId = Integer.parseInt(parts[1]);
-      int sectionId = Integer.parseInt(parts[2]);
-      
-      StudentService studentService = new StudentService();
-      String message = studentService.registerCourse(userId, sectionId);
-      
-      return "SUCCESS:" + message;
-      
+      userId = Integer.parseInt(parts[1]);
+      sectionId = Integer.parseInt(parts[2]);
     } catch (NumberFormatException e) {
       throw new Exception("Invalid ID format provided.");
-      }
+    }
+    // only the same student or admin may register
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the student or admins may register for a course.");
+    }
+
+    StudentService studentService = new StudentService();
+    String message = studentService.registerCourse(userId, sectionId);
+    return "SUCCESS:" + message;
   }
 
   private String handleGetCatalog() throws Exception {
@@ -296,7 +368,9 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     String password = parts[2];
     
     AuthService authService = new AuthService();
-    UserAuth user = authService.authenticate(username, password);
+  UserAuth user = authService.authenticate(username, password);
+  // set the per-connection authenticated user for this handler
+  this.currentUser = user;
     
     String userJson = gson.toJson(user);
     return "SUCCESS:" + userJson;
@@ -304,28 +378,45 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
   
   private String handleGetGrades(String[] parts) throws Exception {
     if (parts.length < 2) throw new Exception("Missing user ID for grades request.");
-    
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
     int userId = Integer.parseInt(parts[1]); 
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the user or admins may fetch grades.");
+    }
 
     StudentService studentService = new StudentService();
     List<Grade> grades = studentService.fetchGrades(userId);
-    
     String gradesJson = gson.toJson(grades); 
     return "SUCCESS:" + gradesJson;
   }
 
+  /**
+   * Handles LOGOUT command which clears the per-connection authenticated user.
+   * Command format: LOGOUT
+   */
+  private String handleLogout(String[] parts) throws Exception {
+    // No parameters expected
+    this.currentUser = null;
+    return "SUCCESS:Logged out";
+  }
+
   private String handleChangePassword(String[] parts) throws Exception {
     if (parts.length < 4) throw new Exception("Missing parameters for password change (ID, old, or new password).");
-    
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
     int userId = Integer.parseInt(parts[1]);
     String oldPassword = parts[2];
     String newPassword = parts[3];
+    // allow user themselves or admin to change password
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the user or admins may change this password.");
+    }
 
     AuthService authService = new AuthService();
     boolean success = authService.changePassword(userId, oldPassword, newPassword);
-
     if (success) {
-             return "SUCCESS:Password successfully changed.";
+      return "SUCCESS:Password successfully changed.";
     } else {
       return "ERROR:Failed to change password (Service returned false).";
     }
@@ -335,8 +426,13 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
 
   private String handleCreateStudent(String[] parts) throws Exception {
     if (parts.length < 2) throw new Exception("Missing student payload.");
-    
-    
+    // only admins can create students
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (!checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only admins may create students.");
+    }
+
     // parts[0] = CREATE_STUDENT
     int userId = Integer.parseInt(parts[1]);
     String username = parts[2];
@@ -351,13 +447,17 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
 
     // Call the service
     String message = adminService.createStudent(student, password);
-
     return "SUCCESS:" + message;
 
-    
 }
 private String handleCreateCourseSection(String[] parts) throws Exception {
     if (parts.length < 2) throw new Exception("Missing course/section payload.");
+    // only admins
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (!checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only admins may create course sections.");
+    }
     
     /*String request = String.format("CREATE_COURSE_SECTION:%s:%s:%d:%d:%s:%d:%s:%d:%s:%d:%s:%d",
             course.getCourseCode(),
@@ -392,11 +492,12 @@ private String handleCreateCourseSection(String[] parts) throws Exception {
 
 private String handleToggleMaintenance(String[] parts) throws Exception {
     if (parts.length < 2) throw new Exception("Missing maintenance toggle parameter.");
-    
-    boolean on = parts[1].equalsIgnoreCase("ON");
-    adminService.toggleMaintenance(on);
-    
-    return "SUCCESS:Maintenance mode turned " + (on ? "ON" : "OFF");
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
+
+  boolean on = parts[1].equalsIgnoreCase("ON");
+  adminService.toggleMaintenance(on);
+  return "SUCCESS:Maintenance mode turned " + (on ? "ON" : "OFF");
 }
 
 private String handleCheckMaintenance(){
@@ -405,22 +506,30 @@ private String handleCheckMaintenance(){
 }
 
 private String handleGetAllCourses() throws Exception {
-    List<CourseCatalog> courses = adminService.getAllCourses();
-    String json = gson.toJson(courses);
-    return "SUCCESS:" + json;
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
+
+  List<CourseCatalog> courses = adminService.getAllCourses();
+  String json = gson.toJson(courses);
+  return "SUCCESS:" + json;
 }
 
 
 private String handleGetAllStudents() throws Exception {
-    List<Student> students = adminService.getAllStudents();
-    String json = gson.toJson(students);
-    return "SUCCESS:" + json;
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
+
+  List<Student> students = adminService.getAllStudents();
+  String json = gson.toJson(students);
+  return "SUCCESS:" + json;
 }
 
 private String handleCreateInstructor(String[] parts) throws Exception {
     if (parts.length < 7) throw new Exception("Incomplete instructor creation request.");
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
 
-    int userId = Integer.parseInt(parts[1]);
+  int userId = Integer.parseInt(parts[1]);
     String username = parts[2];
     String role = parts[3];
     String name = parts[4];
@@ -433,4 +542,26 @@ private String handleCreateInstructor(String[] parts) throws Exception {
     String message = adminService.createInstructor(instructor, password);
     return "SUCCESS:" + message;
 }
+
+  /**
+   * Handles admin request to set the global drop deadline.
+   * Command format: SET_DROP_DEADLINE:YYYY-MM-DD
+   */
+  private String handleSetDropDeadline(String[] parts) throws Exception {
+    // Expecting: SET_DROP_DEADLINE:YYYY-MM-DD
+    if (parts.length < 2) throw new Exception("Missing parameters. Expected SET_DROP_DEADLINE:YYYY-MM-DD");
+    String isoDate = parts[1];
+
+    // Block changes while maintenance mode is ON
+    if (settingDAO.isMaintenanceModeOn()) {
+        return "ERROR:MAINTENANCE_ON:Cannot change settings while maintenance is ON.";
+    }
+
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
+
+  this.adminService.setDropDeadline(isoDate);
+  return "SUCCESS:Drop deadline set to " + isoDate;
+  }
+
 }

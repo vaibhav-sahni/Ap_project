@@ -1,14 +1,12 @@
 package edu.univ.erp.domain;
 
-import java.io.Serializable;
-
+ 
 /**
  * Domain model representing an Instructor user.
  * This object is used primarily during authentication and to identify the 
  * instructor when fetching their assigned sections.
  */
-public class Instructor extends UserAuth implements Serializable {
-    private static final long serialVersionUID = 1L;
+public class Instructor extends UserAuth {
     
     private int instructorId;
     private String Name;

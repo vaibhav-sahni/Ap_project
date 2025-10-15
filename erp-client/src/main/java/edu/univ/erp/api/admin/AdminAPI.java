@@ -81,8 +81,15 @@ public class AdminAPI {
 
     public boolean checkMaintenanceMode() throws Exception{
         String response = ClientRequest.send("CHECK_MAINTENANCE");
-        if (response.startsWith("SUCCESS:")) return true;
-        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error toggling maintenance");
+        if (response.startsWith("SUCCESS:")) {
+            String payload = response.substring("SUCCESS:".length()).trim();
+            // Server returns SUCCESS:ON or SUCCESS:OFF (or TRUE/FALSE). Only treat ON/TRUE as maintenance active.
+            return "ON".equalsIgnoreCase(payload) || "TRUE".equalsIgnoreCase(payload);
+        }
+        if (response.startsWith("ERROR:")) {
+            throw new Exception(response.substring("ERROR:".length()));
+        }
+        throw new Exception("Unknown response from server: " + response);
     }
     // ----------------------------------------------------------------------
     // --- 4. GET ALL COURSES / SECTIONS (Optional helper for admin UI) ---
@@ -133,4 +140,19 @@ String response = ClientRequest.send(request);
     }
     throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating instructor");
 }
+
+    /**
+     * Set the global drop deadline (ISO date YYYY-MM-DD). CLI and admin UI should login first
+     * to establish the server-side session, then call this. The server authorizes using the
+     * session's current user.
+     */
+    public String setDropDeadline(String isoDate) throws Exception {
+        String request = String.format("SET_DROP_DEADLINE:%s", isoDate);
+        String response = ClientRequest.send(request);
+
+        if (response.startsWith("SUCCESS:")) {
+            return response.substring("SUCCESS:".length());
+        }
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error setting drop deadline");
+    }
 }

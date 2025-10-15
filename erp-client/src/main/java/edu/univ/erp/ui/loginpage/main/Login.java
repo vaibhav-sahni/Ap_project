@@ -3,8 +3,12 @@ package edu.univ.erp.ui.loginpage.main;
 import java.awt.Color;
 
 import javax.swing.JOptionPane;
+
 import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.ui.controller.DashboardController;
+import edu.univ.erp.ui.preview.AdminDashboardFrame;
+import edu.univ.erp.ui.preview.InstructorDashboardFrame;
+import edu.univ.erp.ui.preview.StudentDashboardFrame;
 
 public class Login extends javax.swing.JFrame {
     edu.univ.erp.api.auth.AuthAPI authApi = new edu.univ.erp.api.auth.AuthAPI();
@@ -43,11 +47,8 @@ public class Login extends javax.swing.JFrame {
 
         cmdLogin.setForeground(new java.awt.Color(231, 231, 231));
         cmdLogin.setText("SIGN IN");
-        cmdLogin.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                cmdLoginActionPerformed(evt);
-            }
-        });
+        // use lambda to avoid anonymous inner class lint warnings
+        cmdLogin.addActionListener(evt -> cmdLoginActionPerformed());
 
         javax.swing.GroupLayout panelLayout = new javax.swing.GroupLayout(panel);
         panel.setLayout(panelLayout);
@@ -108,34 +109,69 @@ public class Login extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }
 
-    private void cmdLoginActionPerformed(java.awt.event.ActionEvent evt) {//LOGIN BUTTON
+    private void cmdLoginActionPerformed() {//LOGIN BUTTON
         String username = txtUser.getText();
         String password = String.valueOf(txtPassword.getPassword());
         try {
 
-        edu.univ.erp.domain.UserAuth user = authApi.login(username, password);
-    
-        System.out.println("Client LOG: Login SUCCESS. User Role: " + user.getRole());
-        
-        this.dispose(); 
-        
-        // Initialize the main dashboard controller with the authenticated user data
-        
-        new edu.univ.erp.ui.controller.DashboardController(user).initDashboard(); 
+            UserAuth user = authApi.login(username, password);
 
-    } catch (Exception ex) {
-        // 3. FAILURE HANDLING (Catches Network error OR Server-side Auth failure message)
-        
-        // Display the specific error message relayed from the Server/API
-        String errorMessage = "Login Failed: " + ex.getMessage();
-        System.err.println("Client ERROR: " + errorMessage);
-        
-        // Show the error to the user using a standard Swing dialog
-        javax.swing.JOptionPane.showMessageDialog(this, 
-                                                 ex.getMessage(), // Show only the relayed error message
-                                                 "Login Failed", 
-                                                 javax.swing.JOptionPane.ERROR_MESSAGE);
-    }
+            if (user == null) {
+                JOptionPane.showMessageDialog(this, "Login failed: no user returned", "Login Failed", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            System.out.println("Client LOG: Login SUCCESS. User Role: " + user.getRole());
+
+            this.dispose();
+
+            // Open role-specific dashboard windows (preview frames)
+            String role = user.getRole();
+            switch (role) {
+                case "Student" -> {
+                    StudentDashboardFrame f = new StudentDashboardFrame(user);
+                    DashboardController controller = new DashboardController(user, f);
+                    f.setController(controller);
+                    f.setVisible(true);
+                }
+                case "Instructor" -> {
+                    InstructorDashboardFrame f = new InstructorDashboardFrame(user);
+                    DashboardController controller = new DashboardController(user, f);
+                    f.setController(controller);
+                    f.setVisible(true);
+                }
+                case "Admin" -> {
+                    AdminDashboardFrame f = new AdminDashboardFrame(user);
+                    DashboardController controller = new DashboardController(user, f);
+                    f.setController(controller);
+                    f.setVisible(true);
+                }
+                default -> {
+                    // Fallback to the original DashboardMainPanel embedded frame for unknown roles
+                    javax.swing.JFrame dashboardFrame = new javax.swing.JFrame("ERP Dashboard");
+                    dashboardFrame.setSize(1000, 700);
+                    dashboardFrame.setLocationRelativeTo(null);
+                    dashboardFrame.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+                    DashboardController controller = new DashboardController(user, dashboardFrame);
+                    edu.univ.erp.ui.preview.DashboardMainPanel mainPanel = new edu.univ.erp.ui.preview.DashboardMainPanel(user, controller);
+                    dashboardFrame.getContentPane().add(mainPanel);
+                    dashboardFrame.setVisible(true);
+                }
+            }
+
+        } catch (Exception ex) {
+            // 3. FAILURE HANDLING (Catches Network error OR Server-side Auth failure message)
+
+            // Display the specific error message relayed from the Server/API
+            String errorMessage = "Login Failed: " + ex.getMessage();
+            System.err.println("Client ERROR: " + errorMessage);
+
+            // Show the error to the user using a standard Swing dialog
+            JOptionPane.showMessageDialog(this,
+                                           ex.getMessage(), // Show only the relayed error message
+                                           "Login Failed",
+                                           JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String args[]) {
@@ -146,20 +182,10 @@ public class Login extends javax.swing.JFrame {
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new Login().setVisible(true);
-            }
-        });
+        java.awt.EventQueue.invokeLater(() -> new Login().setVisible(true));
     }
     private edu.univ.erp.ui.loginpage.login.Background background;
     private edu.univ.erp.ui.loginpage.swing.Button cmdLogin;

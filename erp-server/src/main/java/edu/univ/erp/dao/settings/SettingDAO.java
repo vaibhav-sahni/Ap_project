@@ -49,23 +49,66 @@ public class SettingDAO {
     public boolean isMaintenanceModeOn() {
         try {
             String status = getSetting("MAINTENANCE_MODE");
-            return status != null && status.equalsIgnoreCase("ON");
+            if (status == null) {
+                // fallback to legacy key if present
+                status = getSetting("maintenance_on");
+            }
+            return status != null && (status.equalsIgnoreCase("ON") || status.equalsIgnoreCase("TRUE"));
         } catch (SQLException e) {
             System.err.println("SettingDAO: Error checking maintenance mode. Defaulting to OFF. " + e.getMessage());
             return false;
         }
     }
 
-    public void setMaintenanceMode(boolean on) {
+    public void setMaintenanceMode(boolean on) throws SQLException {
+        String value = on ? "ON" : "OFF";
         try (Connection conn = DBConnector.getErpConnection();
              PreparedStatement stmt = conn.prepareStatement(UPDATE_SETTING_SQL)) {
-            
-            stmt.setString(1, on ? "ON" : "OFF");
+
+            stmt.setString(1, value);
             stmt.setString(2, "MAINTENANCE_MODE");
-            stmt.executeUpdate();
-            
-        } catch (SQLException e) {
-            System.err.println("SettingDAO: Error updating maintenance mode. " + e.getMessage());
+            int updated = stmt.executeUpdate();
+
+            if (updated == 0) {
+                // No existing row for the canonical key - insert it
+                try (PreparedStatement insert = conn.prepareStatement(
+                        "INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)")) {
+                    insert.setString(1, "MAINTENANCE_MODE");
+                    insert.setString(2, value);
+                    insert.executeUpdate();
+                }
+            }
+
+            // Also try to update legacy key for backwards compatibility (best-effort)
+            try (PreparedStatement legacy = conn.prepareStatement(UPDATE_SETTING_SQL)) {
+                legacy.setString(1, value);
+                legacy.setString(2, "maintenance_on");
+                legacy.executeUpdate();
+            } catch (SQLException ignore) {
+                // best-effort; ignore legacy update failures
+            }
+        }
+    }
+
+    /**
+     * Generic upsert for a settings key/value pair.
+     */
+    public void setSetting(String key, String value) throws SQLException {
+        try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(UPDATE_SETTING_SQL)) {
+
+            stmt.setString(1, value);
+            stmt.setString(2, key);
+            int updated = stmt.executeUpdate();
+
+            if (updated == 0) {
+                try (PreparedStatement insert = conn.prepareStatement(
+                        "INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)")) {
+                    insert.setString(1, key);
+                    insert.setString(2, value);
+                    insert.executeUpdate();
+                }
+            }
         }
     }
 }

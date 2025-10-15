@@ -17,6 +17,7 @@ edu\univ\erp\domain\Instructor.class
 edu\univ\erp\api\student\StudentAPI$3.class
 edu\univ\erp\api\instructor\InstructorAPI.class
 edu\univ\erp\ui\loginpage\login\Background$1.class
+edu\univ\erp\net\ClientConnection.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect$1.class
 edu\univ\erp\domain\EnrollmentRecord.class
 edu\univ\erp\ui\loginpage\swing\PasswordField$2.class
@@ -31,6 +32,7 @@ edu\univ\erp\api\student\StudentAPI.class
 edu\univ\erp\ui\controller\DashboardController.class
 edu\univ\erp\ui\loginpage\fbr\FancyAnimation.class
 edu\univ\erp\api\instructor\InstructorAPI$1.class
+edu\univ\erp\tools\ClientSmokeTest.class
 edu\univ\erp\ui\loginpage\login\Background.class
 edu\univ\erp\ui\loginpage\login\CrossButton.class
 edu\univ\erp\ui\loginpage\login\Background$3.class
@@ -49,3 +51,5 @@ edu\univ\erp\api\admin\AdminAPI.class
 edu\univ\erp\ui\loginpage\shadow\GraphicsUtilities.class
 edu\univ\erp\api\ClientRequest.class
 edu\univ\erp\ui\loginpage\main\Login.class
+edu\univ\erp\tools\ClientSetDropDeadline.class
+edu\univ\erp\net\ClientSession.class

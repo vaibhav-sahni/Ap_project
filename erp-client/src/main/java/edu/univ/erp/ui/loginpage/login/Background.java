@@ -1,6 +1,5 @@
 package edu.univ.erp.ui.loginpage.login;
 
-import com.twelvemonkeys.image.ImageUtil;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Component;
@@ -13,11 +12,15 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+
 import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+
+import com.twelvemonkeys.image.ImageUtil;
+
 import edu.univ.erp.ui.loginpage.fbr.FancyBorderRadius;
 import edu.univ.erp.ui.loginpage.shadow.ShadowRenderer;
 
@@ -30,12 +33,9 @@ public class Background extends JComponent {
 
     public void setBlur(Component blur) {
         this.blur = blur;
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                createImage();
-                repaint();
-            }
+        SwingUtilities.invokeLater(() -> {
+            createImage();
+            repaint();
         });
     }
 
@@ -55,7 +55,7 @@ public class Background extends JComponent {
             // This looks for the image inside the resources folder
             image = new ImageIcon(ImageIO.read(getClass().getResourceAsStream("/images/" + fileName)));
         } catch (Exception e) {
-            e.printStackTrace();
+            java.util.logging.Logger.getLogger(Background.class.getName()).log(java.util.logging.Level.WARNING, "Failed to load background image", e);
         }
 
         // --- 2. Initialize components as class fields ---
@@ -144,12 +144,9 @@ public class Background extends JComponent {
     @Override
     public void setBounds(int i, int i1, int i2, int i3) {
         super.setBounds(i, i1, i2, i3);
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                createImage();
-                repaint();
-            }
+        SwingUtilities.invokeLater(() -> {
+            createImage();
+            repaint();
         });
     }
 
