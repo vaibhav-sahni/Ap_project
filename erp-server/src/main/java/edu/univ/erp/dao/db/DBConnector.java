@@ -1,37 +1,73 @@
 package edu.univ.erp.dao.db;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 
-public class DBConnector {
-    // Configuration for AUTH DB (login as root)
-    //create user 'auth_user'@'localhost' identified by 'auth_pass';
-    //grant all privileges on auth_db.* to 'auth_user'@'localhost';
-    //create user 'erp_user'@'localhost' identified by 'erp_pass';
-    //grant all privileges on erp_db.* to 'erp_user'@'localhost';
-    //flush privileges;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
-    private static final String AUTH_DB_URL = "jdbc:mysql://localhost:3306/auth_db";
-    private static final String AUTH_DB_USER = "auth_user";
-    private static final String AUTH_DB_PASS = "auth_pass";
+/**
+ * DBConnector provides pooled JDBC connections for the server.
+ * It preserves the existing static API (getAuthConnection/getErpConnection)
+ * so DAO code does not need to change.
+ */
+public final class DBConnector {
 
-    // Configuration for ERP DB
-    private static final String ERP_DB_URL = "jdbc:mysql://localhost:3306/erp_db";
-    private static final String ERP_DB_USER = "erp_user";
-    private static final String ERP_DB_PASS = "erp_pass";
+    private static final HikariDataSource authDs;
+    private static final HikariDataSource erpDs;
 
-    /**
-     * Gets a connection to the Auth Database.
-     */
-    public static Connection getAuthConnection() throws SQLException {
-        return DriverManager.getConnection(AUTH_DB_URL, AUTH_DB_USER, AUTH_DB_PASS);
+    static {
+        // Auth DB pool
+        HikariConfig authCfg = new HikariConfig();
+        authCfg.setJdbcUrl(System.getProperty("erp.auth.jdbcUrl", "jdbc:mysql://localhost:3306/auth_db"));
+        authCfg.setUsername(System.getProperty("erp.auth.user", "auth_user"));
+        authCfg.setPassword(System.getProperty("erp.auth.pass", "auth_pass"));
+        authCfg.setMaximumPoolSize(Integer.parseInt(System.getProperty("erp.auth.maxPool", "5")));
+        authCfg.setMinimumIdle(Integer.parseInt(System.getProperty("erp.auth.minIdle", "1")));
+        authCfg.setConnectionTimeout(Long.parseLong(System.getProperty("erp.auth.connTimeout", "30000")));
+        authCfg.setIdleTimeout(Long.parseLong(System.getProperty("erp.auth.idleTimeout", "300000")));
+        authCfg.setMaxLifetime(Long.parseLong(System.getProperty("erp.auth.maxLifetime", "1800000")));
+        authCfg.setLeakDetectionThreshold(Long.parseLong(System.getProperty("erp.auth.leakThreshold", "5000")));
+        authDs = new HikariDataSource(authCfg);
+
+        // ERP DB pool
+        HikariConfig erpCfg = new HikariConfig();
+        erpCfg.setJdbcUrl(System.getProperty("erp.jdbcUrl", "jdbc:mysql://localhost:3306/erp_db"));
+        erpCfg.setUsername(System.getProperty("erp.user", "erp_user"));
+        erpCfg.setPassword(System.getProperty("erp.pass", "erp_pass"));
+        erpCfg.setMaximumPoolSize(Integer.parseInt(System.getProperty("erp.maxPool", "10")));
+        erpCfg.setMinimumIdle(Integer.parseInt(System.getProperty("erp.minIdle", "2")));
+        erpCfg.setConnectionTimeout(Long.parseLong(System.getProperty("erp.connTimeout", "30000")));
+        erpCfg.setIdleTimeout(Long.parseLong(System.getProperty("erp.idleTimeout", "300000")));
+        erpCfg.setMaxLifetime(Long.parseLong(System.getProperty("erp.maxLifetime", "1800000")));
+        erpCfg.setLeakDetectionThreshold(Long.parseLong(System.getProperty("erp.leakThreshold", "5000")));
+        // driver tuning
+        erpCfg.addDataSourceProperty("cachePrepStmts", "true");
+        erpCfg.addDataSourceProperty("prepStmtCacheSize", "250");
+        erpCfg.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        erpDs = new HikariDataSource(erpCfg);
     }
 
-    /**
-     * Gets a connection to the ERP Database.
-     */
+    private DBConnector() {}
+
+    public static Connection getAuthConnection() throws SQLException {
+        return authDs.getConnection();
+    }
+
     public static Connection getErpConnection() throws SQLException {
-        return DriverManager.getConnection(ERP_DB_URL, ERP_DB_USER, ERP_DB_PASS);
+        return erpDs.getConnection();
+    }
+
+    public static void shutdown() {
+        try {
+            if (erpDs != null) erpDs.close();
+        } catch (Exception e) {
+            java.util.logging.Logger.getLogger(DBConnector.class.getName()).warning("Failed to close ERP datasource: " + e.getMessage());
+        }
+        try {
+            if (authDs != null) authDs.close();
+        } catch (Exception e) {
+            java.util.logging.Logger.getLogger(DBConnector.class.getName()).warning("Failed to close AUTH datasource: " + e.getMessage());
+        }
     }
 }

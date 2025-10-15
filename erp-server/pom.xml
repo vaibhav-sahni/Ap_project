@@ -32,6 +32,13 @@
             <version>2.10.1</version>
         </dependency>
 
+        <!-- Connection pool -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>5.0.1</version>
+        </dependency>
+
         </dependencies>
     
     <build>

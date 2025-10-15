@@ -92,6 +92,55 @@ public class StudentUiHandlers {
     }
 
     /**
+     * Asynchronously download the transcript HTML and prompt the user to save it.
+     * Network I/O runs off the EDT; file chooser and dialogs run on the EDT in done().
+     * @param parent optional parent component for the file chooser dialog
+     */
+    public void downloadTranscriptAndSave(java.awt.Component parent) {
+        if (!"Student".equals(user.getRole())) {
+            javax.swing.SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(parent, "Only students can download transcripts.", "Access Denied", JOptionPane.ERROR_MESSAGE));
+            return;
+        }
+
+        new javax.swing.SwingWorker<String, Void>() {
+            @Override
+            protected String doInBackground() throws Exception {
+                return studentActions.downloadTranscript(user.getUserId());
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    String htmlContent = get();
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        JFileChooser fileChooser = new JFileChooser();
+                        fileChooser.setDialogTitle("Save Student Transcript");
+                        String defaultFileName = "transcript_user_" + user.getUserId() + "_" + System.currentTimeMillis() + ".html";
+                        fileChooser.setSelectedFile(new java.io.File(defaultFileName));
+                        int userSelection = fileChooser.showSaveDialog(parent);
+                        if (userSelection == JFileChooser.APPROVE_OPTION) {
+                            java.io.File fileToSave = fileChooser.getSelectedFile();
+                            try (java.io.FileWriter writer = new java.io.FileWriter(fileToSave)) {
+                                writer.write(htmlContent);
+                                JOptionPane.showMessageDialog(parent,
+                                        "Transcript successfully downloaded and saved to:\n" + fileToSave.getAbsolutePath(),
+                                        "Download Complete", JOptionPane.INFORMATION_MESSAGE);
+                            } catch (java.io.IOException e) {
+                                JOptionPane.showMessageDialog(parent, "Error saving file locally: " + e.getMessage(), "File Save Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        } else {
+                            JOptionPane.showMessageDialog(parent, "Transcript download cancelled.", "Download Status", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    });
+                } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
+                    JOptionPane.showMessageDialog(parent, e.getMessage(), "Download Failed", JOptionPane.ERROR_MESSAGE);
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                }
+            }
+        }.execute();
+    }
+
+    /**
      * Initialize student dashboard flows (grades, catalog, timetable). Any UI errors
      * will be shown from this handler so the controller remains UI-free.
      */

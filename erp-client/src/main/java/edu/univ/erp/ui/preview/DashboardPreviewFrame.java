@@ -26,25 +26,7 @@ public class DashboardPreviewFrame extends JFrame {
             catalog.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true));
             grades.addActionListener(e -> new GradesPreviewFrame(user).setVisible(true));
             timetable.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true)); // reuse catalog for timetable preview
-            transcript.addActionListener(e -> {
-                // fetch transcript and show in dialog (async)
-                new javax.swing.SwingWorker<String, Void>(){
-                    @Override protected String doInBackground() throws Exception { return new edu.univ.erp.ui.handlers.StudentUiHandlers(user).fetchTranscriptHtml(); }
-                    @Override protected void done() {
-                        try {
-                            String html = get();
-                            javax.swing.JTextArea ta = new javax.swing.JTextArea(html);
-                            ta.setEditable(false);
-                            javax.swing.JScrollPane sp = new javax.swing.JScrollPane(ta);
-                            sp.setPreferredSize(new java.awt.Dimension(800, 600));
-                            javax.swing.JOptionPane.showMessageDialog(DashboardPreviewFrame.this, sp, "Transcript (HTML)", javax.swing.JOptionPane.PLAIN_MESSAGE);
-                        } catch (InterruptedException | java.util.concurrent.ExecutionException ex) {
-                            javax.swing.JOptionPane.showMessageDialog(DashboardPreviewFrame.this, "Failed to fetch transcript: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
-                            if (ex instanceof InterruptedException) Thread.currentThread().interrupt();
-                        }
-                    }
-                }.execute();
-            });
+            transcript.addActionListener(e -> new edu.univ.erp.ui.handlers.StudentUiHandlers(user).downloadTranscriptAndSave(DashboardPreviewFrame.this));
             exit.addActionListener(e -> dispose());
 
             add(catalog); add(grades); add(timetable); add(transcript); add(exit);
