@@ -15,23 +15,35 @@ import edu.univ.erp.security.PasswordHasher;
 
 public class AdminDAO {
 
-    // -----------------------------
-    // 1. CREATE STUDENT (AUTH + ERP)
-    // -----------------------------
     private static final String INSERT_AUTH_SQL =
         "INSERT INTO auth_db.users_auth (user_id, username, role, password_hash) VALUES (?, ?, ?, ?)";
     private static final String INSERT_STUDENT_SQL =
         "INSERT INTO erp_db.students (user_id, roll_no, program, year) VALUES (?, ?, ?, ?)";
+    private static final String INSERT_COURSE_SQL =
+            "INSERT INTO erp_db.courses (code, title, credits) VALUES (?, ?, ?)";
+    private static final String INSERT_SECTION_SQL =
+            "INSERT INTO erp_db.sections (course_code, instructor_id, day_time, room, capacity, semester, year) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?)";
+    private static final String SELECT_STUDENTS_SQL =
+            "SELECT s.user_id, s.roll_no, s.program, s.year, u.username, u.role " +
+            "FROM erp_db.students s " +
+            "JOIN auth_db.users_auth u ON s.user_id = u.user_id";
+    private static final String INSERT_USER_SQL = "INSERT INTO auth_db.users_auth (user_id, username, password_hash, role) VALUES (?, ?, ?, ?)";
+    private static final String INSERT_INSTRUCTOR_SQL = "INSERT INTO erp_db.instructors (user_id, name, department_name) VALUES (?, ?, ?)";
 
-    /**
-     * Creates a new student record in both auth_db and erp_db.
-     * Assumes passwordHash is pre-hashed (e.g., BCrypt) before calling this method.
-     */
+        private static final String SELECT_COURSES_SQL =
+            "SELECT s.section_id, c.code, c.title, c.credits, s.day_time, s.room, s.capacity, s.semester, s.year, " +
+            "i.user_id AS instructor_id, i.name AS instructor_name, " +
+            "(SELECT COUNT(*) FROM erp_db.enrollments e WHERE e.section_id = s.section_id AND e.status = 'Registered') AS enrolled_count " +
+            "FROM erp_db.sections s " +
+            "JOIN erp_db.courses c ON s.course_code = c.code " +
+            "JOIN erp_db.instructors i ON s.instructor_id = i.user_id";
+   
+
     public boolean createStudent(Student student, String password) {
         try (Connection conn = DBConnector.getErpConnection()) {
             conn.setAutoCommit(false); // Transaction for both DBs
 
-            // 1️⃣ Insert into auth_db.users_auth
             try (PreparedStatement stmtAuth = conn.prepareStatement(INSERT_AUTH_SQL)) {
                 stmtAuth.setInt(1, student.getUserId());
                 stmtAuth.setString(2, student.getUsername());
@@ -40,7 +52,6 @@ public class AdminDAO {
                 stmtAuth.executeUpdate();
             }
 
-            // 2️⃣ Insert into erp_db.students
             try (PreparedStatement stmtERP = conn.prepareStatement(INSERT_STUDENT_SQL)) {
                 stmtERP.setInt(1, student.getUserId());
                 stmtERP.setString(2, student.getRollNo());
@@ -57,20 +68,10 @@ public class AdminDAO {
         }
     }
 
-    // -----------------------------
-    // 2. CREATE COURSE + SECTION
-    // -----------------------------
-    private static final String INSERT_COURSE_SQL =
-            "INSERT INTO erp_db.courses (code, title, credits) VALUES (?, ?, ?)";
-    private static final String INSERT_SECTION_SQL =
-            "INSERT INTO erp_db.sections (course_code, instructor_id, day_time, room, capacity, semester, year) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?)";
-
     public boolean createCourseAndSection(CourseCatalog course) {
         try (Connection conn = DBConnector.getErpConnection()) {
             conn.setAutoCommit(false);
 
-            // Insert course
             try (PreparedStatement stmtCourse = conn.prepareStatement(INSERT_COURSE_SQL)) {
                 stmtCourse.setString(1, course.getCourseCode());
                 stmtCourse.setString(2, course.getCourseTitle());
@@ -78,7 +79,6 @@ public class AdminDAO {
                 stmtCourse.executeUpdate();
             }
 
-            // Insert section
             try (PreparedStatement stmtSection = conn.prepareStatement(INSERT_SECTION_SQL)) {
                 stmtSection.setString(1, course.getCourseCode());
                 stmtSection.setInt(2, course.getInstructorId());
@@ -97,17 +97,6 @@ public class AdminDAO {
             return false;
         }
     }
-
-    // -----------------------------
-    // 3. FETCH ALL COURSES
-    // -----------------------------
-    private static final String SELECT_COURSES_SQL =
-            "SELECT s.section_id, c.code, c.title, c.credits, s.day_time, s.room, s.capacity, s.semester, s.year, " +
-            "i.user_id AS instructor_id, i.name AS instructor_name, " +
-            "(SELECT COUNT(*) FROM erp_db.enrollments e WHERE e.section_id = s.section_id AND e.status = 'Registered') AS enrolled_count " +
-            "FROM erp_db.sections s " +
-            "JOIN erp_db.courses c ON s.course_code = c.code " +
-            "JOIN erp_db.instructors i ON s.instructor_id = i.user_id";
 
     public List<CourseCatalog> fetchAllCourses() {
         List<CourseCatalog> courses = new ArrayList<>();
@@ -137,14 +126,6 @@ public class AdminDAO {
         return courses;
     }
 
-    // -----------------------------
-    // 4. FETCH ALL STUDENTS
-    // -----------------------------
-    private static final String SELECT_STUDENTS_SQL =
-            "SELECT s.user_id, s.roll_no, s.program, s.year, u.username, u.role " +
-            "FROM erp_db.students s " +
-            "JOIN auth_db.users_auth u ON s.user_id = u.user_id";
-
     public List<Student> fetchAllStudents() {
         List<Student> students = new ArrayList<>();
         try (Connection conn = DBConnector.getErpConnection();
@@ -169,25 +150,22 @@ public class AdminDAO {
     }
 
     public boolean createInstructor(Instructor instructor, String password) {
-    String insertUser = "INSERT INTO auth_db.users_auth (user_id, username, password_hash, role) VALUES (?, ?, ?, ?)";
-    String insertInstructor = "INSERT INTO erp_db.instructors (user_id, name, department_name) VALUES (?, ?, ?)";
-
     try (Connection conn = DBConnector.getErpConnection()) {
         conn.setAutoCommit(false);
 
-        try (PreparedStatement psUser = conn.prepareStatement(insertUser);
-             PreparedStatement psInstr = conn.prepareStatement(insertInstructor)) {
+        try (PreparedStatement stmtAuth = conn.prepareStatement(INSERT_AUTH_SQL);
+             PreparedStatement stmtInstr = conn.prepareStatement(INSERT_INSTRUCTOR_SQL)) {
             
-            psUser.setInt(1, instructor.getUserId());
-            psUser.setString(2, instructor.getUsername());
-            psUser.setString(3, PasswordHasher.hashPassword(password));
-            psUser.setString(4, instructor.getRole());
-            psUser.executeUpdate();
+            stmtAuth.setInt(1, instructor.getUserId());
+            stmtAuth.setString(2, instructor.getUsername());
+            stmtAuth.setString(3, instructor.getRole());
+            stmtAuth.setString(4, PasswordHasher.hashPassword(password));
+            stmtAuth.executeUpdate();
 
-            psInstr.setInt(1, instructor.getUserId());
-            psInstr.setString(2, instructor.getName());
-            psInstr.setString(3, instructor.getDepartmentName());
-            psInstr.executeUpdate();
+            stmtInstr.setInt(1, instructor.getUserId());
+            stmtInstr.setString(2, instructor.getName());
+            stmtInstr.setString(3, instructor.getDepartmentName());
+            stmtInstr.executeUpdate();
 
             conn.commit();
             return true;

@@ -4,17 +4,15 @@ import edu.univ.erp.dao.auth.AuthDAO;
 import edu.univ.erp.dao.instructor.InstructorDAO;
 
 /**
- * Centralized utility for performing authorization checks across services.
- * This class ensures a user has the correct role and association 
- * (e.g., is the correct instructor for a section) before sensitive actions.
+ Centralized utility for performing authorization checks across services.
  */
 public class AccessChecker {
 
     private final InstructorDAO instructorDAO = new InstructorDAO();
     private final AuthDAO authDAO = new AuthDAO();
 
-    /**
-     * Checks if the given instructor ID is assigned to teach the specified section.
+    /*
+      Checks if the given instructor ID is assigned to teach the specified section.
      */
     public boolean isInstructorOfSection(int instructorId, int sectionId) {
         try {
@@ -25,9 +23,8 @@ public class AccessChecker {
         }
     }
 
-    /**
-     * Checks if the given instructor is assigned to the section associated 
-     * with the enrollment record. This is crucial for grade recording.
+    /*
+      Checks if the given instructor is assigned to the section associated with the enrollment record.
      */
     public boolean isInstructorOfEnrollment(int instructorId, int enrollmentId) {
         try {
