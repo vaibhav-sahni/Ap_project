@@ -1,12 +1,10 @@
 edu\univ\erp\ui\loginpage\fbr\Border$Point.class
 edu\univ\erp\domain\Admin.class
-edu\univ\erp\ui\loginpage\login\Background$2.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect$Effect.class
 edu\univ\erp\api\instructor\InstructorAPI$2.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect.class
 edu\univ\erp\domain\CourseCatalog.class
 edu\univ\erp\domain\GradeComponent.class
-edu\univ\erp\ui\loginpage\main\Login$2.class
 edu\univ\erp\ui\loginpage\swing\PasswordField$1.class
 edu\univ\erp\domain\UserAuth.class
 edu\univ\erp\api\admin\AdminAPI$2.class
@@ -35,9 +33,7 @@ edu\univ\erp\api\instructor\InstructorAPI$1.class
 edu\univ\erp\tools\ClientSmokeTest.class
 edu\univ\erp\ui\loginpage\login\Background.class
 edu\univ\erp\ui\loginpage\login\CrossButton.class
-edu\univ\erp\ui\loginpage\login\Background$3.class
 edu\univ\erp\domain\Section.class
-edu\univ\erp\ui\loginpage\main\Login$1.class
 edu\univ\erp\ui\loginpage\fbr\FancyBorderRadius.class
 edu\univ\erp\api\auth\AuthAPI.class
 edu\univ\erp\ui\loginpage\fbr\Border.class

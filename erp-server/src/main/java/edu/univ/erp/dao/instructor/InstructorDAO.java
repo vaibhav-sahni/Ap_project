@@ -197,6 +197,46 @@ public class InstructorDAO {
             stmt.executeUpdate();
         } 
     }
+
+    /**
+     * Applies multiple grade component updates in a single transaction.
+     * The updates map is keyed by enrollmentId, each value is a map of componentName->score.
+     * This method guarantees all-or-nothing application: on any error the transaction is rolled back.
+     */
+    public void applyGradeUpdatesTransactional(Map<Integer, Map<String, Double>> updates) throws SQLException {
+        if (updates == null || updates.isEmpty()) return;
+
+        String UPSERT_GRADE_SQL = 
+            "INSERT INTO Grades (enrollment_id, component, score, final_grade) " +
+            "VALUES (?, ?, ?, NULL) " +
+            "ON DUPLICATE KEY UPDATE score = VALUES(score)";
+
+        try (Connection conn = DBConnector.getErpConnection()) {
+            boolean oldAuto = conn.getAutoCommit();
+            try {
+                conn.setAutoCommit(false);
+                try (PreparedStatement stmt = conn.prepareStatement(UPSERT_GRADE_SQL)) {
+                    for (Map.Entry<Integer, Map<String, Double>> e : updates.entrySet()) {
+                        int enrollmentId = e.getKey();
+                        Map<String, Double> comps = e.getValue();
+                        for (Map.Entry<String, Double> c : comps.entrySet()) {
+                            stmt.setInt(1, enrollmentId);
+                            stmt.setString(2, c.getKey());
+                            stmt.setDouble(3, c.getValue());
+                            stmt.addBatch();
+                        }
+                    }
+                    stmt.executeBatch();
+                }
+                conn.commit();
+            } catch (SQLException ex) {
+                try { conn.rollback(); } catch (SQLException ignore) {}
+                throw ex;
+            } finally {
+                try { conn.setAutoCommit(oldAuto); } catch (SQLException ignore) {}
+            }
+        }
+    }
     
     /**
      * Updates the final letter grade for a course on a specific enrollment record.
@@ -223,12 +263,12 @@ public class InstructorDAO {
      * Security check: Determines if the instructor is assigned to the given section.
      */
     public boolean isInstructorAssigned(int instructorId, int sectionId) throws SQLException {
-        String SQL = "SELECT COUNT(*) FROM Sections WHERE section_id = ? AND instructor_id = ?";
+        // Correct parameter order: instructor_id then section_id
+        String SQL = "SELECT COUNT(*) FROM Sections WHERE instructor_id = ? AND section_id = ?";
         try (Connection conn = DBConnector.getErpConnection();
              PreparedStatement stmt = conn.prepareStatement(SQL)) {
-            
-            stmt.setInt(1, sectionId);
-            stmt.setInt(2, instructorId);
+            stmt.setInt(1, instructorId);
+            stmt.setInt(2, sectionId);
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }

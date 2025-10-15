@@ -18,8 +18,9 @@ public class AccessChecker {
         try {
             return instructorDAO.isInstructorAssigned(instructorId, sectionId);
         } catch (Exception e) {
-            System.err.println("AccessChecker DB error in isInstructorOfSection: " + e.getMessage());
-            return false; // Fail safe on error
+            // Log and surface the DB error so callers don't treat DB failures as simple 'not authorized'
+            java.util.logging.Logger.getLogger(AccessChecker.class.getName()).severe("DB error in isInstructorOfSection: " + e.getMessage());
+            throw new RuntimeException("DB_ERROR:Failed to verify instructor assignment: " + e.getMessage(), e);
         }
     }
 
@@ -30,8 +31,8 @@ public class AccessChecker {
         try {
             return instructorDAO.isInstructorOfEnrollmentRecord(instructorId, enrollmentId);
         } catch (Exception e) {
-            System.err.println("AccessChecker DB error in isInstructorOfEnrollment: " + e.getMessage());
-            return false; // Fail safe on error
+            java.util.logging.Logger.getLogger(AccessChecker.class.getName()).severe("DB error in isInstructorOfEnrollment: " + e.getMessage());
+            throw new RuntimeException("DB_ERROR:Failed to verify instructor enrollment: " + e.getMessage(), e);
         }
     }
 
@@ -43,8 +44,8 @@ public class AccessChecker {
             AuthDAO.AuthDetails details = authDAO.findUserByUserId(userId);
             return details != null && "ADMIN".equalsIgnoreCase(details.role());
         } catch (Exception e) {
-            System.err.println("AccessChecker error in isAdmin for userId " + userId + ": " + e.getMessage());
-            return false;
+            java.util.logging.Logger.getLogger(AccessChecker.class.getName()).severe("DB error in isAdmin for userId " + userId + ": " + e.getMessage());
+            throw new RuntimeException("DB_ERROR:Failed to verify admin role: " + e.getMessage(), e);
         }
     }
 }

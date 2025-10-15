@@ -24,7 +24,14 @@ public class ClientRequest {
         // If a persistent connection exists (created during login), reuse it
         ClientConnection conn = ClientSession.getConnection();
         if (conn != null) {
-            return conn.send(request);
+            try {
+                return conn.send(request);
+            } catch (Exception e) {
+                // Persistent connection appears broken. Clear it and fall back to a one-shot socket.
+                try { ClientSession.clear(); } catch (Exception ignore) {}
+                // Log locally and continue to retry with a fresh socket
+                System.err.println("CLIENT WARN: persistent connection failed, retrying over new socket: " + e.getMessage());
+            }
         }
 
         try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);

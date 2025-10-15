@@ -25,4 +25,12 @@ public class InstructorActions {
         return instructorApi.computeFinalGrade(instructorId, enrollmentId);
     }
     
+    public String exportGradesCsv(int instructorId, int sectionId) throws Exception {
+        return instructorApi.exportGrades(instructorId, sectionId);
+    }
+
+    public String importGradesCsv(int instructorId, int sectionId, String csvContent) throws Exception {
+        return instructorApi.importGrades(instructorId, sectionId, csvContent);
+    }
+    
 }

@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -130,6 +132,10 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
                     return handleRecordScore(parts);
                 case "COMPUTE_FINAL_GRADE":
                     return handleComputeFinalGrade(parts);
+        case "EXPORT_GRADES":
+          return handleExportGrades(parts);
+        case "IMPORT_GRADES":
+          return handleImportGrades(parts);
                 // -----------------------------
 
         case "CREATE_STUDENT":
@@ -259,6 +265,7 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       throw new Exception("Invalid ID format provided.");
     }
 
+    // Authorization: only the assigned instructor or admin may compute final grade
     edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
     if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId()) && !checker.isInstructorOfEnrollment(instructorId, enrollmentId)) {
       throw new Exception("NOT_AUTHORIZED:Only the instructor for this enrollment or admins may compute final grades.");
@@ -267,6 +274,80 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     String finalGrade = instructorService.computeAndRecordFinalGrade(instructorId, enrollmentId);
     return "SUCCESS:Final grade (" + finalGrade + ") computed and recorded successfully.";
     }
+
+  /**
+   * Handles EXPORT_GRADES. Returns a base64-encoded CSV file content to avoid newlines in single-line protocol.
+   * Command: EXPORT_GRADES:instructorId:sectionId
+   */
+  private String handleExportGrades(String[] parts) throws Exception {
+    if (parts.length < 3) throw new Exception("Missing instructor ID or section ID for export.");
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int instructorId;
+    int sectionId;
+    try {
+      instructorId = Integer.parseInt(parts[1]);
+      sectionId = Integer.parseInt(parts[2]);
+    } catch (NumberFormatException e) {
+      throw new Exception("Invalid ID format provided.");
+    }
+
+    // Only assigned instructor or admin may export
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId()) && !checker.isInstructorOfSection(instructorId, sectionId)) {
+      throw new Exception("NOT_AUTHORIZED:Only the instructor or admins may export grades for this section.");
+    }
+
+    String csv = instructorService.exportGradesCsv(instructorId, sectionId);
+    String base64 = Base64.getEncoder().encodeToString(csv.getBytes(StandardCharsets.UTF_8));
+    // Return as file download with a base64 payload
+    return "FILE_DOWNLOAD:text/csv:grades_section_" + sectionId + ".csv:BASE64:" + base64;
+  }
+
+  /**
+   * Handles IMPORT_GRADES. Expects a base64-encoded CSV string to avoid multi-line transport.
+   * Command: IMPORT_GRADES:instructorId:sectionId:BASE64:<payload>
+   */
+  private String handleImportGrades(String[] parts) throws Exception {
+    if (parts.length < 5) throw new Exception("Missing parameters for import (instructorId, sectionId, BASE64, payload).");
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int instructorId;
+    int sectionId;
+    try {
+      instructorId = Integer.parseInt(parts[1]);
+      sectionId = Integer.parseInt(parts[2]);
+    } catch (NumberFormatException e) {
+      throw new Exception("Invalid ID format provided.");
+    }
+    if (!"BASE64".equalsIgnoreCase(parts[3])) {
+      throw new Exception("Unsupported payload encoding. Expected BASE64.");
+    }
+    String base64 = parts[4];
+    // If the payload might contain colons, join remaining parts
+    if (parts.length > 5) {
+      StringBuilder sb = new StringBuilder(base64);
+      for (int i = 5; i < parts.length; i++) {
+        sb.append(":").append(parts[i]);
+      }
+      base64 = sb.toString();
+    }
+
+    // Authorization
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId()) && !checker.isInstructorOfSection(instructorId, sectionId)) {
+      throw new Exception("NOT_AUTHORIZED:Only the instructor or admins may import grades for this section.");
+    }
+
+  byte[] decoded = Base64.getDecoder().decode(base64);
+  String csv = new String(decoded, StandardCharsets.UTF_8);
+
+  LOGGER.info(() -> "IMPORT_GRADES invoked by user " + current.getUserId() + " for instructorId=" + instructorId + " sectionId=" + sectionId + " payloadBytes=" + decoded.length);
+
+  String summary = instructorService.importGradesCsv(instructorId, sectionId, csv);
+  LOGGER.info(() -> "IMPORT_GRADES completed for instructorId=" + instructorId + " sectionId=" + sectionId + " summary=" + summary);
+    return "SUCCESS:" + summary;
+  }
+
+    
     
   // ----------------------------------------------------------------------
   // --- EXISTING HANDLERS (UNCHANGED) ------------------------------------

@@ -95,4 +95,48 @@ public class InstructorAPI {
             throw new Exception("Final grade computation failed due to an unexpected server response.");
         }
     }
+
+    /**
+     * Exports grades CSV for a section. Returns the raw CSV string (decoded).
+     * Command: EXPORT_GRADES:instructorId:sectionId
+     * Server returns: FILE_DOWNLOAD:contentType:filename:BASE64:<payload>
+     */
+    public String exportGrades(int instructorId, int sectionId) throws Exception {
+        String request = String.format("EXPORT_GRADES:%d:%d", instructorId, sectionId);
+        String response = ClientRequest.send(request);
+
+        if (response.startsWith("FILE_DOWNLOAD:")) {
+            // Split into 5 parts so payload may contain colons
+            String[] parts = response.split(":", 5);
+            if (parts.length < 5) throw new Exception("Malformed FILE_DOWNLOAD response from server.");
+            String encodingMarker = parts[3];
+            String payload = parts[4];
+            if (!"BASE64".equalsIgnoreCase(encodingMarker)) {
+                throw new Exception("Unsupported file encoding: " + encodingMarker);
+            }
+            byte[] decoded = java.util.Base64.getDecoder().decode(payload);
+            return new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
+        } else if (response.startsWith("SUCCESS:")) {
+            // Some servers may return success with empty body
+            return response.substring("SUCCESS:".length());
+        } else {
+            throw new Exception("Failed to export grades: unexpected server response.");
+        }
+    }
+
+    /**
+     * Imports grades CSV for a section. Accepts raw CSV string; returns server summary.
+     * Command: IMPORT_GRADES:instructorId:sectionId:BASE64:<payload>
+     */
+    public String importGrades(int instructorId, int sectionId, String csvContent) throws Exception {
+        String b64 = java.util.Base64.getEncoder().encodeToString(csvContent.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String request = String.format("IMPORT_GRADES:%d:%d:BASE64:%s", instructorId, sectionId, b64);
+        String response = ClientRequest.send(request);
+
+        if (response.startsWith("SUCCESS:")) {
+            return response.substring("SUCCESS:".length());
+        } else {
+            throw new Exception("Failed to import grades: " + response);
+        }
+    }
 }

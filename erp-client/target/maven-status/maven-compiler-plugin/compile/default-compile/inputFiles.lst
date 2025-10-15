@@ -16,8 +16,10 @@ c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\UserAuth.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\net\ClientConnection.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\net\ClientSession.java
+c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\tools\ClientGradeCsvTool.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\tools\ClientSetDropDeadline.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\tools\ClientSmokeTest.java
+c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\tools\QuickInstructorSectionsTest.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\ui\actions\AdminActions.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\ui\actions\InstructorActions.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\ui\actions\StudentActions.java

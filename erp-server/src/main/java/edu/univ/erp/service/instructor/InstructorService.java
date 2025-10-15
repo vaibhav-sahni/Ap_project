@@ -2,6 +2,7 @@ package edu.univ.erp.service.instructor;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 import edu.univ.erp.access.AccessChecker;
 import edu.univ.erp.dao.instructor.InstructorDAO;
@@ -138,5 +139,125 @@ public class InstructorService {
         }
         
         return finalLetter;
+    }
+
+    /**
+     * Exports the roster and component scores for a section as CSV.
+     * CSV columns: enrollmentId,studentId,studentName,rollNo,quiz,assignment,midterm,endterm,finalGrade
+     */
+    public String exportGradesCsv(int instructorId, int sectionId) throws Exception {
+        // Authorization
+        if (!accessChecker.isInstructorOfSection(instructorId, sectionId) && !accessChecker.isAdmin(instructorId)) {
+            throw new Exception("NOT_AUTHORIZED:Only the instructor or admins may export grades for this section.");
+        }
+
+        List<EnrollmentRecord> roster;
+        try {
+            roster = getSectionRoster(instructorId, sectionId);
+        } catch (Exception e) {
+            throw new Exception("Failed to fetch roster for export: " + e.getMessage(), e);
+        }
+
+        // Export in import-friendly format: enrollmentId,quiz,assignment,midterm,endterm
+        StringBuilder csv = new StringBuilder();
+        csv.append("enrollmentId,quiz,assignment,midterm,endterm");
+        for (EnrollmentRecord r : roster) {
+            csv.append('\n')
+               .append(r.getEnrollmentId()).append(',')
+               .append(r.getQuizScore() == null ? "" : String.valueOf(r.getQuizScore())).append(',')
+               .append(r.getAssignmentScore() == null ? "" : String.valueOf(r.getAssignmentScore())).append(',')
+               .append(r.getMidtermScore() == null ? "" : String.valueOf(r.getMidtermScore())).append(',')
+               .append(r.getEndtermScore() == null ? "" : String.valueOf(r.getEndtermScore()));
+        }
+        return csv.toString();
+    }
+
+    /**
+     * Imports a CSV of grades for a section and records component scores.
+     * Expected CSV columns: enrollmentId,quiz,assignment,midterm,endterm
+     * Returns a summary report string.
+     */
+    public String importGradesCsv(int instructorId, int sectionId, String csvContent) throws Exception {
+        if (!accessChecker.isInstructorOfSection(instructorId, sectionId) && !accessChecker.isAdmin(instructorId)) {
+            throw new Exception("NOT_AUTHORIZED:Only the instructor or admins may import grades for this section.");
+        }
+
+        String[] lines = csvContent.split("\r?\n");
+        if (lines.length < 2) return "No data to import.";
+
+        // First pass: parse and validate all rows, collect updates per enrollment
+        Map<Integer, Map<String, Double>> updates = new java.util.HashMap<>();
+        int processed = 0;
+        int errors = 0;
+        StringBuilder errorDetails = new StringBuilder();
+
+        for (int i = 1; i < lines.length; i++) {
+            String line = lines[i].trim();
+            if (line.isEmpty()) continue;
+            String[] cols = line.split(",");
+            try {
+                int enrollmentId = Integer.parseInt(cols[0].trim());
+
+                // Security: ensure this enrollment belongs to the section and instructor
+                if (!instructorDAO.isInstructorOfEnrollmentRecord(instructorId, enrollmentId)) {
+                    errors++;
+                    errorDetails.append("Enrollment ").append(enrollmentId).append(": not authorized or not in section.\n");
+                    continue;
+                }
+
+                Map<String, Double> comps = updates.computeIfAbsent(enrollmentId, k -> new java.util.HashMap<>());
+
+                if (cols.length > 1 && !cols[1].trim().isEmpty()) {
+                    double q = Double.parseDouble(cols[1].trim());
+                    comps.put("Quiz", q);
+                }
+                if (cols.length > 2 && !cols[2].trim().isEmpty()) {
+                    double a = Double.parseDouble(cols[2].trim());
+                    comps.put("Assignment", a);
+                }
+                if (cols.length > 3 && !cols[3].trim().isEmpty()) {
+                    double m = Double.parseDouble(cols[3].trim());
+                    comps.put("Midterm", m);
+                }
+                if (cols.length > 4 && !cols[4].trim().isEmpty()) {
+                    double e = Double.parseDouble(cols[4].trim());
+                    comps.put("Endterm", e);
+                }
+
+                processed++;
+            } catch (Exception ex) {
+                errors++;
+                errorDetails.append("Line ").append(i+1).append(": ").append(ex.getMessage()).append("\n");
+            }
+        }
+
+        // If any parsing/validation errors occurred, abort before making DB changes
+        if (errors > 0) {
+            // Log detailed parsing errors for debugging
+            java.util.logging.Logger.getLogger(InstructorService.class.getName()).warning("CSV import aborted: parsing errors detected for instructorId=" + instructorId + " sectionId=" + sectionId + "; details:\n" + errorDetails.toString());
+            StringBuilder summary = new StringBuilder();
+            summary.append("Parsed: ").append(processed).append(", Errors: ").append(errors);
+            summary.append("\nDetails:\n").append(errorDetails.toString());
+            return summary.toString();
+        }
+
+        // Second pass: apply all updates atomically using DAO transaction
+        try {
+            instructorDAO.applyGradeUpdatesTransactional(updates);
+        } catch (SQLException e) {
+            throw new Exception("Database error while applying grade updates: " + e.getMessage());
+        }
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("Imported and applied updates for ").append(processed).append(" rows.");
+        return summary.toString();
+    }
+
+    private String escapeCsv(String s) {
+        if (s == null) return "";
+        if (s.contains(",") || s.contains("\n") || s.contains("\r") || s.contains("\"") ) {
+            return "\"" + s.replace("\"", "\"\"") + "\"";
+        }
+        return s;
     }
 }
