@@ -70,4 +70,17 @@ public final class DBConnector {
             java.util.logging.Logger.getLogger(DBConnector.class.getName()).warning("Failed to close AUTH datasource: " + e.getMessage());
         }
     }
+
+    // Expose configured ERP DB connection details for external utilities
+    public static String getErpJdbcUrl() {
+        return System.getProperty("erp.jdbcUrl", "jdbc:mysql://localhost:3306/erp_db");
+    }
+
+    public static String getErpUsername() {
+        return System.getProperty("erp.user", "erp_user");
+    }
+
+    public static String getErpPassword() {
+        return System.getProperty("erp.pass", "erp_pass");
+    }
 }

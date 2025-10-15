@@ -268,4 +268,131 @@ public class AdminUiHandlers {
             javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
     }
+
+    /**
+     * Opens a file chooser to download a server-created gzipped DB backup and save it locally.
+     */
+    public void handleDownloadBackupClick() {
+        if (!"Admin".equals(user.getRole())) return;
+    javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+    fc.setDialogTitle("Save DB Backup As");
+    // Prefill a sensible default filename with timestamp
+    String ts = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss"));
+    String defaultName = "erp_backup_" + ts + ".gz";
+    fc.setSelectedFile(new java.io.File(defaultName));
+    int ret = fc.showSaveDialog(null);
+        if (ret != javax.swing.JFileChooser.APPROVE_OPTION) return;
+        java.nio.file.Path out = fc.getSelectedFile().toPath();
+
+        // Show modal progress dialog while downloading
+        final javax.swing.JDialog progressDialog = new javax.swing.JDialog((java.awt.Frame) null, "Downloading...", true);
+        final javax.swing.JProgressBar pb = new javax.swing.JProgressBar();
+        pb.setIndeterminate(true);
+        progressDialog.getContentPane().add(pb);
+        progressDialog.setSize(300, 60);
+        progressDialog.setLocationRelativeTo(null);
+
+        javax.swing.SwingWorker<Void, Void> worker = new javax.swing.SwingWorker<>() {
+            private Exception error = null;
+
+            @Override
+            protected Void doInBackground() {
+                try {
+                    String resp = edu.univ.erp.api.ClientRequest.send("DB_BACKUP");
+                    if (!resp.startsWith("FILE_DOWNLOAD:")) throw new Exception("Unexpected response: " + resp);
+                    String[] parts = resp.split(":", 5);
+                    if (parts.length < 5) throw new Exception("Malformed FILE_DOWNLOAD response: " + resp);
+                    String payload = parts[4];
+                    byte[] decoded = java.util.Base64.getDecoder().decode(payload);
+                    java.nio.file.Files.write(out, decoded);
+                } catch (Exception e) {
+                    this.error = e;
+                }
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                if (this.error != null) {
+                    javax.swing.JOptionPane.showMessageDialog(null, this.error.getMessage(), "Backup Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
+                    System.err.println("CLIENT ERROR: DB Backup: " + this.error.getMessage());
+                } else {
+                    javax.swing.JOptionPane.showMessageDialog(null, "Saved DB backup to " + out.toString(), "Backup Saved", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        };
+        worker.execute();
+        progressDialog.setVisible(true);
+    }
+
+    /**
+     * Opens a file chooser to select a gzipped SQL dump file and uploads it to the server for restore.
+     */
+    public void handleRestoreBackupClick() {
+        if (!"Admin".equals(user.getRole())) return;
+        try {
+            // Require maintenance mode to be ON for restore
+            boolean on = adminActions.checkMaintenanceMode();
+            if (!on) {
+                javax.swing.JOptionPane.showMessageDialog(null,
+                        "DB restore requires the system to be in MAINTENANCE mode. Please enable maintenance mode and retry.",
+                        "Maintenance Required", javax.swing.JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+            fc.setDialogTitle("Select DB Backup to Restore");
+            int ret = fc.showOpenDialog(null);
+            if (ret != javax.swing.JFileChooser.APPROVE_OPTION) return;
+            java.nio.file.Path in = fc.getSelectedFile().toPath();
+
+            final javax.swing.JDialog progressDialog = new javax.swing.JDialog((java.awt.Frame) null, "Restoring...", true);
+            final javax.swing.JProgressBar pb = new javax.swing.JProgressBar();
+            pb.setIndeterminate(true);
+            progressDialog.getContentPane().add(pb);
+            progressDialog.setSize(300, 60);
+            progressDialog.setLocationRelativeTo(null);
+
+            javax.swing.SwingWorker<String, Void> worker = new javax.swing.SwingWorker<>() {
+                private Exception error = null;
+
+                @Override
+                protected String doInBackground() {
+                    try {
+                        byte[] data = java.nio.file.Files.readAllBytes(in);
+                        String b64 = java.util.Base64.getEncoder().encodeToString(data);
+                        String request = "DB_RESTORE:BASE64:" + b64;
+                        String resp = edu.univ.erp.api.ClientRequest.send(request);
+                        return resp;
+                    } catch (Exception e) {
+                        this.error = e;
+                        return null;
+                    }
+                }
+
+                @Override
+                protected void done() {
+                    progressDialog.dispose();
+                    if (this.error != null) {
+                        javax.swing.JOptionPane.showMessageDialog(null, this.error.getMessage(), "Restore Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
+                        System.err.println("CLIENT ERROR: DB Restore: " + this.error.getMessage());
+                    } else {
+                        try {
+                            String resp = get();
+                            javax.swing.JOptionPane.showMessageDialog(null, resp, "Restore Result", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                        } catch (Exception e) {
+                            javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Restore Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                }
+            };
+            worker.execute();
+            progressDialog.setVisible(true);
+
+        } catch (Exception e) {
+            javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Restore Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: DB Restore: " + e.getMessage());
+        }
+    }
 }

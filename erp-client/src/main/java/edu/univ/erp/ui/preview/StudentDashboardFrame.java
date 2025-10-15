@@ -15,7 +15,18 @@ public class StudentDashboardFrame extends JFrame {
         super("Student Dashboard");
         setLayout(new FlowLayout());
         setSize(800, 120);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        // Perform graceful logout on window close to avoid abrupt socket resets
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                if (controller != null) controller.handleLogoutClick();
+                else {
+                    try { new edu.univ.erp.api.auth.AuthAPI().logout(); } catch (Exception ignore) {}
+                    dispose();
+                }
+            }
+        });
 
         JButton catalog = new JButton("Catalog");
         JButton grades = new JButton("My Grades");
@@ -25,7 +36,10 @@ public class StudentDashboardFrame extends JFrame {
 
         catalog.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true));
         grades.addActionListener(e -> new GradesPreviewFrame(user).setVisible(true));
-        timetable.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true));
+        timetable.addActionListener(e -> {
+            if (controller != null) controller.fetchAndDisplayTimetable();
+            else new edu.univ.erp.ui.handlers.StudentUiHandlers(user).displayTimetable();
+        });
         transcript.addActionListener(e -> new edu.univ.erp.ui.handlers.StudentUiHandlers(user).downloadTranscriptAndSave(StudentDashboardFrame.this));
         exit.addActionListener(e -> {
             if (controller != null) controller.handleLogoutClick();

@@ -25,7 +25,7 @@ public class DashboardPreviewFrame extends JFrame {
 
             catalog.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true));
             grades.addActionListener(e -> new GradesPreviewFrame(user).setVisible(true));
-            timetable.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true)); // reuse catalog for timetable preview
+            timetable.addActionListener(e -> new edu.univ.erp.ui.handlers.StudentUiHandlers(user).displayTimetable());
             transcript.addActionListener(e -> new edu.univ.erp.ui.handlers.StudentUiHandlers(user).downloadTranscriptAndSave(DashboardPreviewFrame.this));
             exit.addActionListener(e -> dispose());
 

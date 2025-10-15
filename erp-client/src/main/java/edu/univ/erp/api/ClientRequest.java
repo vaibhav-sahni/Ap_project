@@ -27,10 +27,29 @@ public class ClientRequest {
             try {
                 return conn.send(request);
             } catch (Exception e) {
-                // Persistent connection appears broken. Clear it and fall back to a one-shot socket.
-                try { ClientSession.clear(); } catch (Exception ignore) {}
-                // Log locally and continue to retry with a fresh socket
-                System.err.println("CLIENT WARN: persistent connection failed, retrying over new socket: " + e.getMessage());
+                // Decide whether this was a network/connection failure (clear session) or a server-side application error (don't clear)
+                String msg = e.getMessage() == null ? "" : e.getMessage();
+                boolean isNetworkFailure = false;
+                // Common network/connection failure messages produced by ClientConnection
+                if (msg.contains("Server closed connection") || msg.toLowerCase().contains("connection reset") || msg.toLowerCase().contains("broken pipe")) {
+                    isNetworkFailure = true;
+                }
+                // Also consider underlying IOExceptions
+                Throwable cause = e.getCause();
+                while (cause != null) {
+                    if (cause instanceof java.io.IOException || cause instanceof java.net.SocketException) { isNetworkFailure = true; break; }
+                    cause = cause.getCause();
+                }
+
+                if (isNetworkFailure) {
+                    try { ClientSession.clear(); } catch (Exception ignore) {}
+                    System.err.println("CLIENT WARN: persistent connection failed, session cleared: " + e.getMessage());
+                    throw new Exception("Persistent session lost. Please login again before retrying this operation.", e);
+                }
+
+                // Server-side application error; do not clear the persistent session. Surface the server message to caller.
+                System.err.println("CLIENT ERROR: server-side error (session kept): " + e.getMessage());
+                throw e;
             }
         }
 

@@ -185,6 +185,14 @@ public class Login extends javax.swing.JFrame {
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(Login.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+        // Register a shutdown hook to attempt a graceful logout when the JVM exits
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                // Try to logout using the AuthAPI; ignore errors
+                new edu.univ.erp.api.auth.AuthAPI().logout();
+            } catch (Exception ignore) {}
+        }));
+
         java.awt.EventQueue.invokeLater(() -> new Login().setVisible(true));
     }
     private edu.univ.erp.ui.loginpage.login.Background background;

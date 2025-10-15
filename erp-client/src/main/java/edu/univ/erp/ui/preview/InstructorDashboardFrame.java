@@ -16,7 +16,18 @@ public class InstructorDashboardFrame extends JFrame {
         super("Instructor Dashboard");
         setLayout(new FlowLayout());
         setSize(800, 120);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        // Perform graceful logout on window close to avoid abrupt socket resets
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                if (controller != null) controller.handleLogoutClick();
+                else {
+                    try { new edu.univ.erp.api.auth.AuthAPI().logout(); } catch (Exception ignore) {}
+                    dispose();
+                }
+            }
+        });
 
         JButton assigned = new JButton("Assigned Sections");
         JButton roster = new JButton("View Roster (section 1)");
