@@ -3,6 +3,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet; // Assuming Student is defined separately
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import edu.univ.erp.dao.db.DBConnector;
 import edu.univ.erp.domain.Student;
@@ -13,6 +15,8 @@ import edu.univ.erp.domain.UserAuth;
  * from the ERP database (students table).
  */
 public class StudentDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(StudentDAO.class.getName());
 
     private static final String FIND_STUDENT_PROFILE_SQL = 
         "SELECT roll_no, program, year FROM students WHERE user_id = ?";
@@ -46,8 +50,7 @@ public class StudentDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("DB Error during Student profile lookup for ID: " + userAuth.getUserId());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "DB Error during Student profile lookup for ID: " + userAuth.getUserId(), e);
         }
         return null; // Profile not found or a database error occurred
     }
@@ -67,8 +70,7 @@ public class StudentDAO {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("DB Error during Roll No lookup for ID: " + userId);
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "DB Error during Roll No lookup for ID: " + userId, e);
         }
         return null;
     }

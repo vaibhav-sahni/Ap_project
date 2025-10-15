@@ -32,6 +32,14 @@ public class EnrollmentDAO {
     // 4. Register the student (Insert a new active enrollment)
     private static final String REGISTER_COURSE_SQL =
         "INSERT INTO enrollments (student_id, section_id, status) VALUES (?, ?, 'Registered')";
+    
+    // Select capacity while acquiring a row lock to prevent concurrent changes
+    private static final String SELECT_SECTION_FOR_UPDATE_SQL =
+        "SELECT capacity FROM sections WHERE section_id = ? FOR UPDATE";
+
+    // Count current registered students for a section
+    private static final String COUNT_REGISTERED_SQL =
+        "SELECT COUNT(*) AS enrolled_count FROM enrollments WHERE section_id = ? AND status = 'Registered'";
         
     // --- NEW SQL QUERY: Update status from 'Registered' to 'Dropped' (Rule #2) ---
     private static final String DROP_COURSE_SQL =
@@ -99,16 +107,62 @@ public class EnrollmentDAO {
      * Executes the enrollment transaction.
      */
     public void registerStudent(int studentId, int sectionId) throws SQLException {
-        try (Connection conn = DBConnector.getErpConnection();
-             PreparedStatement stmt = conn.prepareStatement(REGISTER_COURSE_SQL)) {
-            
-            stmt.setInt(1, studentId);
-            stmt.setInt(2, sectionId);
-            int affectedRows = stmt.executeUpdate();
+        Connection conn = null;
+        PreparedStatement selectSectionStmt = null;
+        PreparedStatement countStmt = null;
+        PreparedStatement insertStmt = null;
+        ResultSet rs = null;
 
-            if (affectedRows == 0) {
-                 throw new SQLException("Enrollment failed, possibly due to invalid IDs.");
+        try {
+            conn = DBConnector.getErpConnection();
+            conn.setAutoCommit(false);
+
+            // Lock the section row to prevent concurrent capacity reads
+            selectSectionStmt = conn.prepareStatement(SELECT_SECTION_FOR_UPDATE_SQL);
+            selectSectionStmt.setInt(1, sectionId);
+            rs = selectSectionStmt.executeQuery();
+            if (!rs.next()) {
+                conn.rollback();
+                throw new SQLException("Section ID not found: " + sectionId);
             }
+            int capacity = rs.getInt("capacity");
+            rs.close(); rs = null;
+
+            // Count currently registered students
+            countStmt = conn.prepareStatement(COUNT_REGISTERED_SQL);
+            countStmt.setInt(1, sectionId);
+            rs = countStmt.executeQuery();
+            int enrolledCount = 0;
+            if (rs.next()) enrolledCount = rs.getInt("enrolled_count");
+            rs.close(); rs = null;
+
+            if (enrolledCount >= capacity) {
+                conn.rollback();
+                throw new SQLException("Section is full. Registration failed.");
+            }
+
+            // Insert enrollment
+            insertStmt = conn.prepareStatement(REGISTER_COURSE_SQL);
+            insertStmt.setInt(1, studentId);
+            insertStmt.setInt(2, sectionId);
+            int affectedRows = insertStmt.executeUpdate();
+            if (affectedRows == 0) {
+                conn.rollback();
+                throw new SQLException("Enrollment failed, possibly due to invalid IDs.");
+            }
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { /* ignore */ }
+            }
+            throw e;
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException ex) { /* ignore */ }
+            if (selectSectionStmt != null) try { selectSectionStmt.close(); } catch (SQLException ex) { /* ignore */ }
+            if (countStmt != null) try { countStmt.close(); } catch (SQLException ex) { /* ignore */ }
+            if (insertStmt != null) try { insertStmt.close(); } catch (SQLException ex) { /* ignore */ }
+            if (conn != null) try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { /* ignore */ }
         }
     }
     

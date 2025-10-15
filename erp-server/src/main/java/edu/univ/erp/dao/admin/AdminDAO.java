@@ -6,6 +6,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import edu.univ.erp.dao.db.DBConnector;
 import edu.univ.erp.domain.CourseCatalog;
@@ -14,6 +16,8 @@ import edu.univ.erp.domain.Student;
 import edu.univ.erp.security.PasswordHasher;
 
 public class AdminDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(AdminDAO.class.getName());
 
     private static final String INSERT_AUTH_SQL =
         "INSERT INTO auth_db.users_auth (user_id, username, role, password_hash) VALUES (?, ?, ?, ?)";
@@ -63,7 +67,7 @@ public class AdminDAO {
             conn.commit();
             return true;
         } catch (SQLException e) {
-            System.err.println("AdminDAO createStudent error: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "AdminDAO createStudent error: " + e.getMessage(), e);
             return false;
         }
     }
@@ -93,7 +97,7 @@ public class AdminDAO {
             conn.commit();
             return true;
         } catch (SQLException e) {
-            System.err.println("AdminDAO createCourseAndSection error: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "AdminDAO createCourseAndSection error: " + e.getMessage(), e);
             return false;
         }
     }
@@ -121,7 +125,7 @@ public class AdminDAO {
                 ));
             }
         } catch (SQLException e) {
-            System.err.println("AdminDAO fetchAllCourses error: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "AdminDAO fetchAllCourses error: " + e.getMessage(), e);
         }
         return courses;
     }
@@ -144,7 +148,7 @@ public class AdminDAO {
             }
 
         } catch (SQLException e) {
-            System.err.println("AdminDAO fetchAllStudents error: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "AdminDAO fetchAllStudents error: " + e.getMessage(), e);
         }
         return students;
     }
@@ -169,15 +173,15 @@ public class AdminDAO {
 
             conn.commit();
             return true;
+            } catch (SQLException e) {
+                try { conn.rollback(); } catch (SQLException ex) { LOGGER.log(Level.WARNING, "Rollback failed", ex); }
+                LOGGER.log(Level.SEVERE, "AdminDAO createInstructor error: " + e.getMessage(), e);
+                return false;
+            }
         } catch (SQLException e) {
-            conn.rollback();
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "AdminDAO createInstructor outer SQL error: " + e.getMessage(), e);
             return false;
         }
-    } catch (SQLException e) {
-        e.printStackTrace();
-        return false;
-    }
 }
 
 }

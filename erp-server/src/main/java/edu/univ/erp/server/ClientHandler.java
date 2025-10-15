@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.google.gson.Gson;
 
@@ -23,6 +25,7 @@ import edu.univ.erp.service.instructor.InstructorService;
 import edu.univ.erp.service.student.StudentService;
 
 public class ClientHandler implements Runnable {
+private static final Logger LOGGER = Logger.getLogger(ClientHandler.class.getName());
 private final Socket clientSocket;
 private final Gson gson = new Gson();
 private final SettingDAO settingDAO = new SettingDAO(); 
@@ -69,7 +72,7 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
        }
 
     } catch (IOException e) {
-      System.err.println("SERVER LOG: ClientHandler network error: " + e.getMessage());
+      LOGGER.log(Level.SEVERE, "ClientHandler network error: " + e.getMessage(), e);
     } finally {
       // clear per-connection session on exit
       this.currentUser = null;
@@ -85,14 +88,14 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       String command = parts[0].toUpperCase();
       
       // --- CRITICAL STEP 1: Maintenance Mode Check (Rule #3) ---
-      if (settingDAO.isMaintenanceModeOn()) {
+  if (settingDAO.isMaintenanceModeOn()) {
         // Block write operations during maintenance. Note: admin creation commands
         // are represented as top-level commands (CREATE_STUDENT, CREATE_INSTRUCTOR, CREATE_COURSE_SECTION).
         if (command.equals("REGISTER") || command.equals("DROP_SECTION") || 
           command.equals("RECORD_SCORE") || command.equals("COMPUTE_FINAL_GRADE") || // instructor grading
           command.equals("CREATE_STUDENT") || command.equals("CREATE_INSTRUCTOR") || command.equals("CREATE_COURSE_SECTION")) {
           
-          System.out.println("SERVER LOG: ACCESS DENIED: Command " + command + " blocked due to maintenance.");
+          LOGGER.warning(() -> "SERVER LOG: ACCESS DENIED: Command " + command + " blocked due to maintenance.");
           return "ERROR:MAINTENANCE_ON:The system is currently undergoing maintenance. Enrollment changes and grading operations are disabled.";
         }
       }
@@ -152,7 +155,7 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       }
     } catch (Exception e) {
       // Catches exceptions thrown by services (e.g., business rules, DAO errors)
-      System.err.println("SERVER EXCEPTION: " + e.getMessage());
+      LOGGER.log(Level.SEVERE, "SERVER EXCEPTION: " + e.getMessage(), e);
       return "ERROR:" + e.getMessage();
     }
   }
@@ -328,7 +331,7 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     }
 
     StudentService studentService = new StudentService();
-    String message = studentService.dropCourse(userId, sectionId);
+    String message = studentService.dropCourse(current.getUserId(), userId, sectionId);
     return "SUCCESS:" + message;
   }
 
@@ -350,7 +353,7 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     }
 
     StudentService studentService = new StudentService();
-    String message = studentService.registerCourse(userId, sectionId);
+    String message = studentService.registerCourse(current.getUserId(), userId, sectionId);
     return "SUCCESS:" + message;
   }
 
