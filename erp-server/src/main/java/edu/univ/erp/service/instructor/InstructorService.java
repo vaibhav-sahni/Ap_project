@@ -269,11 +269,4 @@ public class InstructorService {
         return summary.toString();
     }
 
-    private String escapeCsv(String s) {
-        if (s == null) return "";
-        if (s.contains(",") || s.contains("\n") || s.contains("\r") || s.contains("\"") ) {
-            return "\"" + s.replace("\"", "\"\"") + "\"";
-        }
-        return s;
-    }
 }

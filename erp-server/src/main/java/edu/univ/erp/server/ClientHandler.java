@@ -6,6 +6,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
 import java.util.logging.Level;
@@ -22,6 +24,7 @@ import edu.univ.erp.domain.Section;
 import edu.univ.erp.domain.Student; // NEW: Instructor's list of sections
 import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.service.admin.AdminService;
+import edu.univ.erp.service.admin.MysqldumpBackupService;
 import edu.univ.erp.service.auth.AuthService;
 import edu.univ.erp.service.instructor.InstructorService;
 import edu.univ.erp.service.student.StudentService;
@@ -63,16 +66,36 @@ private final AdminService adminService = new AdminService();
 public ClientHandler(Socket socket) { this.clientSocket = socket; }
  @Override
   public void run() { 
+    // Apply a socket read timeout to avoid handler threads blocking forever on dead clients
+    try {
+      int timeoutMs = Integer.parseInt(System.getProperty("erp.socketReadTimeoutMs", "300000")); // default 5 minutes
+      clientSocket.setSoTimeout(timeoutMs);
+    } catch (Exception ignore) {}
+
     try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-      PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true) 
+      PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true)
     ) {
       // Keep reading requests until null
              String request;
-       while ((request = in.readLine()) != null) {
+      while (true) {
+        try {
+          request = in.readLine();
+        } catch (java.net.SocketTimeoutException ste) {
+          try { LOGGER.log(Level.INFO, "ClientHandler read timeout from " + clientSocket.getRemoteSocketAddress()); } catch (Exception ignore) { LOGGER.log(Level.INFO, "ClientHandler read timeout"); }
+          break; // exit loop and close connection
+        }
+        if (request == null) break;
          String response = processRequest(request);
          out.println(response);
        }
 
+    } catch (java.net.SocketException se) {
+      // Common client disconnects (connection reset, closed by peer) — log compactly with remote address
+      try {
+        LOGGER.log(Level.INFO, "ClientHandler network disconnect from " + clientSocket.getRemoteSocketAddress() + ": " + se.getMessage());
+      } catch (Exception ignore) {
+        LOGGER.log(Level.INFO, "ClientHandler network disconnect: " + se.getMessage());
+      }
     } catch (IOException e) {
       LOGGER.log(Level.SEVERE, "ClientHandler network error: " + e.getMessage(), e);
     } finally {
@@ -103,7 +126,7 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       }
       
       // CENTRAL REQUEST ROUTER
-      switch (command) {
+  switch (command) {
         case "LOGIN":
           return handleLogin(parts);
         case "LOGOUT":
@@ -122,43 +145,41 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
           return handleChangePassword(parts); 
         case "DOWNLOAD_TRANSCRIPT":
           return handleDownloadTranscript(parts);
-                
-                // --- NEW INSTRUCTOR COMMANDS ---
-                case "GET_INSTRUCTOR_SECTIONS":
-                    return handleGetInstructorSections(parts);
-                case "GET_ROSTER":
-                    return handleGetRoster(parts);
-                case "RECORD_SCORE":
-                    return handleRecordScore(parts);
-                case "COMPUTE_FINAL_GRADE":
-                    return handleComputeFinalGrade(parts);
+        case "GET_INSTRUCTOR_SECTIONS":
+          return handleGetInstructorSections(parts);
+        case "GET_ROSTER":
+          return handleGetRoster(parts);
+        case "RECORD_SCORE":
+          return handleRecordScore(parts);
+        case "COMPUTE_FINAL_GRADE":
+          return handleComputeFinalGrade(parts);
         case "EXPORT_GRADES":
           return handleExportGrades(parts);
         case "IMPORT_GRADES":
           return handleImportGrades(parts);
-                // -----------------------------
-
         case "CREATE_STUDENT":
         return handleCreateStudent(parts);
-    case "CREATE_COURSE_SECTION":
-        return handleCreateCourseSection(parts);
-    case "TOGGLE_MAINTENANCE":
-        return handleToggleMaintenance(parts);
+  case "CREATE_COURSE_SECTION":
+    return handleCreateCourseSection(parts);
+  case "TOGGLE_MAINTENANCE":
+    return handleToggleMaintenance(parts);
   case "SET_DROP_DEADLINE":
     return handleSetDropDeadline(parts);
-    case "CHECK_MAINTENANCE":
-        return handleCheckMaintenance();
-    case "GET_ALL_COURSES":
-        return handleGetAllCourses();
-    case "GET_ALL_STUDENTS":
-        return handleGetAllStudents();
-    case "CREATE_INSTRUCTOR":
-        return handleCreateInstructor(parts);
-
-                
-        default:
-          return "ERROR:UNKNOWN_COMMAND";
-      }
+  case "CHECK_MAINTENANCE":
+    return handleCheckMaintenance();
+  case "DB_BACKUP":
+    return handleDbBackup(parts);
+  case "DB_RESTORE":
+    return handleDbRestore(parts);
+  case "GET_ALL_COURSES":
+      return handleGetAllCourses();
+  case "GET_ALL_STUDENTS":
+      return handleGetAllStudents();
+  case "CREATE_INSTRUCTOR":
+      return handleCreateInstructor(parts);
+  default:
+      return "ERROR:UNKNOWN_COMMAND";
+  }
     } catch (Exception e) {
       // Catches exceptions thrown by services (e.g., business rules, DAO errors)
       LOGGER.log(Level.SEVERE, "SERVER EXCEPTION: " + e.getMessage(), e);
@@ -392,6 +413,92 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     List<CourseCatalog> schedule = studentService.fetchTimetable(userId);
     String scheduleJson = gson.toJson(schedule);
     return "SUCCESS:" + scheduleJson;
+  }
+
+  /**
+   * Handles DB_BACKUP. Only admins may invoke. Returns a gzipped SQL dump as BASE64 file download.
+   * Command: DB_BACKUP
+   */
+  private String handleDbBackup(String[] parts) throws Exception {
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    requireAdmin(current);
+
+    MysqldumpBackupService backupService = new MysqldumpBackupService();
+    Path gz = backupService.createGzippedBackup();
+    if (gz == null) throw new Exception("DB_BACKUP_FAILED:Backup service returned no file.");
+    try {
+      byte[] gzippedDump = Files.readAllBytes(gz);
+      if (gzippedDump == null || gzippedDump.length == 0) {
+        throw new Exception("DB_BACKUP_FAILED:Empty backup payload produced.");
+      }
+      // compute SHA-256 fingerprint for audit
+      java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+      byte[] digest = md.digest(gzippedDump);
+      StringBuilder sb = new StringBuilder();
+      for (byte b : digest) sb.append(String.format("%02x", b));
+      String sha256 = sb.toString();
+      long size = gzippedDump.length;
+      // append audit line
+      String auditLine = java.time.Instant.now().toString() + " | user=" + current.getUserId() + " | OP=DB_BACKUP | sha256=" + sha256 + " | size=" + size + java.lang.System.lineSeparator();
+      try {
+        java.nio.file.Path audit = java.nio.file.Paths.get("db_backup_audit.log");
+        java.nio.file.Files.writeString(audit, auditLine, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+      } catch (Exception ignore) { LOGGER.log(Level.WARNING, "Failed to write DB backup audit: " + ignore.getMessage()); }
+
+      String base64 = Base64.getEncoder().encodeToString(gzippedDump);
+      return "FILE_DOWNLOAD:application/gzip:erp_backup.gz:BASE64:" + base64;
+    } finally {
+      try { Files.deleteIfExists(gz); } catch (Exception ignore) {}
+    }
+  }
+
+  /**
+   * Handles DB_RESTORE. Only admins may invoke. Accepts a BASE64 gzipped SQL dump and restores it.
+   * Command: DB_RESTORE:BASE64:<payload>
+   */
+  private String handleDbRestore(String[] parts) throws Exception {
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    requireAdmin(current);
+    if (parts.length < 3) throw new Exception("Missing payload encoding for DB_RESTORE. Expected BASE64 and payload.");
+    if (!"BASE64".equalsIgnoreCase(parts[1])) throw new Exception("Unsupported payload encoding. Expected BASE64.");
+
+    String base64 = parts[2];
+    if (parts.length > 3) {
+      StringBuilder sb = new StringBuilder(base64);
+      for (int i = 3; i < parts.length; i++) sb.append(":").append(parts[i]);
+      base64 = sb.toString();
+    }
+
+    byte[] gzipped = Base64.getDecoder().decode(base64);
+    MysqldumpBackupService backupService = new MysqldumpBackupService();
+
+    // Require server-side maintenance mode ON for restore
+    if (!settingDAO.isMaintenanceModeOn()) {
+      throw new Exception("NOT_ALLOWED:DB_RESTORE requires maintenance mode to be ON on the server.");
+    }
+
+    Path tmp = Files.createTempFile("erp-restore-client-", ".sql.gz");
+    try {
+      Files.write(tmp, gzipped);
+      // compute SHA-256 for audit
+      java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+      byte[] digest = md.digest(gzipped);
+      StringBuilder sb = new StringBuilder();
+      for (byte b : digest) sb.append(String.format("%02x", b));
+      String sha256 = sb.toString();
+      long size = gzipped.length;
+      // append audit entry (pre-restore)
+      String auditLine = java.time.Instant.now().toString() + " | user=" + current.getUserId() + " | OP=DB_RESTORE | sha256=" + sha256 + " | size=" + size + java.lang.System.lineSeparator();
+      try {
+        java.nio.file.Path audit = java.nio.file.Paths.get("db_backup_audit.log");
+        java.nio.file.Files.writeString(audit, auditLine, java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+      } catch (Exception ignore) { LOGGER.log(Level.WARNING, "Failed to write DB restore audit: " + ignore.getMessage()); }
+
+      backupService.restoreFromGzippedDump(tmp);
+    } finally {
+      try { Files.deleteIfExists(tmp); } catch (Exception ignore) {}
+    }
+    return "SUCCESS:DB restore completed.";
   }
 
   private String handleDropCourse(String[] parts) throws Exception {
