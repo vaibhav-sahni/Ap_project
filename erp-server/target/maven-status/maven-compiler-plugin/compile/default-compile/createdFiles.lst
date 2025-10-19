@@ -1,6 +1,5 @@
 edu\univ\erp\service\admin\AdminService.class
 edu\univ\erp\service\instructor\InstructorService.class
-edu\univ\erp\server\ServerMain.class
 edu\univ\erp\server\ClientHandler.class
 edu\univ\erp\domain\Admin.class
 edu\univ\erp\dao\instructor\InstructorDAO.class

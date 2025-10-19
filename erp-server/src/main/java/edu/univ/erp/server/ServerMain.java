@@ -10,6 +10,7 @@ public class ServerMain {
     private static final Logger LOGGER = Logger.getLogger(ServerMain.class.getName());
 
     public static void main(String[] args) {
+        // (ANSI log formatter removed) Keep default handlers/formatters
         // register shutdown hook to close pooled datasources
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOGGER.info("SERVER LOG: Shutting down, closing DB pools...");
@@ -17,11 +18,11 @@ public class ServerMain {
         }));
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            LOGGER.info("ERP SERVER STARTED. Listening on port " + PORT + "...");
+            LOGGER.log(Level.INFO, "ERP SERVER STARTED. Listening on port {0}...", PORT);
             
             while (true) {
                 Socket clientSocket = serverSocket.accept(); 
-                LOGGER.info("SERVER LOG: New client connected: " + clientSocket.getInetAddress().getHostAddress());
+                LOGGER.log(Level.INFO, "SERVER LOG: New client connected: {0}", clientSocket.getInetAddress().getHostAddress());
                 
                 // Handle the client request in a new thread
                 new Thread(new ClientHandler(clientSocket)).start(); 

@@ -16,6 +16,7 @@ import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.Grade;
 import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.ui.actions.StudentActions;
+// ANSI console removed; use standard System.out/err for CLI output
 
 /**
  * UI click handlers for student-related UI actions.
@@ -149,7 +150,7 @@ public class StudentUiHandlers {
             // Fetch and display grades
             List<Grade> grades = studentActions.getMyGrades(user.getUserId());
             if (grades != null) {
-                System.out.println("\n--- DETAILED GRADES RECEIVED ---");
+                System.out.println("--- DETAILED GRADES RECEIVED ---");
                 if (grades.isEmpty()) System.out.println("No grade data received.");
                 else grades.forEach(g -> {
                     System.out.println("\nCourse: " + g.getCourseName() + " (Final Grade: " + g.getFinalGrade() + ")");
@@ -166,7 +167,7 @@ public class StudentUiHandlers {
 
             // Fetch and display catalog
             List<CourseCatalog> catalog = studentActions.getCourseCatalog();
-            System.out.println("\n--- COURSE CATALOG RECEIVED ---");
+            System.out.println("--- COURSE CATALOG RECEIVED ---");
             if (catalog == null || catalog.isEmpty()) {
                 System.out.println("No courses available in the catalog.");
             } else {
@@ -178,7 +179,7 @@ public class StudentUiHandlers {
 
             // Fetch and display timetable
             List<CourseCatalog> schedule = studentActions.getTimetable(user.getUserId());
-            System.out.println("\n--- CURRENT STUDENT TIMETABLE ---");
+            System.out.println("--- CURRENT STUDENT TIMETABLE ---");
             if (schedule == null || schedule.isEmpty()) {
                 System.out.println("You are not currently registered for any courses.");
             } else {
