@@ -25,13 +25,6 @@ public class InstructorActions {
         return instructorApi.computeFinalGrade(instructorId, enrollmentId);
     }
     
-    /**
-     * Record or update a single component score for a student's enrollment.
-     */
-    public String recordComponentScore(int instructorId, int enrollmentId, String componentName, double score) throws Exception {
-        return instructorApi.recordScore(instructorId, enrollmentId, componentName, score);
-    }
-    
     public String exportGradesCsv(int instructorId, int sectionId) throws Exception {
         return instructorApi.exportGrades(instructorId, sectionId);
     }
