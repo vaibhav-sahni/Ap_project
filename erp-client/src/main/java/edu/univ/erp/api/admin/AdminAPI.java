@@ -20,9 +20,11 @@ public class AdminAPI {
     // ----------------------------------------------------------------------
     public String createStudent(Student student, String password) throws Exception {
     
+    // If student.userId is 0, server will allocate a new one
+    int userId = student.getUserId();
     String request = String.format(
         "CREATE_STUDENT:%d:%s:%s:%s:%s:%d:%s",
-        student.getUserId(),
+        userId,
         student.getUsername(),
         student.getRole(),
         student.getRollNo(),
@@ -64,6 +66,32 @@ public class AdminAPI {
             return response.substring("SUCCESS:".length());
         }
         throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating course/section");
+    }
+
+    /** Create only the course (no section) */
+    public String createCourse(CourseCatalog course) throws Exception {
+        String request = String.format("CREATE_COURSE:%s:%s:%d",
+                course.getCourseCode(),
+                course.getCourseTitle(),
+                course.getCredits());
+        String response = ClientRequest.send(request);
+        if (response.startsWith("SUCCESS:")) return response.substring("SUCCESS:".length());
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating course");
+    }
+
+    /** Create only a section for an existing course */
+    public String createSection(CourseCatalog section) throws Exception {
+        String request = String.format("CREATE_SECTION:%s:%d:%s:%s:%d:%s:%d",
+                section.getCourseCode(),
+                section.getInstructorId(),
+                section.getDayTime(),
+                section.getRoom(),
+                section.getCapacity(),
+                section.getSemester(),
+                section.getYear());
+        String response = ClientRequest.send(request);
+        if (response.startsWith("SUCCESS:")) return response.substring("SUCCESS:".length());
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating section");
     }
 
     // ----------------------------------------------------------------------
@@ -121,25 +149,36 @@ public class AdminAPI {
         throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error fetching students");
     }
 
-    public String createInstructor(Instructor instructor, String password) throws Exception {
-    
-    String request = String.format(
-    "CREATE_INSTRUCTOR:%d:%s:%s:%s:%s:%s",
-    instructor.getUserId(),
-    instructor.getUsername(),
-    instructor.getRole(),
-    instructor.getName(),
-    instructor.getDepartmentName(),
-    password
-);
-String response = ClientRequest.send(request);
+    public java.util.List<java.util.Map<String,Object>> getAllInstructors() throws Exception {
+        String request = "GET_ALL_INSTRUCTORS";
+        String response = ClientRequest.send(request);
 
-
-    if (response.startsWith("SUCCESS:")) {
-        return response.substring("SUCCESS:".length());
+        if (response.startsWith("SUCCESS:")) {
+            String json = response.substring("SUCCESS:".length());
+            Type listType = new TypeToken<java.util.List<java.util.Map<String,Object>>>() {}.getType();
+            return gson.fromJson(json, listType);
+        }
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error fetching instructors");
     }
-    throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating instructor");
-}
+
+    public String createInstructor(Instructor instructor, String password) throws Exception {
+    // Allow passing 0 to let server allocate user id
+    String request = String.format(
+        "CREATE_INSTRUCTOR:%d:%s:%s:%s:%s:%s",
+        instructor.getUserId(),
+        instructor.getUsername(),
+        instructor.getRole(),
+        instructor.getName(),
+        instructor.getDepartmentName(),
+        password
+    );
+        String response = ClientRequest.send(request);
+
+        if (response.startsWith("SUCCESS:")) {
+            return response.substring("SUCCESS:".length());
+        }
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating instructor");
+    }
 
     /**
      * Set the global drop deadline (ISO date YYYY-MM-DD). CLI and admin UI should login first
@@ -154,5 +193,13 @@ String response = ClientRequest.send(request);
             return response.substring("SUCCESS:".length());
         }
         throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error setting drop deadline");
+    }
+
+    /** Reassigns the instructor for an existing section. Admin-only. */
+    public String reassignInstructor(int sectionId, int newInstructorId) throws Exception {
+        String request = String.format("REASSIGN_INSTRUCTOR:%d:%d", sectionId, newInstructorId);
+        String response = ClientRequest.send(request);
+        if (response.startsWith("SUCCESS:")) return response.substring("SUCCESS:".length());
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error reassigning instructor");
     }
 }

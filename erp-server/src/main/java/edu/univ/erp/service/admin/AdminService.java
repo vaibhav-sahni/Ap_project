@@ -11,6 +11,19 @@ import edu.univ.erp.domain.Student;
 public class AdminService {
 
     private final AdminDAO adminDAO = new AdminDAO();
+
+    /** Reassigns the instructor for a given section. Only called by admin layer. */
+    public String reassignInstructor(int sectionId, int newInstructorId) throws Exception {
+        // Validate new instructor exists
+        if (!adminDAO.instructorExists(newInstructorId)) {
+            throw new Exception("Instructor with id " + newInstructorId + " does not exist.");
+        }
+
+        boolean ok = adminDAO.reassignInstructor(sectionId, newInstructorId);
+        if (!ok) throw new Exception("Failed to reassign instructor. Check sectionId and instructorId.");
+        // optional: could return previous instructor id if DAO returned it
+        return "Instructor reassigned successfully.";
+    }
     private final SettingDAO settingDAO = new SettingDAO(); // For maintenance toggle
 
     // --------------------------
@@ -36,9 +49,48 @@ public class AdminService {
             throw new Exception("Invalid course/section data.");
         }
 
+        // Validate instructor exists before creating section
+        if (course.getInstructorId() != 0 && !adminDAO.instructorExists(course.getInstructorId())) {
+            throw new Exception("Instructor with id " + course.getInstructorId() + " does not exist.");
+        }
+
         boolean created = adminDAO.createCourseAndSection(course);
         if (!created) throw new Exception("Failed to create course and section.");
         return "Course and section created successfully: " + course.getCourseCode();
+    }
+
+    /** Create only the course record (no section) */
+    public String createCourse(CourseCatalog course) throws Exception {
+        if (course == null) throw new Exception("CourseCatalog object cannot be null.");
+        if (course.getCourseCode() == null) throw new Exception("Course must have a course code.");
+        // Reject duplicate course codes
+        if (adminDAO.courseExists(course.getCourseCode())) {
+            throw new Exception("Course with code '" + course.getCourseCode() + "' already exists.");
+        }
+
+        boolean created = adminDAO.createCourse(course);
+        if (!created) throw new Exception("Failed to create course. Check DB constraints.");
+        return "Course created successfully: " + course.getCourseCode();
+    }
+
+    /** Create only a new section for an existing course */
+    public String createSection(CourseCatalog course) throws Exception {
+        if (course == null) throw new Exception("CourseCatalog object cannot be null.");
+        if (course.getCourseCode() == null) throw new Exception("Section must reference a course code.");
+
+        // Validate instructor exists before creating section
+        if (course.getInstructorId() != 0 && !adminDAO.instructorExists(course.getInstructorId())) {
+            throw new Exception("Instructor with id " + course.getInstructorId() + " does not exist.");
+        }
+
+        // Ensure the referenced course exists
+        if (!adminDAO.courseExists(course.getCourseCode())) {
+            throw new Exception("Cannot create section: course with code '" + course.getCourseCode() + "' does not exist.");
+        }
+
+        boolean created = adminDAO.createSection(course);
+        if (!created) throw new Exception("Failed to create section. Check DB constraints.");
+        return "Section created successfully for course: " + course.getCourseCode();
     }
 
     // --------------------------
@@ -87,6 +139,15 @@ public class AdminService {
     // --------------------------
     public List<Student> getAllStudents() throws Exception {
         return adminDAO.fetchAllStudents();
+    }
+
+    public java.util.List<java.util.Map<String,Object>> getAllInstructors() throws Exception {
+        return adminDAO.fetchAllInstructors();
+    }
+
+    /** Returns next available user id for new accounts. */
+    public int getNextUserId() {
+        return adminDAO.getNextUserId();
     }
 
     public String createInstructor(Instructor instructor, String passwordHash) throws Exception {

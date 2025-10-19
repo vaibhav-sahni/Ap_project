@@ -77,9 +77,8 @@ public class AdminUiHandlers {
     public void handleCreateStudentClick() {
         if (!"Admin".equals(user.getRole())) return;
         try {
-            String userIdStr = JOptionPane.showInputDialog(null, "Enter User ID:");
-            if (userIdStr == null) return;
-            int userId = Integer.parseInt(userIdStr);
+            // Let the server allocate user ID automatically. Use 0 to signal allocation.
+            int userId = 0;
 
             String username = JOptionPane.showInputDialog(null, "Enter Username:");
             if (username == null) return;
@@ -112,25 +111,40 @@ public class AdminUiHandlers {
     public void handleCreateInstructorClick() {
         if (!"Admin".equals(user.getRole())) return;
         try {
+            // Let the server allocate user ID automatically. Use 0 to signal allocation.
+            int userId = 0;
+
             String username = JOptionPane.showInputDialog(null, "Enter Username:");
             if (username == null) return;
+
+            String name = JOptionPane.showInputDialog(null, "Enter Full Name (optional):");
+            if (name == null) name = "";
+
+            String department = JOptionPane.showInputDialog(null, "Enter Department:");
+            if (department == null) department = "";
 
             String role = "Instructor";
             String password = JOptionPane.showInputDialog(null, "Enter Initial Password:");
             if (password == null) return;
 
-            Instructor instructor = new Instructor(0, username, role, password);
+            Instructor instructor = new Instructor(userId, username, role, department);
+            instructor.setName(name);
             String successMsg = adminActions.createInstructor(instructor, password);
             JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, e.getMessage(), "Instructor Creation Failed", JOptionPane.ERROR_MESSAGE);
-            System.err.println("CLIENT ERROR: " + e.getMessage());
+            if (e instanceof NumberFormatException) {
+                JOptionPane.showMessageDialog(null, "Invalid User ID entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, e.getMessage(), "Instructor Creation Failed", JOptionPane.ERROR_MESSAGE);
+                System.err.println("CLIENT ERROR: " + e.getMessage());
+            }
         }
     }
 
     public void handleCreateCourseClick() {
         if (!"Admin".equals(user.getRole())) return;
         try {
+            // Create only the course metadata. Sections are created separately via Create Section.
             String code = JOptionPane.showInputDialog(null, "Enter Course Code:");
             if (code == null) return;
 
@@ -140,6 +154,119 @@ public class AdminUiHandlers {
             String creditsStr = JOptionPane.showInputDialog(null, "Enter Credits:");
             if (creditsStr == null) return;
             int credits = Integer.parseInt(creditsStr);
+
+            CourseCatalog course = new CourseCatalog(code, title, credits, 0, "", "", 0, 0, "", 0, 0, "");
+            try {
+                String successMsg = adminActions.createCourseOnly(course);
+                JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                // Friendly handling for duplicate-course scenarios
+                String msg = e.getMessage() == null ? "" : e.getMessage();
+                if (msg.contains("already exists")) {
+                    int choice = JOptionPane.showOptionDialog(null,
+                            "A course with this code already exists.\nWould you like to create a section for the existing course or just view it?",
+                            "Course Already Exists",
+                            JOptionPane.YES_NO_CANCEL_OPTION,
+                            JOptionPane.INFORMATION_MESSAGE,
+                            null,
+                            new String[] {"Create Section", "View Course", "Cancel"},
+                            "Create Section");
+
+                    if (choice == 0) {
+                        // Launch create section flow pre-filled with course code
+                        handleCreateSectionClickPrefill(code);
+                    } else if (choice == 1) {
+                        // Show course details in a simple message (fetch from server)
+                        try {
+                            java.util.List<CourseCatalog> courses = adminActions.fetchAllCourses();
+                            CourseCatalog found = null;
+                            if (courses != null) for (CourseCatalog c : courses) if (code.equalsIgnoreCase(c.getCourseCode())) { found = c; break; }
+                                if (found != null) {
+                                    // Show detailed view (sections + enrolled counts)
+                                    viewCourseDetails(code);
+                                } else {
+                                    JOptionPane.showMessageDialog(null, "Course exists but could not be fetched.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                                }
+                        } catch (Exception ex) {
+                            JOptionPane.showMessageDialog(null, "Failed to fetch course details: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } else {
+                        // Cancelled
+                    }
+                } else {
+                    throw e; // rethrow for generic handling below
+                }
+            }
+        } catch (NumberFormatException nfe) {
+            JOptionPane.showMessageDialog(null, "Invalid number entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e.getMessage(), "Course Creation Failed", JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: " + e.getMessage());
+        }
+    }
+
+    /** Show a simple course details dialog listing sections and enrolled counts. */
+    private void viewCourseDetails(String courseCode) {
+        try {
+            java.util.List<CourseCatalog> courses = adminActions.fetchAllCourses();
+            if (courses == null || courses.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "No course data available.", "Course Details", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+            for (CourseCatalog c : courses) {
+                if (courseCode.equalsIgnoreCase(c.getCourseCode())) {
+                    sb.append(String.format("Section ID: %d\nDay/Time: %s\nRoom: %s\nCapacity: %d\nEnrolled: %d\nSemester: %s %d\nInstructor ID: %d\nInstructor Name: %s\n---\n",
+                            c.getSectionId(), c.getDayTime(), c.getRoom(), c.getCapacity(), c.getEnrolledCount(), c.getSemester(), c.getYear(), c.getInstructorId(), c.getInstructorName()));
+                }
+            }
+
+            if (sb.length() == 0) {
+                JOptionPane.showMessageDialog(null, "Course has no sections yet.", "Course Details", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, sb.toString(), "Course Details: " + courseCode, JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Failed to load course details: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /** Helper to pre-fill course code when creating a section from the duplicate-course dialog. */
+    private void handleCreateSectionClickPrefill(String prefillCourseCode) {
+        if (!"Admin".equals(user.getRole())) return;
+        try {
+            String courseCode = prefillCourseCode;
+
+            // Pre-check that course exists (should be true)
+            java.util.List<CourseCatalog> courses = adminActions.fetchAllCourses();
+            boolean exists = false;
+            if (courses != null) {
+                for (CourseCatalog c : courses) if (courseCode.equalsIgnoreCase(c.getCourseCode())) { exists = true; break; }
+            }
+            if (!exists) {
+                JOptionPane.showMessageDialog(null, "Course not found on server.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Fetch instructors and present a dropdown (including an Unassigned option)
+            java.util.List<java.util.Map<String,Object>> instructors = adminActions.fetchAllInstructors();
+            java.util.List<String> instrOptionsList = new java.util.ArrayList<>();
+            instrOptionsList.add("0 - Unassigned");
+            if (instructors != null) {
+                for (java.util.Map<String,Object> m : instructors) {
+                    Number uid = (Number) m.get("user_id");
+                    String username = m.get("username") == null ? "" : m.get("username").toString();
+                    String name = m.get("name") == null ? username : m.get("name").toString();
+                    Number assigned = (Number) (m.get("assigned_count") == null ? 0 : m.get("assigned_count"));
+                    instrOptionsList.add(String.format("%d - %s (assigned: %d)", uid.intValue(), name, assigned.intValue()));
+                }
+            }
+            String[] instrOptions = instrOptionsList.toArray(new String[0]);
+            javax.swing.JComboBox<String> instrBox = new javax.swing.JComboBox<>(instrOptions);
+            int instrSel = JOptionPane.showConfirmDialog(null, instrBox, "Select Instructor (or Unassigned)", JOptionPane.OK_CANCEL_OPTION);
+            if (instrSel != JOptionPane.OK_OPTION) return;
+            int instrId = Integer.parseInt(((String)instrBox.getSelectedItem()).split(" - ")[0]);
 
             String dayTime = JOptionPane.showInputDialog(null, "Enter Day/Time (e.g., Mon 9-11):");
             if (dayTime == null) dayTime = "";
@@ -151,9 +278,77 @@ public class AdminUiHandlers {
             if (capacityStr == null) return;
             int capacity = Integer.parseInt(capacityStr);
 
-            String enrolledCountStr = JOptionPane.showInputDialog(null, "Enter Enrolled Count:");
-            if (enrolledCountStr == null) return;
-            int enrolledCount = Integer.parseInt(enrolledCountStr);
+            String semester = JOptionPane.showInputDialog(null, "Enter Semester:");
+            if (semester == null) semester = "";
+
+            String yearStr = JOptionPane.showInputDialog(null, "Enter Year:");
+            if (yearStr == null) return;
+            int year = Integer.parseInt(yearStr);
+
+            CourseCatalog section = new CourseCatalog(courseCode, "", 0, 0, dayTime, room, capacity, 0, semester, year, instrId, "");
+            String resp = adminActions.createSectionOnly(section);
+            JOptionPane.showMessageDialog(null, resp, "Create Section", JOptionPane.INFORMATION_MESSAGE);
+        } catch (NumberFormatException nfe) {
+            JOptionPane.showMessageDialog(null, "Invalid number entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e.getMessage(), "Create Section Failed", JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: Create Section prefill: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Create only a section for an existing course.
+     */
+    public void handleCreateSectionClick() {
+        if (!"Admin".equals(user.getRole())) return;
+        try {
+            // Present a dropdown of existing courses (code - title)
+            java.util.List<CourseCatalog> courses = adminActions.fetchAllCourses();
+            if (courses == null || courses.isEmpty()) {
+                int create = JOptionPane.showConfirmDialog(null, "No courses found. Would you like to create a course now?", "No Courses", JOptionPane.YES_NO_OPTION);
+                if (create == JOptionPane.YES_OPTION) {
+                    handleCreateCourseClick();
+                }
+                return;
+            }
+
+            String[] courseOptions = courses.stream()
+                    .map(c -> String.format("%s - %s", c.getCourseCode(), c.getCourseTitle()))
+                    .toArray(String[]::new);
+            javax.swing.JComboBox<String> courseBox = new javax.swing.JComboBox<>(courseOptions);
+            int courseChoice = JOptionPane.showConfirmDialog(null, courseBox, "Select Course for New Section", JOptionPane.OK_CANCEL_OPTION);
+            if (courseChoice != JOptionPane.OK_OPTION) return;
+            String selectedCourse = (String) courseBox.getSelectedItem();
+            String courseCode = selectedCourse.split(" - ")[0].trim();
+
+            // Fetch instructors and present a dropdown (including an Unassigned option)
+            java.util.List<java.util.Map<String,Object>> instructors = adminActions.fetchAllInstructors();
+            java.util.List<String> instrOptionsList = new java.util.ArrayList<>();
+            instrOptionsList.add("0 - Unassigned");
+            if (instructors != null) {
+                for (java.util.Map<String,Object> m : instructors) {
+                    Number uid = (Number) m.get("user_id");
+                    String username = m.get("username") == null ? "" : m.get("username").toString();
+                    String name = m.get("name") == null ? username : m.get("name").toString();
+                    Number assigned = (Number) (m.get("assigned_count") == null ? 0 : m.get("assigned_count"));
+                    instrOptionsList.add(String.format("%d - %s (assigned: %d)", uid.intValue(), name, assigned.intValue()));
+                }
+            }
+            String[] instrOptions = instrOptionsList.toArray(new String[0]);
+            javax.swing.JComboBox<String> instrBox = new javax.swing.JComboBox<>(instrOptions);
+            int instrSel = JOptionPane.showConfirmDialog(null, instrBox, "Select Instructor (or Unassigned)", JOptionPane.OK_CANCEL_OPTION);
+            if (instrSel != JOptionPane.OK_OPTION) return;
+            int instrId = Integer.parseInt(((String)instrBox.getSelectedItem()).split(" - ")[0]);
+
+            String dayTime = JOptionPane.showInputDialog(null, "Enter Day/Time (e.g., Mon 9-11):");
+            if (dayTime == null) dayTime = "";
+
+            String room = JOptionPane.showInputDialog(null, "Enter Room:");
+            if (room == null) room = "";
+
+            String capacityStr = JOptionPane.showInputDialog(null, "Enter Capacity:");
+            if (capacityStr == null) return;
+            int capacity = Integer.parseInt(capacityStr);
 
             String semester = JOptionPane.showInputDialog(null, "Enter Semester:");
             if (semester == null) semester = "";
@@ -162,25 +357,69 @@ public class AdminUiHandlers {
             if (yearStr == null) return;
             int year = Integer.parseInt(yearStr);
 
-            String instructorID = JOptionPane.showInputDialog(null, "Enter Instructor ID:");
-            if (instructorID == null) return;
-            int instrid = Integer.parseInt(instructorID);
-
-            String instr_name = JOptionPane.showInputDialog(null, "Enter Instructor Name:");
-            if (instr_name == null) instr_name = "";
-
-            CourseCatalog course = new CourseCatalog(
-                    code, title, credits, 0, dayTime, room, capacity,
-                    enrolledCount, semester, year, instrid, instr_name
-            );
-
-            String successMsg = adminActions.createCourse(course);
-            JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+            CourseCatalog section = new CourseCatalog(courseCode, "", 0, 0, dayTime, room, capacity, 0, semester, year, instrId, "");
+            String resp = adminActions.createSectionOnly(section);
+            JOptionPane.showMessageDialog(null, resp, "Create Section", JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException nfe) {
             JOptionPane.showMessageDialog(null, "Invalid number entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, e.getMessage(), "Course Creation Failed", JOptionPane.ERROR_MESSAGE);
-            System.err.println("CLIENT ERROR: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, e.getMessage(), "Create Section Failed", JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: Create Section: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Shows a dialog allowing the admin to choose a section and a new instructor from dropdowns
+     * and performs the reassignment via AdminActions.reassignInstructor.
+     */
+    public void handleReassignInstructorClick() {
+        if (!"Admin".equals(user.getRole())) return;
+        try {
+            java.util.List<edu.univ.erp.domain.CourseCatalog> courses = adminActions.fetchAllCourses();
+            if (courses == null || courses.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "No course sections available.", "Reassign Instructor", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            java.util.List<java.util.Map<String,Object>> instructors = adminActions.fetchAllInstructors();
+            if (instructors == null || instructors.isEmpty()) {
+                int create = JOptionPane.showConfirmDialog(null, "No instructors found. Would you like to create an instructor now?", "No Instructors", JOptionPane.YES_NO_OPTION);
+                if (create == JOptionPane.YES_OPTION) {
+                    handleCreateInstructorClick();
+                    instructors = adminActions.fetchAllInstructors();
+                    if (instructors == null || instructors.isEmpty()) {
+                        JOptionPane.showMessageDialog(null, "Still no instructors available. Aborting.", "Reassign Instructor", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+
+            String[] courseOptions = courses.stream().map(c -> c.getSectionId() + " - " + c.getCourseCode() + " : " + c.getCourseTitle()).toArray(String[]::new);
+            String[] instrOptions = instructors.stream().map(m -> {
+                Number uid = (Number) m.get("user_id");
+                String username = m.get("username") == null ? "" : m.get("username").toString();
+                String name = m.get("name") == null ? username : m.get("name").toString();
+                Number assigned = (Number) (m.get("assigned_count") == null ? 0 : m.get("assigned_count"));
+                return String.format("%d - %s (assigned: %d)", uid.intValue(), name, assigned.intValue());
+            }).toArray(String[]::new);
+
+            javax.swing.JComboBox<String> courseBox = new javax.swing.JComboBox<>(courseOptions);
+            javax.swing.JComboBox<String> instrBox = new javax.swing.JComboBox<>(instrOptions);
+
+            Object[] message = {"Select Section:", courseBox, "Select New Instructor:", instrBox};
+            int choice = JOptionPane.showConfirmDialog(null, message, "Reassign Instructor", JOptionPane.OK_CANCEL_OPTION);
+            if (choice != JOptionPane.OK_OPTION) return;
+
+            int sectionId = Integer.parseInt(((String)courseBox.getSelectedItem()).split(" - ")[0]);
+            int newInstrId = Integer.parseInt(((String)instrBox.getSelectedItem()).split(" - ")[0]);
+
+            String resp = adminActions.reassignInstructor(sectionId, newInstrId);
+            JOptionPane.showMessageDialog(null, resp, "Reassign Result", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e.getMessage(), "Reassign Failed", JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: Reassign Instructor: " + e.getMessage());
         }
     }
 
@@ -248,20 +487,38 @@ public class AdminUiHandlers {
                 return;
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.append(String.format("%-10s %-40s %-15s %-10s %-10s\n",
-                    "CODE", "TITLE", "INSTRUCTOR", "CAPACITY", "SECTION ID"));
-            sb.append("---------------------------------------------------------------------\n");
-            for (edu.univ.erp.domain.CourseCatalog c : courses) {
-                sb.append(String.format("%-10s %-40s %-15s %-10d %-10d\n",
-                        c.getCourseCode(), c.getCourseTitle(), c.getInstructorName(), c.getCapacity(), c.getSectionId()));
+            // Build a table for aligned columns
+            String[] cols = new String[] { "Code", "Title", "Credits", "Section ID", "Day/Time", "Room", "Capacity", "Enrolled", "Semester", "Year", "Instructor ID", "Instructor" };
+            Object[][] data = new Object[courses.size()][cols.length];
+            for (int i = 0; i < courses.size(); i++) {
+                edu.univ.erp.domain.CourseCatalog c = courses.get(i);
+                data[i][0] = c.getCourseCode();
+                data[i][1] = c.getCourseTitle();
+                data[i][2] = c.getCredits();
+                data[i][3] = c.getSectionId();
+                data[i][4] = c.getDayTime();
+                data[i][5] = c.getRoom();
+                data[i][6] = c.getCapacity();
+                data[i][7] = c.getEnrolledCount();
+                data[i][8] = c.getSemester();
+                data[i][9] = c.getYear();
+                data[i][10] = c.getInstructorId();
+                data[i][11] = c.getInstructorName();
             }
 
-            javax.swing.JTextArea ta = new javax.swing.JTextArea(sb.toString());
-            ta.setEditable(false);
-            ta.setColumns(100);
-            ta.setRows(Math.min(25, courses.size() + 5));
-            javax.swing.JScrollPane sp = new javax.swing.JScrollPane(ta);
+            javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(data, cols) {
+                @Override public boolean isCellEditable(int row, int column) { return false; }
+            };
+            javax.swing.JTable table = new javax.swing.JTable(model);
+            table.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF);
+            // Set preferred widths for readability
+            int[] widths = new int[] {80, 240, 60, 80, 120, 80, 70, 70, 80, 60, 90, 160};
+            for (int col = 0; col < widths.length && col < table.getColumnModel().getColumnCount(); col++) {
+                table.getColumnModel().getColumn(col).setPreferredWidth(widths[col]);
+            }
+
+            javax.swing.JScrollPane sp = new javax.swing.JScrollPane(table);
+            sp.setPreferredSize(new java.awt.Dimension(1000, Math.min(600, courses.size() * 25 + 60)));
             JOptionPane.showMessageDialog(null, sp, "All Courses / Sections", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             System.err.println("ERROR: Failed to fetch courses via API: " + e.getMessage());

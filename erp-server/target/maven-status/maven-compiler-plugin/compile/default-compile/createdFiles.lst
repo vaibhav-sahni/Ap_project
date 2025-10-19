@@ -1,5 +1,6 @@
 edu\univ\erp\service\admin\AdminService.class
 edu\univ\erp\service\instructor\InstructorService.class
+edu\univ\erp\server\ServerMain.class
 edu\univ\erp\server\ClientHandler.class
 edu\univ\erp\domain\Admin.class
 edu\univ\erp\dao\instructor\InstructorDAO.class
@@ -17,12 +18,15 @@ edu\univ\erp\dao\student\StudentDAO.class
 edu\univ\erp\dao\grade\GradeDAO$RawGradeResult.class
 edu\univ\erp\domain\AssessmentComponent.class
 edu\univ\erp\service\student\StudentService.class
+edu\univ\erp\server\AnsiLogFormatter.class
+edu\univ\erp\service\admin\MysqldumpBackupService$DbInfo.class
 edu\univ\erp\dao\course\CourseDAO.class
 edu\univ\erp\domain\Instructor.class
 edu\univ\erp\domain\Section.class
 org\mindrot\jbcrypt\BCrypt.class
 edu\univ\erp\domain\Grade.class
 edu\univ\erp\domain\Student.class
+edu\univ\erp\service\admin\MysqldumpBackupService.class
 edu\univ\erp\util\ThrowingRunnable.class
 edu\univ\erp\dao\db\DBConnector.class
 edu\univ\erp\dao\auth\AuthDAO$AuthDetails.class

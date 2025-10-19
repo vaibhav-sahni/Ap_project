@@ -161,6 +161,10 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
         return handleCreateStudent(parts);
   case "CREATE_COURSE_SECTION":
     return handleCreateCourseSection(parts);
+  case "CREATE_COURSE":
+    return handleCreateCourse(parts);
+  case "CREATE_SECTION":
+    return handleCreateSection(parts);
   case "TOGGLE_MAINTENANCE":
     return handleToggleMaintenance(parts);
   case "SET_DROP_DEADLINE":
@@ -173,10 +177,14 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     return handleDbRestore(parts);
   case "GET_ALL_COURSES":
       return handleGetAllCourses();
+    case "GET_ALL_INSTRUCTORS":
+      return handleGetAllInstructors();
   case "GET_ALL_STUDENTS":
       return handleGetAllStudents();
   case "CREATE_INSTRUCTOR":
       return handleCreateInstructor(parts);
+  case "REASSIGN_INSTRUCTOR":
+    return handleReassignInstructor(parts);
   default:
       return "ERROR:UNKNOWN_COMMAND";
   }
@@ -214,6 +222,48 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     String jsonSections = gson.toJson(sections);
     return "SUCCESS:" + jsonSections;
     }
+
+/**
+ * Handles CREATE_COURSE:code:title:credits
+ */
+private String handleCreateCourse(String[] parts) throws Exception {
+  if (parts.length < 4) throw new Exception("Missing parameters. Expected CREATE_COURSE:code:title:credits");
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
+
+  String code = parts[1];
+  String title = parts[2];
+  int credits;
+  try { credits = Integer.parseInt(parts[3]); } catch (NumberFormatException e) { throw new Exception("Invalid credits value."); }
+
+  edu.univ.erp.domain.CourseCatalog course = new CourseCatalog(code, title, credits, 0, "", "", 0, 0, "", 0, 0, "");
+  String message = adminService.createCourse(course);
+  return "SUCCESS:" + message;
+}
+
+/**
+ * Handles CREATE_SECTION:courseCode:instructorId:dayTime:room:capacity:semester:year
+ */
+private String handleCreateSection(String[] parts) throws Exception {
+  if (parts.length < 8) throw new Exception("Missing parameters. Expected CREATE_SECTION:courseCode:instructorId:dayTime:room:capacity:semester:year");
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
+
+  String courseCode = parts[1];
+  int instrId;
+  try { instrId = Integer.parseInt(parts[2]); } catch (NumberFormatException e) { throw new Exception("Invalid instructor id."); }
+  String dayTime = parts[3];
+  String room = parts[4];
+  int capacity;
+  try { capacity = Integer.parseInt(parts[5]); } catch (NumberFormatException e) { throw new Exception("Invalid capacity."); }
+  String semester = parts[6];
+  int year;
+  try { year = Integer.parseInt(parts[7]); } catch (NumberFormatException e) { throw new Exception("Invalid year."); }
+
+  CourseCatalog section = new CourseCatalog(courseCode, "", 0, 0, dayTime, room, capacity, 0, semester, year, instrId, "");
+  String message = adminService.createSection(section);
+  return "SUCCESS:" + message;
+}
 
     /**
      * Handles GET_ROSTER. Fetches the roster for a specific section.
@@ -633,6 +683,11 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     int year = Integer.parseInt(parts[6]);
     String password = parts[7];
 
+    // If client sent 0 for userId, allocate next available id server-side
+    if (userId == 0) {
+      userId = adminService.getNextUserId();
+    }
+
     // Construct the Student domain object manually
     Student student = new Student(userId, username, role, rollNo, program, year);
 
@@ -715,23 +770,73 @@ private String handleGetAllStudents() throws Exception {
   return "SUCCESS:" + json;
 }
 
+private String handleGetAllInstructors() throws Exception {
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    requireAdmin(current);
+  java.util.List<java.util.Map<String,Object>> list = adminService.getAllInstructors();
+  String json = gson.toJson(list);
+    return "SUCCESS:" + json;
+}
+
 private String handleCreateInstructor(String[] parts) throws Exception {
-    if (parts.length < 7) throw new Exception("Incomplete instructor creation request.");
+  // Support two formats:
+  // 1) CREATE_INSTRUCTOR:userId:username:role:name:department:password
+  // 2) CREATE_INSTRUCTOR:username:role:name:department:password  (server will allocate userId)
   edu.univ.erp.domain.UserAuth current = requireAuthenticated();
   requireAdmin(current);
 
-  int userId = Integer.parseInt(parts[1]);
-    String username = parts[2];
-    String role = parts[3];
-    String name = parts[4];
-    String department = parts[5];
-    String password = parts[6];
+  String username, role, name, department, password;
+  int userId = 0;
 
-    Instructor instructor = new Instructor(userId, username, role, department);
-    instructor.setName(name);
+  if (parts.length == 7) {
+    try { userId = Integer.parseInt(parts[1]); } catch (NumberFormatException e) { userId = 0; }
+    username = parts[2];
+    role = parts[3];
+    name = parts[4];
+    department = parts[5];
+    password = parts[6];
+  } else if (parts.length == 6) {
+    // no userId provided
+    username = parts[1];
+    role = parts[2];
+    name = parts[3];
+    department = parts[4];
+    password = parts[5];
+  } else {
+    throw new Exception("Incomplete instructor creation request.");
+  }
 
-    String message = adminService.createInstructor(instructor, password);
-    return "SUCCESS:" + message;
+  if (userId == 0) {
+    userId = adminService.getNextUserId();
+  }
+
+  Instructor instructor = new Instructor(userId, username, role, department);
+  instructor.setName(name);
+
+  String message = adminService.createInstructor(instructor, password);
+  return "SUCCESS:" + message;
+}
+
+/**
+ * Handles REASSIGN_INSTRUCTOR:sectionId:newInstructorId
+ * Only admins may perform this action.
+ */
+private String handleReassignInstructor(String[] parts) throws Exception {
+  if (parts.length < 3) throw new Exception("Missing parameters. Expected REASSIGN_INSTRUCTOR:sectionId:newInstructorId");
+  edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+  requireAdmin(current);
+
+  int sectionId;
+  int newInstructorId;
+  try {
+    sectionId = Integer.parseInt(parts[1]);
+    newInstructorId = Integer.parseInt(parts[2]);
+  } catch (NumberFormatException e) {
+    throw new Exception("Invalid numeric parameter provided.");
+  }
+
+  String msg = adminService.reassignInstructor(sectionId, newInstructorId);
+  return "SUCCESS:" + msg;
 }
 
   /**

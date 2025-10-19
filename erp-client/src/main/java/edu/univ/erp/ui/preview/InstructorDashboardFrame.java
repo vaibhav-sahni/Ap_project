@@ -34,6 +34,7 @@ public class InstructorDashboardFrame extends JFrame {
         JButton finalize = new JButton("Compute Final Grades (section 1)");
     JButton export = new JButton("Export Grades (section 1)");
     JButton importBtn = new JButton("Import Grades (section 1)");
+    JButton enterGrades = new JButton("Enter Grades (section 1)");
         JButton exit = new JButton("Logout");
 
         final int uid = user == null ? -1 : user.getUserId();
@@ -56,12 +57,21 @@ public class InstructorDashboardFrame extends JFrame {
             Integer sid = chooseSectionDialog(handlers, uid);
             if (sid != null) handlers.importGradesFromFile(uid, sid);
         });
+        enterGrades.addActionListener(e -> {
+            Integer sid = chooseSectionDialog(handlers, uid);
+            if (sid != null) {
+                // open roster preview and directly show enter-grades dialog
+                RosterPreviewFrame rpf = new RosterPreviewFrame(user, sid);
+                rpf.setVisible(true);
+                rpf.openEnterGradesDialog(uid, sid);
+            }
+        });
         exit.addActionListener(e -> {
             if (controller != null) controller.handleLogoutClick();
             else dispose();
         });
 
-        add(assigned); add(roster); add(finalize); add(export); add(importBtn); add(exit);
+        add(assigned); add(roster); add(finalize); add(export); add(importBtn); add(enterGrades); add(exit);
     }
 
     /**

@@ -52,22 +52,51 @@ public class InstructorUiHandlers {
             javax.swing.JOptionPane.showMessageDialog(null, "Access Denied.", "Access Denied", javax.swing.JOptionPane.ERROR_MESSAGE);
             return;
         }
-
-        int confirm = javax.swing.JOptionPane.showConfirmDialog(null,
-                "Are you sure you want to compute final grades for all students in section " + sectionId + "? " +
-                        "This action will finalize grades and mark enrollments as Completed.",
-                "Confirm Final Grading",
-                javax.swing.JOptionPane.YES_NO_OPTION);
-
-        if (confirm != javax.swing.JOptionPane.YES_OPTION) {
-            System.out.println("CLIENT LOG: Final grading cancelled by user.");
-            return;
-        }
-
         try {
             java.util.List<edu.univ.erp.domain.EnrollmentRecord> roster = instructorActions.getRoster(instructorId, sectionId);
             if (roster == null || roster.isEmpty()) {
                 javax.swing.JOptionPane.showMessageDialog(null, "No students in this section.", "Info", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            // Build preview table
+            String[] cols = new String[] {"Enroll ID", "Username", "Roll No", "Quiz", "Assignment", "Midterm", "Endterm", "Final Grade"};
+            Object[][] data = new Object[roster.size()][];
+            for (int i = 0; i < roster.size(); i++) {
+                edu.univ.erp.domain.EnrollmentRecord r = roster.get(i);
+                Object[] row = new Object[8];
+                row[0] = r.getEnrollmentId();
+                row[1] = r.getStudentName();
+                row[2] = r.getRollNo();
+                // component scores may be null or 0
+                row[3] = r.getQuizScore() == null ? "" : r.getQuizScore();
+                row[4] = r.getAssignmentScore() == null ? "" : r.getAssignmentScore();
+                row[5] = r.getMidtermScore() == null ? "" : r.getMidtermScore();
+                row[6] = r.getEndtermScore() == null ? "" : r.getEndtermScore();
+                row[7] = r.getFinalGrade() == null ? "In Progress" : r.getFinalGrade();
+                data[i] = row;
+            }
+
+            javax.swing.JTable table = new javax.swing.JTable(data, cols) {
+                @Override public boolean isCellEditable(int row, int column) { return false; }
+            };
+            table.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF);
+            javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(table);
+            scroll.setPreferredSize(new java.awt.Dimension(900, 400));
+
+            int previewChoice = javax.swing.JOptionPane.showConfirmDialog(null, scroll, "Preview Final Grades for Section " + sectionId, javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.PLAIN_MESSAGE);
+            if (previewChoice != javax.swing.JOptionPane.OK_OPTION) {
+                System.out.println("CLIENT LOG: Final grading preview cancelled by user.");
+                return;
+            }
+
+            int confirm = javax.swing.JOptionPane.showConfirmDialog(null,
+                    "Are you sure you want to compute final grades for all students in section " + sectionId + "? This action will finalize grades and mark enrollments as Completed.",
+                    "Confirm Final Grading",
+                    javax.swing.JOptionPane.YES_NO_OPTION);
+
+            if (confirm != javax.swing.JOptionPane.YES_OPTION) {
+                System.out.println("CLIENT LOG: Final grading cancelled by user.");
                 return;
             }
 

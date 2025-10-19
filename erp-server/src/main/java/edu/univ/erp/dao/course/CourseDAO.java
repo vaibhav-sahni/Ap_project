@@ -29,7 +29,9 @@ public class CourseDAO {
         
     // --- 2. SQL to fetch a single catalog item by section ID ---
     private static final String GET_CATALOG_BY_SECTION_ID_SQL = 
-        GET_CATALOG_SQL.replace("ORDER BY c.code, s.day_time", "WHERE s.section_id = ?"); // Use WHERE after JOINS, before GROUP BY
+        // Ensure WHERE appears before GROUP BY; replace the GROUP BY marker with a WHERE + GROUP BY
+        GET_CATALOG_SQL.replace("GROUP BY s.section_id, c.code, c.title, c.credits, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, i.name ",
+                                 "WHERE s.section_id = ? GROUP BY s.section_id, c.code, c.title, c.credits, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, i.name ");
 
     // --- 3. NEW SQL QUERY: To fetch a student's Timetable (Registered sections only) ---
     private static final String GET_TIMETABLE_SQL = 
