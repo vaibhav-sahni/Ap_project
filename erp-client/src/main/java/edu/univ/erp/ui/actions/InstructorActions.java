@@ -25,6 +25,10 @@ public class InstructorActions {
         return instructorApi.computeFinalGrade(instructorId, enrollmentId);
     }
     
+    public String recordScore(int instructorId, int enrollmentId, String componentName, double score) throws Exception {
+        return instructorApi.recordScore(instructorId, enrollmentId, componentName, score);
+    }
+    
     public String exportGradesCsv(int instructorId, int sectionId) throws Exception {
         return instructorApi.exportGrades(instructorId, sectionId);
     }

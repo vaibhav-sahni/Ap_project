@@ -16,6 +16,15 @@ public class InstructorUiHandlers {
         this.user = user;
     }
 
+    // Helper: convert numeric score to letter grade (same scale as server)
+    private String computeLetterFromNumeric(double score) {
+        if (score >= 90.0) return "A";
+        if (score >= 80.0) return "B";
+        if (score >= 70.0) return "C";
+        if (score >= 60.0) return "D";
+        return "F";
+    }
+
     public void displayRoster(int instructorId, int sectionId) {
         if (!"Instructor".equals(user.getRole())) {
             javax.swing.JOptionPane.showMessageDialog(null, "Access Denied.", "Access Denied", javax.swing.JOptionPane.ERROR_MESSAGE);
@@ -62,6 +71,12 @@ public class InstructorUiHandlers {
             // Build preview table
             String[] cols = new String[] {"Enroll ID", "Username", "Roll No", "Quiz", "Assignment", "Midterm", "Endterm", "Final Grade"};
             Object[][] data = new Object[roster.size()][];
+            // Weight constants (keep in sync with server)
+            final double W_QUIZ = 0.15;
+            final double W_ASSIGNMENT = 0.20;
+            final double W_MIDTERM = 0.30;
+            final double W_ENDTERM = 0.35;
+
             for (int i = 0; i < roster.size(); i++) {
                 edu.univ.erp.domain.EnrollmentRecord r = roster.get(i);
                 Object[] row = new Object[8];
@@ -69,11 +84,37 @@ public class InstructorUiHandlers {
                 row[1] = r.getStudentName();
                 row[2] = r.getRollNo();
                 // component scores may be null or 0
-                row[3] = r.getQuizScore() == null ? "" : r.getQuizScore();
-                row[4] = r.getAssignmentScore() == null ? "" : r.getAssignmentScore();
-                row[5] = r.getMidtermScore() == null ? "" : r.getMidtermScore();
-                row[6] = r.getEndtermScore() == null ? "" : r.getEndtermScore();
-                row[7] = r.getFinalGrade() == null ? "In Progress" : r.getFinalGrade();
+                Double q = r.getQuizScore();
+                Double a = r.getAssignmentScore();
+                Double m = r.getMidtermScore();
+                Double e = r.getEndtermScore();
+                row[3] = q == null ? "" : q;
+                row[4] = a == null ? "" : a;
+                row[5] = m == null ? "" : m;
+                row[6] = e == null ? "" : e;
+
+                String finalDisplay;
+                if (r.getFinalGrade() != null) {
+                    finalDisplay = r.getFinalGrade();
+                } else {
+                    boolean allNull = (q == null && a == null && m == null && e == null);
+                    if (allNull) {
+                        finalDisplay = "In Progress";
+                    } else {
+                        double numeric = ( (q == null ? 0.0 : q) * W_QUIZ )
+                                       + ( (a == null ? 0.0 : a) * W_ASSIGNMENT )
+                                       + ( (m == null ? 0.0 : m) * W_MIDTERM )
+                                       + ( (e == null ? 0.0 : e) * W_ENDTERM );
+                        String letter = computeLetterFromNumeric(numeric);
+                        if (q == null || a == null || m == null || e == null) {
+                            finalDisplay = String.format("In Progress (would be %s %.1f)", letter, numeric);
+                        } else {
+                            finalDisplay = String.format("%s %.1f", letter, numeric);
+                        }
+                    }
+                }
+
+                row[7] = finalDisplay;
                 data[i] = row;
             }
 
@@ -163,6 +204,85 @@ public class InstructorUiHandlers {
     // Headless fetch method for UI previews/tests
     public java.util.List<edu.univ.erp.domain.EnrollmentRecord> fetchRoster(int instructorId, int sectionId) throws Exception {
         return instructorActions.getRoster(instructorId, sectionId);
+    }
+
+    /**
+     * UI flow: choose a student from the roster and enter component scores.
+     */
+    public void enterGradeForStudentUi(int instructorId, int sectionId) {
+        if (!"Instructor".equals(user.getRole())) {
+            javax.swing.JOptionPane.showMessageDialog(null, "Access Denied.", "Access Denied", javax.swing.JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            java.util.List<edu.univ.erp.domain.EnrollmentRecord> roster = instructorActions.getRoster(instructorId, sectionId);
+            if (roster == null || roster.isEmpty()) {
+                javax.swing.JOptionPane.showMessageDialog(null, "No students in this section.", "Info", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            String[] options = new String[roster.size()];
+            for (int i = 0; i < roster.size(); i++) {
+                edu.univ.erp.domain.EnrollmentRecord r = roster.get(i);
+                options[i] = r.getEnrollmentId() + " - " + r.getStudentName() + " (" + r.getRollNo() + ")";
+            }
+
+            String sel = (String) javax.swing.JOptionPane.showInputDialog(null, "Select student:", "Select Student", javax.swing.JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+            if (sel == null) return;
+            int enrollmentId = Integer.parseInt(sel.split(" - ")[0]);
+
+            // Find the enrollment record
+            edu.univ.erp.domain.EnrollmentRecord chosen = null;
+            for (edu.univ.erp.domain.EnrollmentRecord r : roster) if (r.getEnrollmentId() == enrollmentId) { chosen = r; break; }
+            if (chosen == null) {
+                javax.swing.JOptionPane.showMessageDialog(null, "Selected student not found in roster.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Build input fields prefilled with existing scores
+            javax.swing.JTextField quizField = new javax.swing.JTextField(chosen.getQuizScore() == null ? "" : String.valueOf(chosen.getQuizScore()));
+            javax.swing.JTextField assignmentField = new javax.swing.JTextField(chosen.getAssignmentScore() == null ? "" : String.valueOf(chosen.getAssignmentScore()));
+            javax.swing.JTextField midtermField = new javax.swing.JTextField(chosen.getMidtermScore() == null ? "" : String.valueOf(chosen.getMidtermScore()));
+            javax.swing.JTextField endtermField = new javax.swing.JTextField(chosen.getEndtermScore() == null ? "" : String.valueOf(chosen.getEndtermScore()));
+
+            Object[] message = {"Quiz:", quizField, "Assignment:", assignmentField, "Midterm:", midtermField, "Endterm:", endtermField};
+            int result = javax.swing.JOptionPane.showConfirmDialog(null, message, "Enter Scores for " + chosen.getStudentName(), javax.swing.JOptionPane.OK_CANCEL_OPTION);
+            if (result != javax.swing.JOptionPane.OK_OPTION) return;
+
+            // helper to parse optional double
+            java.util.function.Function<String, Double> parseOpt = s -> {
+                if (s == null || s.trim().isEmpty()) return null;
+                try { return Double.parseDouble(s.trim()); } catch (NumberFormatException ex) { return null; }
+            };
+
+            Double q = parseOpt.apply(quizField.getText());
+            Double a = parseOpt.apply(assignmentField.getText());
+            Double m = parseOpt.apply(midtermField.getText());
+            Double e = parseOpt.apply(endtermField.getText());
+
+            StringBuilder resLog = new StringBuilder();
+            if (q != null) {
+                instructorActions.recordScore(instructorId, enrollmentId, "quiz", q.doubleValue());
+                resLog.append("Quiz=").append(q).append("; ");
+            }
+            if (a != null) {
+                instructorActions.recordScore(instructorId, enrollmentId, "assignment", a.doubleValue());
+                resLog.append("Assignment=").append(a).append("; ");
+            }
+            if (m != null) {
+                instructorActions.recordScore(instructorId, enrollmentId, "midterm", m.doubleValue());
+                resLog.append("Midterm=").append(m).append("; ");
+            }
+            if (e != null) {
+                instructorActions.recordScore(instructorId, enrollmentId, "endterm", e.doubleValue());
+                resLog.append("Endterm=").append(e).append("; ");
+            }
+
+            javax.swing.JOptionPane.showMessageDialog(null, "Scores recorded: " + resLog.toString(), "Success", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            javax.swing.JOptionPane.showMessageDialog(null, "Failed to record scores: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**

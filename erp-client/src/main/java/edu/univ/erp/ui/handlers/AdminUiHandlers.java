@@ -232,6 +232,38 @@ public class AdminUiHandlers {
         }
     }
 
+    /** Display all existing sections (one row per section) with basic metadata. */
+    public void displayAllSections() {
+        if (!"Admin".equals(user.getRole())) return;
+        try {
+            java.util.List<CourseCatalog> courses = adminActions.fetchAllCourses();
+            if (courses == null || courses.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "No sections available.", "View Sections", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            String[] cols = new String[] {"Section ID", "Course Code", "Title", "Instructor", "Enrolled/Capacity", "Semester"};
+            Object[][] data = new Object[courses.size()][];
+            for (int i = 0; i < courses.size(); i++) {
+                CourseCatalog c = courses.get(i);
+                String instr = c.getInstructorName() == null || c.getInstructorName().trim().isEmpty() ? "Unassigned" : c.getInstructorName();
+                String enrolled = c.getEnrolledCount() + "/" + c.getCapacity();
+                data[i] = new Object[] { c.getSectionId(), c.getCourseCode(), c.getCourseTitle(), instr, enrolled, c.getSemester() + " " + c.getYear() };
+            }
+
+            javax.swing.JTable table = new javax.swing.JTable(data, cols) {
+                @Override public boolean isCellEditable(int row, int column) { return false; }
+            };
+            table.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF);
+            javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(table);
+            scroll.setPreferredSize(new java.awt.Dimension(900, 400));
+            javax.swing.JOptionPane.showMessageDialog(null, scroll, "All Sections", javax.swing.JOptionPane.PLAIN_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Failed to load sections: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: displayAllSections: " + e.getMessage());
+        }
+    }
+
     /** Helper to pre-fill course code when creating a section from the duplicate-course dialog. */
     private void handleCreateSectionClickPrefill(String prefillCourseCode) {
         if (!"Admin".equals(user.getRole())) return;
@@ -312,7 +344,16 @@ public class AdminUiHandlers {
                 return;
             }
 
-            String[] courseOptions = courses.stream()
+            // Deduplicate courses by course code so the Create Section dropdown
+            // shows one entry per course (even if multiple sections exist).
+            java.util.LinkedHashMap<String, CourseCatalog> unique = new java.util.LinkedHashMap<>();
+            for (CourseCatalog c : courses) {
+                String codeKey = c.getCourseCode() == null ? "" : c.getCourseCode().trim().toUpperCase();
+                if (!unique.containsKey(codeKey)) {
+                    unique.put(codeKey, c);
+                }
+            }
+            String[] courseOptions = unique.values().stream()
                     .map(c -> String.format("%s - %s", c.getCourseCode(), c.getCourseTitle()))
                     .toArray(String[]::new);
             javax.swing.JComboBox<String> courseBox = new javax.swing.JComboBox<>(courseOptions);

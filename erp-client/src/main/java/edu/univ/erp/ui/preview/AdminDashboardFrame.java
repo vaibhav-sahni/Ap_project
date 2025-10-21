@@ -30,6 +30,7 @@ public class AdminDashboardFrame extends JFrame {
 
         JButton allStudents = new JButton("All Students");
         JButton allCourses = new JButton("All Courses");
+        JButton viewSections = new JButton("View Sections");
         JButton createCourse = new JButton("Create Course");
         JButton createStudent = new JButton("Create Student");
     JButton createInstructor = new JButton("Create Instructor");
@@ -44,6 +45,7 @@ public class AdminDashboardFrame extends JFrame {
         edu.univ.erp.ui.handlers.AdminUiHandlers adminHandlers = new edu.univ.erp.ui.handlers.AdminUiHandlers(user);
         allStudents.addActionListener(e -> adminHandlers.displayAllStudents());
         allCourses.addActionListener(e -> adminHandlers.displayAllCourses());
+    viewSections.addActionListener(e -> adminHandlers.displayAllSections());
     createCourse.addActionListener(e -> adminHandlers.handleCreateCourseClick());
         createStudent.addActionListener(e -> adminHandlers.handleCreateStudentClick());
         createInstructor.addActionListener(e -> adminHandlers.handleCreateInstructorClick());
@@ -58,7 +60,7 @@ public class AdminDashboardFrame extends JFrame {
             else dispose();
         });
 
-    add(allStudents); add(allCourses); add(createCourse); add(createStudent); add(createInstructor); add(createSection); add(reassignInstructor); add(toggleMaintenance); add(setDrop); add(downloadBackup); add(restoreBackup); add(exit);
+    add(allStudents); add(allCourses); add(viewSections); add(createCourse); add(createStudent); add(createInstructor); add(createSection); add(reassignInstructor); add(toggleMaintenance); add(setDrop); add(downloadBackup); add(restoreBackup); add(exit);
     }
 
     public void setController(DashboardController controller) {
