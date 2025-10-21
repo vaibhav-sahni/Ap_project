@@ -17,15 +17,16 @@ public class AuthDAO {
         String passwordHash,
         String role,
         int failedAttempts,      // NEW: For tracking lockout status
-        LocalDateTime lockedUntil // NEW: For checking lockout expiration
+        LocalDateTime lockedUntil, // NEW: For checking lockout expiration
+        LocalDateTime lastLogin    // NEW: last_login timestamp from DB
     ){}
 
     // --- SQL Queries ---
     private static final String FIND_USER_SQL = 
-        "SELECT user_id, password_hash, role, failed_attempts, locked_until FROM users_auth WHERE username = ?";
+        "SELECT user_id, password_hash, role, failed_attempts, locked_until, last_login FROM users_auth WHERE username = ?";
     
     private static final String FIND_USER_BY_ID_SQL = 
-        "SELECT user_id, password_hash, role, failed_attempts, locked_until FROM users_auth WHERE user_id = ?";
+        "SELECT user_id, password_hash, role, failed_attempts, locked_until, last_login FROM users_auth WHERE user_id = ?";
 
     private static final String UPDATE_HASH_SQL = 
         "UPDATE users_auth SET password_hash = ? WHERE user_id = ?";
@@ -39,19 +40,26 @@ public class AuthDAO {
         "locked_until = CASE WHEN failed_attempts + 1 >= 5 THEN ? ELSE NULL END " +
         "WHERE user_id = ?";
 
+    // Update last_login timestamp on successful authentication
+    private static final String UPDATE_LAST_LOGIN_SQL =
+        "UPDATE users_auth SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?";
+
     /**
      * Helper method to map a ResultSet row to the AuthDetails record.
      */
     private AuthDetails mapResultSetToAuthDetails(ResultSet rs) throws SQLException {
         Timestamp lockedTimestamp = rs.getTimestamp("locked_until");
         LocalDateTime lockedUntil = (lockedTimestamp != null) ? lockedTimestamp.toLocalDateTime() : null;
-        
+        Timestamp lastLoginTs = rs.getTimestamp("last_login");
+        LocalDateTime lastLogin = (lastLoginTs != null) ? lastLoginTs.toLocalDateTime() : null;
+
         return new AuthDetails( 
             rs.getInt("user_id"),
             rs.getString("password_hash"),
             rs.getString("role"),
             rs.getInt("failed_attempts"),
-            lockedUntil
+            lockedUntil,
+            lastLogin
         );
     }
     
@@ -132,6 +140,19 @@ public class AuthDAO {
             stmt.executeUpdate();
         } catch (SQLException e) {
             System.err.println("DB Error updating login attempts for ID: " + userId + ". " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update the last_login column for the given user to the current timestamp.
+     */
+    public void updateLastLogin(int userId) {
+        try (Connection conn = DBConnector.getAuthConnection();
+             PreparedStatement stmt = conn.prepareStatement(UPDATE_LAST_LOGIN_SQL)) {
+            stmt.setInt(1, userId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("DB Error updating last_login for ID: " + userId + ". " + e.getMessage());
         }
     }
 }

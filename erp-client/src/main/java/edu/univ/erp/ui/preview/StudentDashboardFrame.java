@@ -28,7 +28,7 @@ public class StudentDashboardFrame extends JFrame {
             }
         });
 
-        JButton catalog = new JButton("Catalog");
+    JButton catalog = new JButton("Catalog");
         JButton grades = new JButton("My Grades");
         JButton register = new JButton("Register Course");
         JButton drop = new JButton("Drop Course");
@@ -36,7 +36,7 @@ public class StudentDashboardFrame extends JFrame {
         JButton transcript = new JButton("Download Transcript");
         JButton exit = new JButton("Logout");
 
-        catalog.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true));
+    catalog.addActionListener(e -> new CatalogPreviewFrame(user).setVisible(true));
         grades.addActionListener(e -> new GradesPreviewFrame(user).setVisible(true));
         timetable.addActionListener(e -> {
             if (controller != null) controller.fetchAndDisplayTimetable();
@@ -136,6 +136,11 @@ public class StudentDashboardFrame extends JFrame {
             else dispose();
         });
 
+    // Last login label (if available on the UserAuth object)
+    if (user != null && user.getLastLogin() != null) {
+        javax.swing.JLabel lastLoginLabel = new javax.swing.JLabel("Last login: " + user.getLastLogin());
+        add(lastLoginLabel);
+    }
     add(catalog); add(grades); add(register); add(drop); add(timetable); add(transcript); add(exit);
     }
 

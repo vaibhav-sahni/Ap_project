@@ -78,11 +78,21 @@ public class AuthService {
             
             // SUCCESS: Reset attempts and proceed
             authDAO.updateLoginAttempts(userId, true); 
+            // Update last_login timestamp
+            authDAO.updateLastLogin(userId);
             
+            // Fetch the latest details to get the updated last_login value
+            AuthDetails refreshed = authDAO.findUserByUserId(userId);
+            String lastLoginStr = null;
+            if (refreshed != null && refreshed.lastLogin() != null) {
+                lastLoginStr = refreshed.lastLogin().toString(); // ISO-8601 from LocalDateTime
+            }
+
             UserAuth user = new UserAuth(
                 userId,
                 username,
-                details.role()
+                details.role(),
+                lastLoginStr
             );
             
             System.out.println("SERVER LOG: SUCCESS - User authenticated: " + user.getUsername() + ", Role: " + user.getRole());

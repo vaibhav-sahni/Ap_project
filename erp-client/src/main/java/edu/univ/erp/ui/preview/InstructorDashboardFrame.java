@@ -40,6 +40,11 @@ public class InstructorDashboardFrame extends JFrame {
         final int uid = user == null ? -1 : user.getUserId();
     InstructorUiHandlers handlers = new InstructorUiHandlers(user);
 
+        if (user != null && user.getLastLogin() != null) {
+            javax.swing.JLabel lastLoginLabel = new javax.swing.JLabel("Last login: " + user.getLastLogin());
+            add(lastLoginLabel);
+        }
+
         assigned.addActionListener(e -> handlers.displayAssignedSections(uid));
         roster.addActionListener(e -> {
             Integer sid = chooseSectionDialog(handlers, uid);

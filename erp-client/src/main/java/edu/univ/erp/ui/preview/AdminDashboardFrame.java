@@ -43,6 +43,10 @@ public class AdminDashboardFrame extends JFrame {
         JButton exit = new JButton("Logout");
 
         edu.univ.erp.ui.handlers.AdminUiHandlers adminHandlers = new edu.univ.erp.ui.handlers.AdminUiHandlers(user);
+        if (user != null && user.getLastLogin() != null) {
+            javax.swing.JLabel lastLoginLabel = new javax.swing.JLabel("Last login: " + user.getLastLogin());
+            add(lastLoginLabel);
+        }
         allStudents.addActionListener(e -> adminHandlers.displayAllStudents());
         allCourses.addActionListener(e -> adminHandlers.displayAllCourses());
     viewSections.addActionListener(e -> adminHandlers.displayAllSections());
