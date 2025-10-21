@@ -528,23 +528,35 @@ public class AdminUiHandlers {
                 return;
             }
 
-            // Build a table for aligned columns
-            String[] cols = new String[] { "Code", "Title", "Credits", "Section ID", "Day/Time", "Room", "Capacity", "Enrolled", "Semester", "Year", "Instructor ID", "Instructor" };
-            Object[][] data = new Object[courses.size()][cols.length];
-            for (int i = 0; i < courses.size(); i++) {
-                edu.univ.erp.domain.CourseCatalog c = courses.get(i);
-                data[i][0] = c.getCourseCode();
-                data[i][1] = c.getCourseTitle();
-                data[i][2] = c.getCredits();
-                data[i][3] = c.getSectionId();
-                data[i][4] = c.getDayTime();
-                data[i][5] = c.getRoom();
-                data[i][6] = c.getCapacity();
-                data[i][7] = c.getEnrolledCount();
-                data[i][8] = c.getSemester();
-                data[i][9] = c.getYear();
-                data[i][10] = c.getInstructorId();
-                data[i][11] = c.getInstructorName();
+            // Present one row per course (deduplicated by course code) with a sections count
+            java.util.Map<String, java.util.List<edu.univ.erp.domain.CourseCatalog>> grouped = new java.util.LinkedHashMap<>();
+            for (edu.univ.erp.domain.CourseCatalog c : courses) {
+                String key = c.getCourseCode() == null ? "" : c.getCourseCode().trim().toUpperCase();
+                grouped.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(c);
+            }
+
+            String[] cols = new String[] { "Code", "Title", "Credits", "Sections", "Total Capacity", "Total Enrolled", "Instructors" };
+            Object[][] data = new Object[grouped.size()][cols.length];
+            int ri = 0;
+            for (java.util.List<edu.univ.erp.domain.CourseCatalog> list : grouped.values()) {
+                edu.univ.erp.domain.CourseCatalog sample = list.get(0);
+                int totalCapacity = 0;
+                int totalEnrolled = 0;
+                java.util.Set<String> instrs = new java.util.LinkedHashSet<>();
+                for (edu.univ.erp.domain.CourseCatalog sc : list) {
+                    totalCapacity += sc.getCapacity();
+                    totalEnrolled += sc.getEnrolledCount();
+                    if (sc.getInstructorName() != null && !sc.getInstructorName().trim().isEmpty()) instrs.add(sc.getInstructorName());
+                }
+                String instrDisplay = instrs.isEmpty() ? "Unassigned" : String.join(", ", instrs);
+                data[ri][0] = sample.getCourseCode();
+                data[ri][1] = sample.getCourseTitle();
+                data[ri][2] = sample.getCredits();
+                data[ri][3] = list.size();
+                data[ri][4] = totalCapacity;
+                data[ri][5] = totalEnrolled;
+                data[ri][6] = instrDisplay;
+                ri++;
             }
 
             javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(data, cols) {
@@ -552,15 +564,14 @@ public class AdminUiHandlers {
             };
             javax.swing.JTable table = new javax.swing.JTable(model);
             table.setAutoResizeMode(javax.swing.JTable.AUTO_RESIZE_OFF);
-            // Set preferred widths for readability
-            int[] widths = new int[] {80, 240, 60, 80, 120, 80, 70, 70, 80, 60, 90, 160};
+            int[] widths = new int[] {100, 300, 60, 80, 100, 100, 200};
             for (int col = 0; col < widths.length && col < table.getColumnModel().getColumnCount(); col++) {
                 table.getColumnModel().getColumn(col).setPreferredWidth(widths[col]);
             }
 
             javax.swing.JScrollPane sp = new javax.swing.JScrollPane(table);
-            sp.setPreferredSize(new java.awt.Dimension(1000, Math.min(600, courses.size() * 25 + 60)));
-            JOptionPane.showMessageDialog(null, sp, "All Courses / Sections", JOptionPane.INFORMATION_MESSAGE);
+            sp.setPreferredSize(new java.awt.Dimension(1000, Math.min(600, grouped.size() * 25 + 60)));
+            JOptionPane.showMessageDialog(null, sp, "All Courses (deduped)", JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             System.err.println("ERROR: Failed to fetch courses via API: " + e.getMessage());
             javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
