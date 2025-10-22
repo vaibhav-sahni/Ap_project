@@ -116,15 +116,23 @@ public class InstructorService {
             (midtermScore * W_MIDTERM) +    // 30%
             (endtermScore * W_ENDTERM);   // 35% (FIXED)
             
-        // 4. Letter Grade Assignment (Example scale)
+        // 4. Letter Grade Assignment with minus grades (no D-):
+        // Thresholds:
+    
         String finalLetter;
         if (finalNumericScore >= 90.0) {
             finalLetter = "A";
         } else if (finalNumericScore >= 80.0) {
-            finalLetter = "B";
+            finalLetter = "A-";
         } else if (finalNumericScore >= 70.0) {
-            finalLetter = "C";
+            finalLetter = "B";
         } else if (finalNumericScore >= 60.0) {
+            finalLetter = "B-";
+        } else if (finalNumericScore >= 50.0) {
+            finalLetter = "C";
+        } else if (finalNumericScore >= 40.0) {
+            finalLetter = "C-";
+        } else if (finalNumericScore >= 30.0) {
             finalLetter = "D";
         } else {
             finalLetter = "F";
