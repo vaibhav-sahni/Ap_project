@@ -1,3 +1,51 @@
+# Ap_project — Product brief & quick demo
+
+Short summary
+Ap_project is a compact university ERP demo that showcases end-to-end student, instructor and admin workflows via a Java Swing client and a lightweight TCP server.
+
+Why this repo exists
+- Students: browse catalog, register/drop sections, view grades and download transcripts.
+- Instructors: manage assigned sections, enter component scores, compute and export final grades.
+- Administrators: create/manage users, courses and sections; perform DB backups and restores.
+
+Top-level features (at a glance)
+- Login / session management with account lockout and last-login tracking.
+- Student flow: view course catalog → register for a section (capacity checks) → view timetable and grades → download transcript.
+- Instructor flow: view assigned sections → open roster → record component scores → compute final grade → export/import grades (CSV).
+- Admin flow: create students/instructors/courses/sections → toggle maintenance mode → DB backup/restore (gzipped SQL via safe BASE64 transfer).
+
+Protocol (simple)
+- The client sends single-line commands over TCP, e.g. `LOGIN:username:password`.
+- The server responds with `SUCCESS:<payload>` or `ERROR:<message>`; files are transferred as `FILE_DOWNLOAD:<mime>:<name>:BASE64:<payload>`.
+
+Quick start (build & run)
+1. Build modules:
+
+```cmd
+cd erp-server
+mvn -DskipTests package
+
+cd ..\erp-client
+mvn -DskipTests package
+```
+
+2. Start server: run `ServerMain` in `erp-server` or execute the jar in `erp-server/target`.
+3. Start client: run the main/launcher in `erp-client` or the client JAR.
+
+Where to look (concise map)
+
+Notes for reviewers
+ This is a student project/demonstration — it uses plain TCP (no TLS) and a simple protocol by design.
+
+If you want me to add a short architecture diagram, minimal README badges, or a short demo script that runs the server and a headless client command, tell me which one and I'll add it.
+Want extras?
+------------
+I can quickly add:
+- A one-page ASCII architecture diagram.
+- A one-minute demo script (automated starter + sample commands).
+- A short non-technical readme badge and contact line for project attribution.
+
+Tell me which extra(s) and I’ll add them.
 # Ap_project (ERP) — Features & Developer README
 
 This repository contains a small university ERP-style application implemented in Java (Maven multi-module). It has two primary modules:
