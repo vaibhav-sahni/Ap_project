@@ -144,10 +144,3 @@ Expect `SUCCESS:` or `ERROR:` responses. File responses return `FILE_DOWNLOAD:..
 
 ---
 
-If you'd like, I can:
-
-- Format `last_login` as timezone-aware and display a localized friendly string in the UI.
-- Automatically refactor long-running client calls to `SwingWorker` and add a small modal progress dialog + cancel button.
-- Add a small status header component and replace the repeated labels in dashboards.
-
-Tell me which of the above you'd like me to implement next and I will proceed.
