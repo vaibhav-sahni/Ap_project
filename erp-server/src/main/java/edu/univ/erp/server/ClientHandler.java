@@ -137,6 +137,8 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
           return handleGetCatalog();
         case "GET_TIMETABLE":
           return handleGetTimetable(parts);
+        case "GET_CGPA":
+          return handleGetCgpa(parts);
         case "REGISTER": 
           return handleRegisterCourse(parts);
         case "DROP_SECTION": 
@@ -463,6 +465,45 @@ private String handleCreateSection(String[] parts) throws Exception {
     List<CourseCatalog> schedule = studentService.fetchTimetable(userId);
     String scheduleJson = gson.toJson(schedule);
     return "SUCCESS:" + scheduleJson;
+  }
+
+  /**
+   * Handles GET_CGPA:userId
+   * Returns JSON payload: { "cgpa": <number|null>, "totalCreditsEarned": <number> }
+   */
+  private String handleGetCgpa(String[] parts) throws Exception {
+    if (parts.length < 2) throw new Exception("Missing user ID for CGPA request.");
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int userId;
+    try {
+      userId = Integer.parseInt(parts[1]);
+    } catch (NumberFormatException e) {
+      throw new Exception("Invalid user ID format provided.");
+    }
+
+    // allow owner or admin
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the user or admins may fetch the CGPA.");
+    }
+
+  StudentService studentService = new StudentService();
+  double cgpa = studentService.computeCgpa(userId);
+  double creditsEarned = studentService.computeTotalCreditsEarned(userId);
+
+  LOGGER.info(() -> "handleGetCgpa: userId=" + userId + ", cgpaRaw=" + cgpa + ", creditsEarned=" + creditsEarned);
+
+    // Build JSON manually to avoid Gson edge-cases with local classes or null serialization.
+    StringBuilder sb = new StringBuilder();
+    sb.append('{');
+    sb.append("\"cgpa\":");
+    if (Double.isNaN(cgpa)) sb.append("null"); else sb.append(String.format(java.util.Locale.ROOT, "%.2f", cgpa));
+    sb.append(',');
+    sb.append("\"totalCreditsEarned\":");
+    sb.append(String.format(java.util.Locale.ROOT, "%.2f", creditsEarned));
+    sb.append('}');
+    String json = sb.toString();
+    return "SUCCESS:" + json;
   }
 
   /**

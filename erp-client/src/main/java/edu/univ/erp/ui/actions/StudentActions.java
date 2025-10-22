@@ -38,5 +38,9 @@ public class StudentActions {
         return studentApi.downloadTranscript(userId);
     }
 
+    public StudentAPI.CgpaResponse getCgpa(int userId) throws Exception {
+        return studentApi.getCgpa(userId);
+    }
+
     // Actions are now headless. The UI/handlers will render results.
 }

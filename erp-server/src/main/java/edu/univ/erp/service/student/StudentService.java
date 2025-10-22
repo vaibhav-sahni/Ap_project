@@ -17,6 +17,7 @@ import edu.univ.erp.dao.student.StudentDAO;
 import edu.univ.erp.domain.AssessmentComponent;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.Grade;
+import edu.univ.erp.util.GradeUtils;
 import edu.univ.erp.util.TranscriptFormatter; 
 
 public class StudentService {
@@ -295,5 +296,73 @@ public class StudentService {
         TranscriptFormatter formatter = new TranscriptFormatter();
         String rollno = StudentDAO.getStudentRollNo(userId);
         return formatter.generateHtml(grades, rollno);
+    }
+
+    /**
+     * Computes the credit-weighted CGPA for a student using a 10-point scale.
+     * Only courses with a recorded final grade (non-null and not "IP") are counted.
+     * Returns Double.NaN if no completed courses are found.
+     */
+    public double computeCgpa(int userId) throws Exception {
+        if (userId <= 0) throw new IllegalArgumentException("Invalid userId");
+
+        List<RawGradeResult> rawResults = gradeDAO.getRawGradeResultsByUserId(userId);
+
+        double totalWeightedPoints = 0.0;
+        double totalCredits = 0.0;
+
+        LOGGER.info(() -> "computeCgpa: rawResults size=" + rawResults.size());
+
+        for (RawGradeResult raw : rawResults) {
+            String finalGrade = raw.finalGrade();
+            double credits = raw.credits();
+
+            Double points = GradeUtils.gradeToPoints(finalGrade);
+            LOGGER.info(() -> "computeCgpa: enrollmentId=" + raw.enrollmentId() + ", course=" + raw.courseTitle() + ", finalGrade=" + finalGrade + ", credits=" + credits + ", mappedPoints=" + points);
+            if (points == null) {
+                // skip courses with no final grade or in-progress or unknown format
+                continue;
+            }
+
+            // If credits is zero or negative, skip (avoid affecting denominator)
+            if (credits <= 0.0) continue;
+
+            totalWeightedPoints += points * credits;
+            totalCredits += credits;
+        }
+
+        if (totalCredits <= 0.0) {
+            return Double.NaN; // indicate no CGPA available
+        }
+
+        double cgpa = totalWeightedPoints / totalCredits;
+        // Round to 2 decimal places
+        return Math.round(cgpa * 100.0) / 100.0;
+    }
+
+    /**
+     * Computes total credits earned by the student.
+     * A course counts as earned if it has a recorded final grade and the grade maps to > 0 points.
+     * Returns 0.0 when none are earned.
+     */
+    public double computeTotalCreditsEarned(int userId) throws Exception {
+        if (userId <= 0) throw new IllegalArgumentException("Invalid userId");
+
+        List<RawGradeResult> rawResults = gradeDAO.getRawGradeResultsByUserId(userId);
+
+        double totalEarned = 0.0;
+        LOGGER.info(() -> "computeTotalCreditsEarned: rawResults size=" + rawResults.size());
+        for (RawGradeResult raw : rawResults) {
+            String finalGrade = raw.finalGrade();
+            double credits = raw.credits();
+            Double points = GradeUtils.gradeToPoints(finalGrade);
+            LOGGER.info(() -> "computeTotalCreditsEarned: enrollmentId=" + raw.enrollmentId() + ", finalGrade=" + finalGrade + ", credits=" + credits + ", mappedPoints=" + points);
+            if (points == null) continue; // skip IP or unknown
+            if (points > 0.0 && credits > 0.0) {
+                totalEarned += credits;
+            }
+        }
+        // Round to 2 decimals for consistency
+        return Math.round(totalEarned * 100.0) / 100.0;
     }
 }

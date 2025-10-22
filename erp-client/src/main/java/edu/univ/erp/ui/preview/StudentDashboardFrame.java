@@ -141,6 +141,25 @@ public class StudentDashboardFrame extends JFrame {
         javax.swing.JLabel lastLoginLabel = new javax.swing.JLabel("Last login: " + user.getLastLogin());
         add(lastLoginLabel);
     }
+    // CGPA and credits label (will be populated asynchronously)
+    javax.swing.JLabel cgpaLabel = new javax.swing.JLabel("CGPA: N/A  | Credits Earned: 0");
+    add(cgpaLabel);
+    if (user != null) {
+        // Fetch CGPA off-EDT to avoid blocking UI
+        new Thread(() -> {
+            try {
+                edu.univ.erp.ui.actions.StudentActions actions = new edu.univ.erp.ui.actions.StudentActions();
+                edu.univ.erp.api.student.StudentAPI.CgpaResponse resp = actions.getCgpa(user.getUserId());
+                String displayCgpa = resp.cgpa == null ? "N/A" : String.format("%.2f", resp.cgpa);
+                String creds = String.format("%.2f", resp.totalCreditsEarned == null ? 0.0 : resp.totalCreditsEarned);
+                javax.swing.SwingUtilities.invokeLater(() -> cgpaLabel.setText("CGPA: " + displayCgpa + "  | Credits Earned: " + creds));
+            } catch (Exception ex) {
+                // Log exception and show N/A
+                ex.printStackTrace(System.err);
+                javax.swing.SwingUtilities.invokeLater(() -> cgpaLabel.setText("CGPA: N/A  | Credits Earned: 0"));
+            }
+        }).start();
+    }
     add(catalog); add(grades); add(register); add(drop); add(timetable); add(transcript); add(exit);
     }
 

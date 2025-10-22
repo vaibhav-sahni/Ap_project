@@ -16,7 +16,8 @@ public class GradeDAO {
     public static record RawGradeResult(
         int enrollmentId,
         String courseTitle,
-        String finalGrade
+        String finalGrade,
+        double credits
     ) {}
 
     // SQL to fetch course title, final letter grade, AND the enrollment ID
@@ -24,7 +25,8 @@ public class GradeDAO {
         "SELECT " +
         "e.enrollment_id, " + 
         "c.title AS course_title, " +
-        "g.final_grade " +
+        "g.final_grade, " +
+        "c.credits AS credits " +
         "FROM enrollments e " + // **START HERE: Get ALL enrollments first**
         "JOIN sections s ON e.section_id = s.section_id " +
         "JOIN courses c ON s.course_code = c.code " +
@@ -50,7 +52,8 @@ public class GradeDAO {
                     rawResults.add(new RawGradeResult(
                         rs.getInt("enrollment_id"),
                         rs.getString("course_title"),
-                        rs.getString("final_grade")
+                        rs.getString("final_grade"),
+                        rs.getDouble("credits")
                     ));
                 }
             }

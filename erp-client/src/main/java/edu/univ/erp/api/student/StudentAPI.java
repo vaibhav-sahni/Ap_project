@@ -4,6 +4,8 @@ import java.lang.reflect.Type;
 import java.util.List;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import edu.univ.erp.api.ClientRequest;
@@ -128,6 +130,36 @@ public class StudentAPI {
             return gson.fromJson(gradesJson, listType);
         } 
         throw new Exception("Failed to receive grades from server.");
+    }
+
+    /**
+     * Requests CGPA and total credits earned for the student.
+     * Response JSON: { "cgpa": number|null, "totalCreditsEarned": number }
+     */
+    public CgpaResponse getCgpa(int userId) throws Exception {
+        String request = "GET_CGPA:" + userId;
+        String response = ClientRequest.send(request);
+
+        // Debug: print raw response for troubleshooting
+        System.err.println("DEBUG StudentAPI.getCgpa raw response: '" + response + "'");
+
+        if (!response.startsWith("SUCCESS:")) {
+            throw new Exception("Failed to retrieve CGPA: " + response);
+        }
+
+        String json = response.substring("SUCCESS:".length());
+        JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+
+        CgpaResponse r = new CgpaResponse();
+        if (obj.has("cgpa") && !obj.get("cgpa").isJsonNull()) r.cgpa = obj.get("cgpa").getAsDouble();
+        else r.cgpa = null;
+        r.totalCreditsEarned = obj.has("totalCreditsEarned") ? obj.get("totalCreditsEarned").getAsDouble() : 0.0;
+        return r;
+    }
+
+    public static class CgpaResponse {
+        public Double cgpa;
+        public Double totalCreditsEarned;
     }
 
     // ----------------------------------------------------------------------
