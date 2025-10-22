@@ -17,12 +17,35 @@ public class AuthAPI {
         // For per-connection session model, open a persistent connection and send LOGIN over it.
         ClientConnection conn = null;
         String response;
+        // Show a simple progress dialog during the blocking login call
+        final edu.univ.erp.ui.components.ProgressDialog[] dlgRef = new edu.univ.erp.ui.components.ProgressDialog[1];
         try {
+            // Create and show dialog on EDT. invokeAndWait throws if we are already on EDT,
+            // so handle both cases.
+            final java.awt.Frame owner = new java.awt.Frame();
+            if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+                dlgRef[0] = new edu.univ.erp.ui.components.ProgressDialog(owner, "Logging in...", "Connecting to server and authenticating...");
+                dlgRef[0].showDialog();
+            } else {
+                javax.swing.SwingUtilities.invokeAndWait(() -> {
+                    dlgRef[0] = new edu.univ.erp.ui.components.ProgressDialog(owner, "Logging in...", "Connecting to server and authenticating...");
+                    dlgRef[0].showDialog();
+                });
+            }
+
             conn = new ClientConnection("localhost", 9090);
             response = conn.send(request);
         } catch (Exception e) {
             if (conn != null) try { conn.close(); } catch (Exception ex) { /* ignore */ }
             throw e;
+        } finally {
+            // ensure the dialog is closed on EDT
+            final edu.univ.erp.ui.components.ProgressDialog finalDlg = dlgRef[0];
+            try {
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    if (finalDlg != null) finalDlg.close();
+                });
+            } catch (Exception ignore) {}
         }
 
         // 3. Process the SUCCESS response

@@ -16,6 +16,12 @@ public class ClientConnection implements AutoCloseable {
 
     public ClientConnection(String host, int port) throws IOException {
         this.socket = new Socket(host, port);
+        // Set a socket read timeout so blocking reads do not hang indefinitely (10s)
+        try {
+            this.socket.setSoTimeout(10000); // 10 seconds
+        } catch (IOException ignore) {
+            // Best-effort; the socket may be closed or unsupported in some envs
+        }
         this.out = new PrintWriter(socket.getOutputStream(), true);
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }

@@ -53,10 +53,12 @@ public class ClientRequest {
             }
         }
 
-        try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
-             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-        ) {
+       try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
+           PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+           BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+       ) {
+          // ensure we don't block forever waiting for a server response
+          try { socket.setSoTimeout(10000); } catch (Exception ignore) {}
             out.println(request);
             String response = in.readLine();
 
@@ -73,6 +75,10 @@ public class ClientRequest {
             return response; 
 
         } catch (IOException e) {
+            String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            if (msg.toLowerCase().contains("timed out") || msg.toLowerCase().contains("sockettimeout")) {
+                throw new Exception("Server did not respond in time (timeout). Try again.", e);
+            }
             throw new Exception("Could not connect to ERP Server. Is the server running?", e);
         }
     }
