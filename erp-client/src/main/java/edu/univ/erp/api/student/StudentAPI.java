@@ -140,8 +140,7 @@ public class StudentAPI {
         String request = "GET_CGPA:" + userId;
         String response = ClientRequest.send(request);
 
-        // Debug: print raw response for troubleshooting
-        System.err.println("DEBUG StudentAPI.getCgpa raw response: '" + response + "'");
+    // Debugging output removed to avoid noisy console logs in UI/clients.
 
         if (!response.startsWith("SUCCESS:")) {
             throw new Exception("Failed to retrieve CGPA: " + response);

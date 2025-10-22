@@ -73,7 +73,7 @@ public class StudentDashboardFrame extends JFrame {
                     if (controller != null) controller.handleRegisterCourseClick(sectionId);
                     else new edu.univ.erp.ui.handlers.StudentUiHandlers(user).handleRegisterCourseClick(sectionId);
 
-                    javax.swing.JOptionPane.showMessageDialog(StudentDashboardFrame.this, "Registration completed.", "Register", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                    // Refresh displays; the handler itself shows success or failure dialogs.
                     if (controller != null) controller.fetchAndDisplayTimetable();
                     else new edu.univ.erp.ui.handlers.StudentUiHandlers(user).refreshCatalogAndTimetable();
                 } catch (Exception ex) {
@@ -120,7 +120,7 @@ public class StudentDashboardFrame extends JFrame {
                     } else {
                         new edu.univ.erp.ui.handlers.StudentUiHandlers(user).handleDropCourseClick(sectionId);
                     }
-                    javax.swing.JOptionPane.showMessageDialog(StudentDashboardFrame.this, "Course drop completed.", "Drop Complete", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                    // Refresh displays; the handler shows success or error dialogs.
                     if (controller != null) controller.fetchAndDisplayTimetable();
                     else new edu.univ.erp.ui.handlers.StudentUiHandlers(user).refreshCatalogAndTimetable();
                 } catch (Exception ex) {

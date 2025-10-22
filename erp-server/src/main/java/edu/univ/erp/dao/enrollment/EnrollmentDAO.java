@@ -40,6 +40,15 @@ public class EnrollmentDAO {
     // Count current registered students for a section
     private static final String COUNT_REGISTERED_SQL =
         "SELECT COUNT(*) AS enrolled_count FROM enrollments WHERE section_id = ? AND status = 'Registered'";
+
+    // Check whether student is registered in any other section of the same course
+    private static final String CHECK_REGISTERED_SAME_COURSE_SQL =
+        "SELECT 1 FROM enrollments e " +
+        "JOIN sections s ON e.section_id = s.section_id " +
+        "JOIN course_catalog c ON s.course_code = c.course_code " +
+        "WHERE e.student_id = ? AND e.status = 'Registered' AND c.course_code = (" +
+        "    SELECT c2.course_code FROM sections s2 JOIN course_catalog c2 ON s2.course_code = c2.course_code WHERE s2.section_id = ?" +
+        ") AND s.section_id <> ? LIMIT 1";
         
     // --- NEW SQL QUERY: Update status from 'Registered' to 'Dropped' (Rule #2) ---
     private static final String DROP_COURSE_SQL =
@@ -163,6 +172,21 @@ public class EnrollmentDAO {
             if (countStmt != null) try { countStmt.close(); } catch (SQLException ex) { /* ignore */ }
             if (insertStmt != null) try { insertStmt.close(); } catch (SQLException ex) { /* ignore */ }
             if (conn != null) try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { /* ignore */ }
+        }
+    }
+
+    /**
+     * Returns true if the student is already registered in another section of the same course.
+     */
+    public boolean isRegisteredForSameCourseInAnotherSection(int studentId, int targetSectionId) throws SQLException {
+        try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(CHECK_REGISTERED_SAME_COURSE_SQL)) {
+            stmt.setInt(1, studentId);
+            stmt.setInt(2, targetSectionId);
+            stmt.setInt(3, targetSectionId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         }
     }
     
