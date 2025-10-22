@@ -241,8 +241,7 @@ public class InstructorService {
 
         // If any parsing/validation errors occurred, abort before making DB changes
         if (errors > 0) {
-            // Log detailed parsing errors for debugging
-            java.util.logging.Logger.getLogger(InstructorService.class.getName()).warning("CSV import aborted: parsing errors detected for instructorId=" + instructorId + " sectionId=" + sectionId + "; details:\n" + errorDetails.toString());
+            // Abort import on parsing/validation errors and return a summary to the caller.
             StringBuilder summary = new StringBuilder();
             summary.append("Parsed: ").append(processed).append(", Errors: ").append(errors);
             summary.append("\nDetails:\n").append(errorDetails.toString());

@@ -491,7 +491,7 @@ private String handleCreateSection(String[] parts) throws Exception {
   double cgpa = studentService.computeCgpa(userId);
   double creditsEarned = studentService.computeTotalCreditsEarned(userId);
 
-  LOGGER.info(() -> "handleGetCgpa: userId=" + userId + ", cgpaRaw=" + cgpa + ", creditsEarned=" + creditsEarned);
+  // suppressed info log for CGPA requests to reduce verbosity
 
     // Build JSON manually to avoid Gson edge-cases with local classes or null serialization.
     StringBuilder sb = new StringBuilder();

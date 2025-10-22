@@ -311,14 +311,14 @@ public class StudentService {
         double totalWeightedPoints = 0.0;
         double totalCredits = 0.0;
 
-        LOGGER.info(() -> "computeCgpa: rawResults size=" + rawResults.size());
+    // Quiet: avoid verbose info logs during CGPA computation
 
         for (RawGradeResult raw : rawResults) {
             String finalGrade = raw.finalGrade();
             double credits = raw.credits();
 
             Double points = GradeUtils.gradeToPoints(finalGrade);
-            LOGGER.info(() -> "computeCgpa: enrollmentId=" + raw.enrollmentId() + ", course=" + raw.courseTitle() + ", finalGrade=" + finalGrade + ", credits=" + credits + ", mappedPoints=" + points);
+            // per-enrollment debug information suppressed
             if (points == null) {
                 // skip courses with no final grade or in-progress or unknown format
                 continue;
@@ -351,12 +351,12 @@ public class StudentService {
         List<RawGradeResult> rawResults = gradeDAO.getRawGradeResultsByUserId(userId);
 
         double totalEarned = 0.0;
-        LOGGER.info(() -> "computeTotalCreditsEarned: rawResults size=" + rawResults.size());
+    // Quiet: avoid verbose info logs during credits computation
         for (RawGradeResult raw : rawResults) {
             String finalGrade = raw.finalGrade();
             double credits = raw.credits();
             Double points = GradeUtils.gradeToPoints(finalGrade);
-            LOGGER.info(() -> "computeTotalCreditsEarned: enrollmentId=" + raw.enrollmentId() + ", finalGrade=" + finalGrade + ", credits=" + credits + ", mappedPoints=" + points);
+            // per-enrollment debug information suppressed
             if (points == null) continue; // skip IP or unknown
             if (points > 0.0 && credits > 0.0) {
                 totalEarned += credits;

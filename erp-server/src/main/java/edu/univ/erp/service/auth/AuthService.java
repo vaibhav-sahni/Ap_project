@@ -24,7 +24,7 @@ public class AuthService {
      */
     public UserAuth authenticate(String username, String password) throws Exception {
         
-        System.out.println("SERVER LOG: Attempting authentication for user: " + username);
+    // Authentication attempts are intentionally not logged to stdout to avoid verbose server output.
 
         // 1. Fetch authentication details (including the hash and lockout status)
         AuthDetails details = authDAO.findUserByUsername(username); 
@@ -45,7 +45,7 @@ public class AuthService {
             // Ensure the time remaining is positive (in case of near-expiration)
             if (totalSecondsRemaining <= 0) {
                  // Account should be unlocked now, but we return a general message as a safety net
-                 System.out.println("SERVER LOG: NEAR EXPIRATION - Account should be unlocked now.");
+                 // near-expiration details intentionally not printed to stdout
                  throw new Exception("Account is temporarily locked due to too many failed attempts. Please try logging in again.");
             }
             
@@ -65,7 +65,7 @@ public class AuthService {
                  timeDisplay.append(seconds).append(seconds == 1 ? " second" : " seconds");
             }
             
-            System.out.println("SERVER LOG: ACCESS BLOCKED - Account is locked until: " + details.lockedUntil());
+            // access-blocked details intentionally not printed to stdout
             
             // NEW: Include the precise time remaining in the error message for the client to display.
             throw new Exception("Account is temporarily locked due to too many failed attempts. Try again in " + timeDisplay.toString() + ".");
@@ -95,7 +95,7 @@ public class AuthService {
                 lastLoginStr
             );
             
-            System.out.println("SERVER LOG: SUCCESS - User authenticated: " + user.getUsername() + ", Role: " + user.getRole());
+            // success authentication message intentionally not printed to stdout
             return user;
             
         } else {

@@ -22,7 +22,7 @@ public class ServerMain {
             
             while (true) {
                 Socket clientSocket = serverSocket.accept(); 
-                LOGGER.log(Level.INFO, "SERVER LOG: New client connected: {0}", clientSocket.getInetAddress().getHostAddress());
+                // Connection accepted; avoid logging each client IP to reduce noisy logs.
                 
                 // Handle the client request in a new thread
                 new Thread(new ClientHandler(clientSocket)).start(); 
