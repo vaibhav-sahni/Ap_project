@@ -159,12 +159,6 @@ Expect `SUCCESS:` or `ERROR:` responses. File responses return `FILE_DOWNLOAD:..
 - The client UI previously could freeze if long-running network calls were performed on the EDT. The codebase contains network APIs that must be invoked off the EDT; see `ui/handlers` where blocking calls are wrapped for UI usage.
 - Socket read timeouts are configured via system property `erp.socketReadTimeoutMs` (default 300000 ms). The server sets socket read timeouts for connections.
 
-## Suggested Next Improvements (low-risk)
-
-- Move client blocking network calls to `SwingWorker` or use an `ExecutorService` to avoid EDT freezes and provide progress/cancellation.
-- Improve timestamp format: return timezone-aware ISO timestamps (Z / offset) from server and present localized friendly format on the client.
-- Add a shared header component in the client to consistently display `lastLogin` instead of repeating the label across frames.
-- Add unit/integration tests for the protocol and a small harness to simulate slow network responses.
 
 ## Where to look in the codebase (entry points)
 
