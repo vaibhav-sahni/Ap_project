@@ -1393,86 +1393,65 @@ public class DashboardForm extends SimpleForm {
             JPanel cell = new JPanel(new BorderLayout());
             cell.setOpaque(false);
 
-            JLabel dayLabel = new JLabel(String.valueOf(day), SwingConstants.CENTER) {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    // Dynamically set color before painting
-                    if (!getParent().isOpaque()) {
-                        // Regular day - not highlighted
-                        setForeground(textColor());
-                    }
-                    super.paintComponent(g);
-                }
-            };
-            dayLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
-
+            // Determine date and whether it's today or deadline
             LocalDate cellDate = LocalDate.of(currentDate.getYear(), currentDate.getMonth(), day);
             boolean isToday = cellDate.equals(LocalDate.now());
-
-            // Find if this date has a deadline
-            CourseDeadline deadline = null;
+            CourseDeadline foundDeadline = null;
             for (CourseDeadline cd : courseDeadlines) {
                 if (cd.date.equals(cellDate)) {
-                    deadline = cd;
+                    foundDeadline = cd;
                     break;
                 }
             }
+            final CourseDeadline deadline = foundDeadline;
+            final boolean isDeadline = (deadline != null);
 
-            final CourseDeadline finalDeadline = deadline;
-            boolean isDeadline = (deadline != null);
+            JLabel dayLabel = new JLabel(String.valueOf(day), SwingConstants.CENTER) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            if (isToday) {
-                // Highlight today with accent color
-                Color todayBg = todayColor();
-                cell.setOpaque(true);
-                cell.setBackground(todayBg);
-                dayLabel.setForeground(Color.WHITE);
-                cell.setBorder(BorderFactory.createCompoundBorder(
-                        new RoundedBorder(8, todayBg),
-                        BorderFactory.createEmptyBorder(8, 2, 8, 2)
-                ));
-            } else if (isDeadline) {
-                // Deadline dates in red
-                Color deadlineBg = deadlineColor();
-                cell.setOpaque(true);
-                cell.setBackground(deadlineBg);
-                dayLabel.setForeground(Color.WHITE);
-                cell.setBorder(BorderFactory.createCompoundBorder(
-                        new RoundedBorder(8, deadlineBg),
-                        BorderFactory.createEmptyBorder(8, 2, 8, 2)
-                ));
-
-                // IMPORTANT: Set tooltip on the label, not the panel
-                if (finalDeadline != null) {
-                    String tooltipText = "Registration of \"" + finalDeadline.courseName + "\" ends";
-                    dayLabel.setToolTipText(tooltipText);
-                    cell.setToolTipText(tooltipText);
-                }
-
-                // Add hover effect with better visual feedback
-                cell.addMouseListener(new MouseAdapter() {
-                    private final Color originalBg = deadlineBg;
-                    private final Color hoverBg = new Color(220, 38, 38);
-
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        cell.setBackground(hoverBg);
-                        cell.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                        // Force tooltip to show
-                        ToolTipManager.sharedInstance().setInitialDelay(100);
+                    Color highlight = isToday ? todayColor() : (isDeadline ? deadlineColor() : null);
+                    if (highlight != null) {
+                        int w = getWidth();
+                        int h = getHeight();
+                        int pad = 8;
+                        int diameter = Math.min(w, h) - pad;
+                        if (diameter < 8) diameter = Math.min(w, h);
+                        int x = (w - diameter) / 2;
+                        int y = (h - diameter) / 2;
+                        g2.setColor(highlight);
+                        g2.fillOval(x, y, diameter, diameter);
+                        g2.setColor(highlight.darker());
+                        g2.setStroke(new BasicStroke(1f));
+                        g2.drawOval(x, y, diameter, diameter);
+                        setForeground(Color.WHITE);
+                    } else {
+                        setForeground(textColor());
                     }
 
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
+
+            dayLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+            dayLabel.setBorder(BorderFactory.createEmptyBorder(8, 2, 8, 2));
+
+            if (isDeadline && deadline != null) {
+                dayLabel.setToolTipText("Registration of \"" + deadline.courseName + "\" ends");
+                // optional click to show details
+                dayLabel.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mouseExited(MouseEvent e) {
-                        cell.setBackground(originalBg);
-                        cell.setCursor(Cursor.getDefaultCursor());
-                        ToolTipManager.sharedInstance().setInitialDelay(750);
+                    public void mouseClicked(MouseEvent e) {
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            javax.swing.JOptionPane.showMessageDialog(DashboardForm.this,
+                                    "Deadline for: " + deadline.courseName + " on " + deadline.date,
+                                    "Deadline Details", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                        });
                     }
                 });
-            } else {
-                // Regular days - use proper text color
-                dayLabel.setForeground(textColor());
-                cell.setBorder(BorderFactory.createEmptyBorder(8, 2, 8, 2));
             }
 
             cell.add(dayLabel, BorderLayout.CENTER);
