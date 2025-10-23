@@ -22,6 +22,7 @@ public class CourseCatalog {
     // Instructor Details
     private int instructorId;
     private String instructorName; // Fetched from instructors.name
+    private String enrollmentStatus;
 
     // Default Constructor (required by Gson)
     public CourseCatalog() {}
@@ -29,7 +30,7 @@ public class CourseCatalog {
     // Parameterized Constructor (for the DAO to use)
     public CourseCatalog(String courseCode, String courseTitle, int credits, int sectionId, String dayTime, 
                          String room, int capacity, int enrolledCount, String semester, int year,
-                         int instructorId, String instructorName) {
+                         int instructorId, String instructorName, String enrollmentStatus) {
         this.courseCode = courseCode;
         this.courseTitle = courseTitle;
         this.credits = credits;
@@ -42,6 +43,16 @@ public class CourseCatalog {
         this.year = year;
         this.instructorId = instructorId;
         this.instructorName = instructorName;
+        this.enrollmentStatus = enrollmentStatus;
+    }
+
+    // Backward-compatible constructor used in older client code (12-arg) that does not include
+    // the enrollmentStatus field. Delegate to the main constructor and default enrollmentStatus
+    // to an empty string to preserve behavior.
+    public CourseCatalog(String courseCode, String courseTitle, int credits, int sectionId, String dayTime,
+                         String room, int capacity, int enrolledCount, String semester, int year,
+                         int instructorId, String instructorName) {
+        this(courseCode, courseTitle, credits, sectionId, dayTime, room, capacity, enrolledCount, semester, year, instructorId, instructorName, "");
     }
 
     // --- GETTERS (Required for Client UI and JSON Serialization) ---
@@ -57,6 +68,7 @@ public class CourseCatalog {
     public int getYear() { return year; }
     public int getInstructorId() { return instructorId; }
     public String getInstructorName() { return instructorName; }
+    public String getEnrollmentStatus() { return enrollmentStatus; }
     
     @Override
     public String toString() {

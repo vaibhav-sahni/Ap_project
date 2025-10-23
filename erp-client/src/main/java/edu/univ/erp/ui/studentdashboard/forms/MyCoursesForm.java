@@ -57,7 +57,7 @@ import javax.swing.table.TableRowSorter;
 
 import com.formdev.flatlaf.FlatLaf;
 
-import components.SimpleForm;
+import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import net.miginfocom.swing.MigLayout;
 
 public class MyCoursesForm extends SimpleForm {
@@ -100,7 +100,8 @@ public class MyCoursesForm extends SimpleForm {
         int enrolledCount;
         int capacity;
         boolean isRegistered; // controls registration status
-        boolean dropAllowed = true; // whether the student can drop this course (deadline)
+    boolean dropAllowed = true; // whether the student can drop this course (deadline)
+    boolean isCompleted = false; // whether the course is completed (final grade recorded)
 
         public CourseSection(String code, String title, int credits, String secId, String time, String room, String instr, int enrolled, int cap, boolean registered) {
             this.courseCode = code;
@@ -284,6 +285,134 @@ public class MyCoursesForm extends SimpleForm {
             if ((e.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing() && !openAnimationPlayed) {
                 openAnimationPlayed = true;
                 formRefresh();
+                // Fetch the real timetable from server on first open (replace dummy data)
+                try {
+                    // Fetch completed/recorded enrollments from grades/transcript API instead of timetable.
+                    // GET_GRADES will return all enrollment rows with final grades when available.
+                    edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+                    if (cu != null) {
+                        final int uid = cu.getUserId();
+                        edu.univ.erp.api.student.StudentAPI studentAPI = new edu.univ.erp.api.student.StudentAPI();
+
+                        // We'll fetch three things: the student's timetable (registered sections),
+                        // the full catalog (to map credits/section metadata), and grades (completed).
+                        // We'll merge timetable (registered) and completed (grades) while avoiding duplicates by sectionId.
+                        courses.clear();
+
+                        edu.univ.erp.ui.utils.UIHelper.runAsync(() -> {
+                            // Parallel-friendly fetch sequence executed synchronously inside the task
+                            java.util.List<edu.univ.erp.domain.CourseCatalog> timetable = null;
+                            java.util.List<edu.univ.erp.domain.CourseCatalog> catalog = null;
+                            java.util.List<edu.univ.erp.domain.Grade> grades = null;
+                            try {
+                                timetable = studentAPI.getTimetable(uid);
+                            } catch (Exception ignore) {
+                            }
+                            try {
+                                catalog = studentAPI.getCourseCatalog();
+                            } catch (Exception ignore) {
+                            }
+                            try {
+                                grades = studentAPI.getMyGrades(uid);
+                            } catch (Exception ignore) {
+                            }
+                            // Return a small wrapper object containing all three
+                            java.util.Map<String, Object> map = new java.util.HashMap<>();
+                            map.put("timetable", timetable);
+                            map.put("catalog", catalog);
+                            map.put("grades", grades);
+                            return map;
+                        }, (@SuppressWarnings("unchecked") java.util.Map<String, Object> results) -> {
+                            @SuppressWarnings("unchecked") java.util.List<edu.univ.erp.domain.CourseCatalog> timetable = (java.util.List<edu.univ.erp.domain.CourseCatalog>) results.get("timetable");
+                            @SuppressWarnings("unchecked") java.util.List<edu.univ.erp.domain.CourseCatalog> catalog = (java.util.List<edu.univ.erp.domain.CourseCatalog>) results.get("catalog");
+                            @SuppressWarnings("unchecked") java.util.List<edu.univ.erp.domain.Grade> grades = (java.util.List<edu.univ.erp.domain.Grade>) results.get("grades");
+
+                            // Use a set of sectionIds to avoid duplicates; some CourseCatalog entries might not have numeric section id
+                            java.util.Set<String> seenSections = new java.util.HashSet<>();
+
+                            // Add registered courses from timetable first
+                            if (timetable != null) {
+                                for (edu.univ.erp.domain.CourseCatalog cc : timetable) {
+                                    String secId = String.valueOf(cc.getSectionId());
+                                    if (secId == null) secId = "N/A";
+                                    if (seenSections.contains(secId)) continue;
+                                    seenSections.add(secId);
+                                    CourseSection cs = new CourseSection(cc.getCourseCode() == null ? cc.getCourseTitle() : cc.getCourseCode(),
+                                            cc.getCourseTitle(), cc.getCredits(), secId, cc.getDayTime(), cc.getRoom(), cc.getInstructorName(), cc.getEnrolledCount(), cc.getCapacity(), true);
+                                    cs.dropAllowed = true; // assume timetable entries are registered and droppable unless server marks otherwise
+                                    cs.isCompleted = false;
+                                    courses.add(cs);
+                                }
+                            }
+
+                            // Add completed courses from grades, mapping to catalog when possible
+                            if (grades != null) {
+                                for (edu.univ.erp.domain.Grade g : grades) {
+                                    String finalGrade = g.getFinalGrade();
+                                    if (finalGrade == null || finalGrade.trim().isEmpty()) continue;
+                                    String courseName = g.getCourseName() == null ? "Unknown Course" : g.getCourseName();
+
+                                    // Try to find a matching catalog entry (either in catalog or timetable)
+                                    edu.univ.erp.domain.CourseCatalog matched = null;
+                                    if (catalog != null) {
+                                        for (edu.univ.erp.domain.CourseCatalog cc : catalog) {
+                                            if (cc.getCourseTitle() != null && cc.getCourseTitle().equalsIgnoreCase(courseName)) {
+                                                matched = cc;
+                                                break;
+                                            }
+                                            if (cc.getCourseCode() != null && cc.getCourseCode().equalsIgnoreCase(courseName)) {
+                                                matched = cc;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (matched == null && timetable != null) {
+                                        for (edu.univ.erp.domain.CourseCatalog cc : timetable) {
+                                            if (cc.getCourseTitle() != null && cc.getCourseTitle().equalsIgnoreCase(courseName)) {
+                                                matched = cc;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    String secId = matched != null ? String.valueOf(matched.getSectionId()) : "N/A";
+                                    if (seenSections.contains(secId)) {
+                                        // If the student is already registered in this section (seen via timetable), mark that row as completed if appropriate
+                                        for (CourseSection csExisting : courses) {
+                                            if (csExisting.sectionId.equals(secId)) {
+                                                csExisting.isCompleted = true;
+                                                csExisting.dropAllowed = false; // completed -> not droppable
+                                            }
+                                        }
+                                        continue;
+                                    }
+
+                                    String code = matched != null ? matched.getCourseCode() : courseName;
+                                    String title = matched != null ? matched.getCourseTitle() : courseName;
+                                    int credits = matched != null ? matched.getCredits() : 0;
+                                    int enrolled = matched != null ? matched.getEnrolledCount() : 0;
+                                    int capacity = matched != null ? matched.getCapacity() : 0;
+
+                                    CourseSection cs = new CourseSection(code, title, credits, secId, "", "", "", enrolled, capacity, false);
+                                    cs.dropAllowed = false;
+                                    cs.isCompleted = true;
+                                    seenSections.add(secId);
+                                    courses.add(cs);
+                                }
+                            }
+
+                            tableModel.updateCourses(new ArrayList<>(courses));
+                            updateStats();
+                        }, (Exception ex) -> {
+                            // On any failure in the async task, keep dummy data and inform user
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                javax.swing.JOptionPane.showMessageDialog(this, "Failed to fetch courses: " + ex.getMessage(), "Fetch Error", javax.swing.JOptionPane.WARNING_MESSAGE);
+                            });
+                        });
+                    }
+                } catch (Exception ignore) {
+                    // ignore; leave dummy data if ClientContext not available
+                }
             }
         });
     }
@@ -1194,12 +1323,14 @@ public class MyCoursesForm extends SimpleForm {
                 setText("");
                 return this;
             }
-            // Determine status: Registered, Completed, or blank
+            // Determine status: Registered, Completed, or blank. Use explicit isCompleted flag first.
             String statusText = "";
             if (course.isRegistered) {
                 statusText = "Registered";
+            } else if (course.isCompleted) {
+                statusText = "Completed";
             } else if (course.enrolledCount >= course.capacity) {
-                statusText = "Completed"; // treat full/completed as completed
+                statusText = "Completed"; // legacy fallback: treat full as completed
             }
 
             setHorizontalAlignment(SwingConstants.CENTER);
@@ -1270,18 +1401,44 @@ public class MyCoursesForm extends SimpleForm {
                 CourseSection cs = (CourseSection) value;
                 // Only Drop path should be reachable here (button only visible then)
                 if (cs.isRegistered && cs.dropAllowed) {
-                    // Dummy drop: remove the course from the student's taken list to simulate drop
-                    cs.isRegistered = false;
-                    if (cs.enrolledCount > 0) {
-                        cs.enrolledCount -= 1;
+                    // Perform real drop via StudentAPI
+                    edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+                    if (cu == null) {
+                        JOptionPane.showMessageDialog(table, "Not authenticated.", "Drop Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
-                    // After drop, simulate that drop is no longer possible
-                    cs.dropAllowed = false;
-                    // Remove from master list to reflect 'not taken' anymore
-                    courses.remove(cs);
-                    JOptionPane.showMessageDialog(table, "Dropped successfully.", "Drop", JOptionPane.INFORMATION_MESSAGE);
+                    final int uid = cu.getUserId();
+                    final int sectionId;
+                    try {
+                        sectionId = Integer.parseInt(cs.sectionId);
+                    } catch (NumberFormatException nfe) {
+                        // If section id isn't numeric, attempt to use 0 and show error
+                        JOptionPane.showMessageDialog(table, "Invalid section id for drop.", "Drop Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    edu.univ.erp.api.student.StudentAPI studentAPI = new edu.univ.erp.api.student.StudentAPI();
+                    actionButton.setEnabled(false);
+                    actionButton.setText("Dropping...");
+                    edu.univ.erp.ui.utils.UIHelper.runAsync(() -> studentAPI.dropCourse(uid, sectionId), (String msg) -> {
+                        // On success, update UI (remove from taken list)
+                        cs.isRegistered = false;
+                        if (cs.enrolledCount > 0) cs.enrolledCount -= 1;
+                        cs.dropAllowed = false;
+                        courses.remove(cs);
+                        tableModel.updateCourses(new ArrayList<>(courses));
+                        updateStats();
+                        JOptionPane.showMessageDialog(table, msg == null || msg.isEmpty() ? "Dropped successfully." : msg, "Drop", JOptionPane.INFORMATION_MESSAGE);
+                    }, (Exception ex) -> {
+                        // Re-enable button and show error
+                        actionButton.setEnabled(true);
+                        actionButton.setText("Drop");
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(table, "Failed to drop course: " + ex.getMessage(), "Drop Error", JOptionPane.ERROR_MESSAGE);
+                        });
+                    });
                 }
-                // Refresh table from master list
+                // Refresh table from master list (in case early exit)
                 tableModel.updateCourses(new ArrayList<>(courses));
                 updateStats();
             });

@@ -39,12 +39,13 @@ public class CourseDAO {
         "    c.code AS course_code, c.title, c.credits, " +
         "    s.section_id, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, " +
         "    i.name AS instructor_name, " +
+        "    er.status AS enrollment_status, " +
         "    1 AS enrolled_count " + // We know they are enrolled, so capacity check isn't strictly needed here.
         "FROM enrollments er " +
         "JOIN sections s ON er.section_id = s.section_id " +
         "JOIN courses c ON s.course_code = c.code " +
         "JOIN instructors i ON s.instructor_id = i.user_id " +
-        "WHERE er.student_id = ? AND er.status = 'Registered' " +
+        "WHERE er.student_id = ? AND er.status IN ('Registered','Completed') " +
         "ORDER BY s.day_time, c.code";
 
 
@@ -127,7 +128,19 @@ public class CourseDAO {
             rs.getString("semester"),
             rs.getInt("year"),
             rs.getInt("instructor_id"),
-            rs.getString("instructor_name")
+            rs.getString("instructor_name"),
+            // enrollment_status may be null in catalog queries
+            (hasColumn(rs, "enrollment_status") ? rs.getString("enrollment_status") : null)
         );
+    }
+
+    // small helper to safely check for optional columns in a ResultSet
+    private boolean hasColumn(ResultSet rs, String columnName) {
+        try {
+            rs.findColumn(columnName);
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 }

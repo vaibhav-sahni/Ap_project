@@ -151,14 +151,31 @@ public class EnrollmentDAO {
             }
 
             // Insert enrollment
-            insertStmt = conn.prepareStatement(REGISTER_COURSE_SQL);
-            insertStmt.setInt(1, studentId);
-            insertStmt.setInt(2, sectionId);
-            int affectedRows = insertStmt.executeUpdate();
-            if (affectedRows == 0) {
-                conn.rollback();
-                throw new SQLException("Enrollment failed, possibly due to invalid IDs.");
-            }
+                    // First, attempt to reactivate a previously dropped enrollment to avoid violating
+                    // the unique constraint on (student_id, section_id). This allows students to re-register
+                    // for a section they previously dropped without creating duplicate rows.
+                    final String REACTIVATE_ENROLLMENT_SQL =
+                            "UPDATE enrollments SET status = 'Registered' WHERE student_id = ? AND section_id = ? AND status = 'Dropped'";
+                    try (PreparedStatement reactivate = conn.prepareStatement(REACTIVATE_ENROLLMENT_SQL)) {
+                        reactivate.setInt(1, studentId);
+                        reactivate.setInt(2, sectionId);
+                        int reactivated = reactivate.executeUpdate();
+                        if (reactivated > 0) {
+                            // Successfully reactivated a dropped enrollment
+                            conn.commit();
+                            return;
+                        }
+                    }
+
+                    // No dropped row found to reactivate; perform insert as usual
+                    insertStmt = conn.prepareStatement(REGISTER_COURSE_SQL);
+                    insertStmt.setInt(1, studentId);
+                    insertStmt.setInt(2, sectionId);
+                    int affectedRows = insertStmt.executeUpdate();
+                    if (affectedRows == 0) {
+                        conn.rollback();
+                        throw new SQLException("Enrollment failed, possibly due to invalid IDs.");
+                    }
 
             conn.commit();
         } catch (SQLException e) {

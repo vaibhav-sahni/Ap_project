@@ -15,6 +15,7 @@ import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
 import edu.univ.erp.ui.studentdashboard.forms.InboxForm;
 import edu.univ.erp.ui.studentdashboard.forms.ReadForm;
 import edu.univ.erp.ui.studentdashboard.forms.RegisterCoursesForm;
+import edu.univ.erp.ui.studentdashboard.forms.MyCoursesForm;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
 import raven.drawer.component.DrawerPanel;
 import raven.drawer.component.SimpleDrawerBuilder;
@@ -302,9 +303,9 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                             FormManager.showForm(new RegisterCoursesForm());
                             return;
                         }
-                        // "My Registered Courses" selected - reuse RegisterCoursesForm for now
+                        // "My Registered Courses" selected - open MyCoursesForm
                         if (index[1] == 1) {
-                            FormManager.showForm(new RegisterCoursesForm());
+                            FormManager.showForm(new MyCoursesForm());
                             return;
                         }
                     }

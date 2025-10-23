@@ -8,6 +8,7 @@ public class Grade implements Serializable {
     
     private String courseName;
     private String finalGrade; // Letter grade (A, B+, F)
+    private double credits;
     private List<AssessmentComponent> components; 
 
     // Constructor used by StudentService for final aggregation
@@ -27,4 +28,6 @@ public class Grade implements Serializable {
     public void setFinalGrade(String finalGrade) { this.finalGrade = finalGrade; }
     public List<AssessmentComponent> getComponents() { return components; }
     public void setComponents(List<AssessmentComponent> components) { this.components = components; }
+    public double getCredits() { return credits; }
+    public void setCredits(double credits) { this.credits = credits; }
 }

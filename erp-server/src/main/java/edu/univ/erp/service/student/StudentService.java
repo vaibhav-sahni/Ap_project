@@ -284,7 +284,8 @@ public class StudentService {
             finalGrades.add(new Grade(
                 raw.courseTitle(),
                 raw.finalGrade(),
-                components
+                components,
+                raw.credits()
             ));
         }
         return finalGrades;

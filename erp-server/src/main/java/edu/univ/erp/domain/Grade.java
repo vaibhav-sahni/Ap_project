@@ -8,6 +8,7 @@ public class Grade implements Serializable {
     
     private String courseName;
     private String finalGrade; // Letter grade (A, B+, F)
+    private double credits; // number of credits for the course
     private List<AssessmentComponent> components; 
 
     // Constructor used by StudentService for final aggregation
@@ -15,6 +16,14 @@ public class Grade implements Serializable {
         this.courseName = courseName;
         this.finalGrade = finalGrade;
         this.components = components;
+    }
+
+    // Overloaded constructor that includes credits
+    public Grade(String courseName, String finalGrade, List<AssessmentComponent> components, double credits) {
+        this.courseName = courseName;
+        this.finalGrade = finalGrade;
+        this.components = components;
+        this.credits = credits;
     }
     
     // Default constructor required by Gson
@@ -27,4 +36,6 @@ public class Grade implements Serializable {
     public void setFinalGrade(String finalGrade) { this.finalGrade = finalGrade; }
     public List<AssessmentComponent> getComponents() { return components; }
     public void setComponents(List<AssessmentComponent> components) { this.components = components; }
+    public double getCredits() { return credits; }
+    public void setCredits(double credits) { this.credits = credits; }
 }
