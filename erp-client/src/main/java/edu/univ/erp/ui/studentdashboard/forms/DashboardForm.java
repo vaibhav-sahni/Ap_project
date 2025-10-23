@@ -111,15 +111,7 @@ public class DashboardForm extends SimpleForm {
     LocalDateTime now = LocalDateTime.now();
 
     notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
-        "Prelim payment due", "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", now.toString(), false));
-    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
-        "Exam schedule", "Norem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit.", now.minusHours(2).toString(), false));
-    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
-        "Assignment reminder", "Your CS101 assignment is due in 2 days.", now.minusHours(5).toString(), false));
-    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
-        "Library book reminder", "Your borrowed book 'Java Fundamentals' is due tomorrow.", now.minusDays(1).minusHours(3).toString(), false));
-    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
-        "Grade posted", "Your grade for Database Systems midterm has been posted.", now.minusDays(1).minusHours(8).toString(), false));
+        "Fetch error", "Client was unable to fetch notifications from server.", now.toString(), false));
 
     return notifications;
     }
