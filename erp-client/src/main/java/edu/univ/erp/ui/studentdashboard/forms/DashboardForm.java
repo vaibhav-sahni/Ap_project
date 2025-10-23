@@ -56,6 +56,7 @@ public class DashboardForm extends SimpleForm {
     private InteractiveCalendarPanel calendarPanel;
     private Timer resizeSyncTimer; // debounce timer for resize sync
     private boolean windowListenersInstalled = false; // ensure we install once
+    private boolean lafListenerInstalled = false; // ensure we add Look&Feel listener once
     private Timer stateTransitionTimer; // fade overlay timer during window state changes
     private float stateTransitionAlpha = 0f; // 0..1 overlay alpha for transition
 
@@ -149,6 +150,10 @@ public class DashboardForm extends SimpleForm {
 
     @Override
     public void formRefresh() {
+        // Clear any previously-built components to avoid duplicate children when
+        // formRefresh is called multiple times (refresh button, theme change, etc.)
+        removeAll();
+
         // Update background color
         setBackground(panelBg());
 
@@ -210,26 +215,40 @@ public class DashboardForm extends SimpleForm {
         // Second row: notifications panel below the charts
         add(createNotificationsPanel(), "grow,height 280!");
 
-        // Refresh the entire window when Look & Feel (mode) changes
-        UIManager.addPropertyChangeListener(evt -> {
-            if ("lookAndFeel".equals(evt.getPropertyName())) {
-                SwingUtilities.invokeLater(() -> {
-                    Window w = SwingUtilities.getWindowAncestor(this);
-                    if (w != null) {
-                        SwingUtilities.updateComponentTreeUI(w);
-                        w.invalidate();
-                        w.validate();
-                        w.repaint();
-                    } else {
-                        SwingUtilities.updateComponentTreeUI(this);
-                        revalidate();
-                        repaint();
-                    }
-                    // Also refresh dashboard-specific dynamic content
-                    formRefresh();
-                });
-            }
-        });
+    // When formRefresh rebuilds the UI (e.g., via Refresh button or theme change),
+    // ensure the gauge cards start their animations and we fetch the latest
+    // student metrics so the values don't remain at the placeholder zeros.
+    if (cgpaCard != null) cgpaCard.startAnimation();
+    if (creditsCard != null) creditsCard.startAnimation();
+    if (coursesCard != null) coursesCard.startAnimation();
+    // async fetch will be a no-op if no current user is set
+    fetchAndPopulateStudentMetrics();
+
+        // Refresh the entire window when Look & Feel (mode) changes.
+        // Register this listener only once to avoid accumulating handlers
+        // which cause repeated rebuilds and layout corruption.
+        if (!lafListenerInstalled) {
+            lafListenerInstalled = true;
+            UIManager.addPropertyChangeListener(evt -> {
+                if ("lookAndFeel".equals(evt.getPropertyName())) {
+                    SwingUtilities.invokeLater(() -> {
+                        Window w = SwingUtilities.getWindowAncestor(this);
+                        if (w != null) {
+                            SwingUtilities.updateComponentTreeUI(w);
+                            w.invalidate();
+                            w.validate();
+                            w.repaint();
+                        } else {
+                            SwingUtilities.updateComponentTreeUI(this);
+                            revalidate();
+                            repaint();
+                        }
+                        // Also refresh dashboard-specific dynamic content
+                        formRefresh();
+                    });
+                }
+            });
+        }
 
         // One-time refresh and start animations when dashboard is first shown
         addComponentListener(new java.awt.event.ComponentAdapter() {
@@ -265,14 +284,8 @@ public class DashboardForm extends SimpleForm {
             }
         });
 
-        // Auto-refresh when theme (Look & Feel) changes
-        UIManager.addPropertyChangeListener(evt -> {
-            if ("lookAndFeel".equals(evt.getPropertyName())) {
-                SwingUtilities.invokeLater(() -> {
-                    formRefresh();
-                });
-            }
-        });
+        // Note: additional Look&Feel listeners were removed to avoid duplicate
+        // invocations. The listener above handles both UI update and form refresh.
 
         // Debounced relayout when the dashboard is resized (e.g., maximize/restore)
         addComponentListener(new java.awt.event.ComponentAdapter() {
