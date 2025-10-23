@@ -1,7 +1,8 @@
-package components;
+package edu.univ.erp.ui.studentdashboard.components;
+
+import javax.swing.JPanel;
 
 import com.formdev.flatlaf.FlatClientProperties;
-import javax.swing.JPanel;
 
 public class SimpleForm extends JPanel {
 

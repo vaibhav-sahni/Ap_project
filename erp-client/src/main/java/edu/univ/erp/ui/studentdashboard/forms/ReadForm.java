@@ -1,7 +1,7 @@
-package forms;
+package edu.univ.erp.ui.studentdashboard.forms;
 
-import components.SimpleForm;
-import menu.FormManager;
+import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
+import edu.univ.erp.ui.studentdashboard.menu.FormManager;
 
 public class ReadForm extends SimpleForm {
 

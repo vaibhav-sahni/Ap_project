@@ -1,4 +1,4 @@
-package utils;
+package edu.univ.erp.ui.studentdashboard.utils;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;

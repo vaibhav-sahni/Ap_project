@@ -1,4 +1,4 @@
-package menu;
+package edu.univ.erp.ui.studentdashboard.menu;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -11,10 +11,10 @@ import javax.swing.JLabel;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
-import forms.DashboardForm;
-import forms.InboxForm;
-import forms.ReadForm;
-import model.ModelUser;
+import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
+import edu.univ.erp.ui.studentdashboard.forms.InboxForm;
+import edu.univ.erp.ui.studentdashboard.forms.ReadForm;
+import edu.univ.erp.ui.studentdashboard.model.ModelUser;
 import raven.drawer.component.DrawerPanel;
 import raven.drawer.component.SimpleDrawerBuilder;
 import raven.drawer.component.footer.SimpleFooterData;
@@ -55,9 +55,23 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
     public SimpleHeaderData getSimpleHeaderData() {
         AvatarIcon icon = new AvatarIcon(getClass().getResource("/image/profile.png"), 60, 60, 999);
         icon.setBorder(2);
+        // Use the authenticated user's name when available so the header isn't hardcoded
+        String title = "Pramag Basantia";
+        String desc = "pramag24421@iiitd.ac.in";
+        try {
+            edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+            if (cu != null) {
+                String uname = cu.getUsername();
+                if (uname != null && !uname.isEmpty()) {
+                    title = uname;
+                    desc = uname + "@univ.edu";
+                }
+            }
+        } catch (Throwable ignore) {
+        }
         return new SimpleHeaderData()
-                .setTitle("Pramag Basantia")
-                .setDescription("pramag24421@iiitd.ac.in")
+                .setTitle(title)
+                .setDescription(desc)
                 .setHeaderStyle(new SimpleHeaderStyle() {
 
                     @Override
@@ -107,6 +121,47 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
             }
         };
 
+        // Build a parallel array of labels for the top-level items so we can detect selections
+        // without depending on unstable numeric indices. Use reflection to try common getter names.
+        final String[] itemLabels = new String[items.length];
+        java.util.List<String> actionable = new java.util.ArrayList<>();
+        for (int i = 0; i < items.length; i++) {
+            MenuItem mi = items[i];
+            String label = null;
+            try {
+                java.lang.reflect.Method m = null;
+                for (String name : new String[]{"getText", "getName", "getTitle", "getLabel"}) {
+                    try {
+                        m = mi.getClass().getMethod(name);
+                        Object o = m.invoke(mi);
+                        if (o != null) {
+                            label = o.toString();
+                            break;
+                        }
+                    } catch (NoSuchMethodException ns) {
+                        // try next
+                    }
+                }
+            } catch (Throwable ignore) {
+            }
+            if (label == null) label = mi.toString();
+            itemLabels[i] = label == null ? "" : label;
+
+            // If this item is not a section label (Item.Label) then include it in actionable list
+            try {
+                if (!(mi instanceof Item.Label)) {
+                    actionable.add(itemLabels[i]);
+                }
+            } catch (Throwable ignore) {
+                // fallback: include
+                actionable.add(itemLabels[i]);
+            }
+        }
+
+        final String[] actionableLabels = actionable.toArray(new String[0]);
+
+        // (debug mapping removed)
+
         simpleMenuOption.setMenuValidation(new MenuValidation() {
 
             private boolean checkMenu(int[] index, int[] indexHide) {
@@ -127,7 +182,7 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                     return false;
                 }
                 if (!user.isAdmin()) {
-                    // non user admin going to hide
+                    
                     boolean act
                             // `Email`->`Gropu Read`->`Read 3`
                             = checkMenu(index, new int[]{1, 2, 3})
@@ -169,15 +224,71 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
         simpleMenuOption.addMenuEvent(new MenuEvent() {
             @Override
             public void selected(MenuAction action, int[] index) {
-                if (index.length == 1) {
-                    if (index[0] == 0) {
-                        FormManager.showForm(new DashboardForm());
+                // selection debug removed
+
+                // Try to detect the label for the top-level item. The drawer implementation
+                // often only counts actionable items (skips section labels), so prefer
+                // actionableLabels (which excludes Item.Label entries) when mapping the
+                // runtime top index to a label.
+                String detectedLabel = null;
+                if (index != null && index.length > 0) {
+                    int top = index[0];
+                    if (top >= 0 && top < actionableLabels.length) {
+                        detectedLabel = actionableLabels[top];
+                    } else if (top >= 0 && top < itemLabels.length) {
+                        // fallback to raw top-level mapping
+                        detectedLabel = itemLabels[top];
                     }
-                    if (index[0] == 9) {
-                        // logout
+                } else {
+                    // Fallback: inspect action string
+                    try {
+                        if (action != null && action.toString() != null) {
+                            String s = action.toString();
+                            if (s.toLowerCase().contains("logout")) detectedLabel = "Logout";
+                        }
+                    } catch (Throwable ignore) {}
+                }
+
+                // detection debug removed
+
+                // Handle Logout explicitly
+                if (detectedLabel != null && detectedLabel.equalsIgnoreCase("Logout")) {
+                    try {
+                        edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+                        boolean didLogout = false;
+                        if (cu != null) {
+                            edu.univ.erp.ui.handlers.AuthUiHandlers authHandlers = new edu.univ.erp.ui.handlers.AuthUiHandlers(cu);
+                            didLogout = authHandlers.confirmAndLogout();
+                        } else {
+                            int choice = javax.swing.JOptionPane.showConfirmDialog(null, "Do you want to logout?", "Logout", javax.swing.JOptionPane.YES_NO_OPTION);
+                            if (choice == javax.swing.JOptionPane.YES_OPTION) {
+                                try {
+                                    new edu.univ.erp.api.auth.AuthAPI().logout();
+                                    didLogout = true;
+                                } catch (Exception ex) {
+                                    javax.swing.JOptionPane.showMessageDialog(null, "Logout failed: " + ex.getMessage(), "Logout Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                                }
+                            }
+                        }
+                        if (didLogout) {
+                            FormManager.logout();
+                        }
+                    } catch (Throwable t) {
+                        System.err.println("CLIENT WARN: logout via drawer failed: " + t.getMessage());
+                        t.printStackTrace(System.err);
                         FormManager.logout();
                     }
-                } else if (index.length == 2) {
+                    return;
+                }
+
+                // Top-level Dashboard
+                if (index != null && index.length == 1 && index[0] == 0) {
+                    FormManager.showForm(new DashboardForm());
+                    return;
+                }
+
+                // Two-level menu items (submenus)
+                if (index != null && index.length == 2) {
                     if (index[0] == 1) {
                         if (index[1] == 0) {
                             FormManager.showForm(new InboxForm());

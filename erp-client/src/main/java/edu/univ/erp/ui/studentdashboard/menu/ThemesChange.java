@@ -1,4 +1,11 @@
-package menu;
+package edu.univ.erp.ui.studentdashboard.menu;
+
+import java.awt.Color;
+import java.awt.EventQueue;
+
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JPanel;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.FlatLaf;
@@ -6,11 +13,7 @@ import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import com.formdev.flatlaf.themes.FlatMacLightLaf;
-import java.awt.Color;
-import java.awt.EventQueue;
-import javax.swing.Icon;
-import javax.swing.JButton;
-import javax.swing.JPanel;
+
 import net.miginfocom.swing.MigLayout;
 
 public class ThemesChange extends JPanel {

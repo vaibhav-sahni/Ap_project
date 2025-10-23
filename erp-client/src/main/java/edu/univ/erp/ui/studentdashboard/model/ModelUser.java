@@ -1,4 +1,4 @@
-package model;
+package edu.univ.erp.ui.studentdashboard.model;
 
 public class ModelUser {
 

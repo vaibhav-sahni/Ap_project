@@ -1,4 +1,4 @@
-package menu;
+package edu.univ.erp.ui.studentdashboard.menu;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;

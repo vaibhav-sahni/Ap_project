@@ -1,4 +1,4 @@
-package menu;
+package edu.univ.erp.ui.studentdashboard.menu;
 
 import java.awt.Image;
 
@@ -7,13 +7,13 @@ import javax.swing.SwingUtilities;
 
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 
-import components.MainForm;
-import components.SimpleForm;
 import edu.univ.erp.ui.loginpage.main.Login;
-import model.ModelUser;
-import swing.slider.PanelSlider;
-import swing.slider.SimpleTransition;
-import utils.UndoRedo;
+import edu.univ.erp.ui.studentdashboard.components.MainForm;
+import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
+import edu.univ.erp.ui.studentdashboard.model.ModelUser;
+import edu.univ.erp.ui.studentdashboard.swing.slider.PanelSlider;
+import edu.univ.erp.ui.studentdashboard.swing.slider.SimpleTransition;
+import edu.univ.erp.ui.studentdashboard.utils.UndoRedo;
 
 public class FormManager {
 
@@ -62,11 +62,17 @@ public class FormManager {
 
     public static void logout() {
         FlatAnimatedLafChange.showSnapshot();
-        instance.frame.getContentPane().removeAll();
-        instance.frame.getContentPane().add(new Login());
-        instance.frame.repaint();
-        instance.frame.revalidate();
-        FlatAnimatedLafChange.hideSnapshotWithAnimation();
+        try {
+            // Dispose the current dashboard window and open a new standalone Login JFrame.
+            java.awt.EventQueue.invokeLater(() -> {
+                try {
+                    instance.frame.dispose();
+                } catch (Throwable ignore) {}
+                new Login().setVisible(true);
+            });
+        } finally {
+            FlatAnimatedLafChange.hideSnapshotWithAnimation();
+        }
     }
 
     public static void login(ModelUser user) {

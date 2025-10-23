@@ -1,4 +1,4 @@
-package forms;
+package edu.univ.erp.ui.studentdashboard.forms;
 
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
@@ -23,11 +23,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -46,10 +42,9 @@ import javax.swing.UIManager;
 import javax.swing.border.Border;
 import java.awt.Window;
 
-import components.SimpleForm;
+import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import com.formdev.flatlaf.FlatLaf;
-import com.formdev.flatlaf.themes.FlatMacDarkLaf;
-import com.formdev.flatlaf.themes.FlatMacLightLaf;
+// theme classes imported where needed elsewhere; remove unused imports here
 import net.miginfocom.swing.MigLayout;
 
 public class DashboardForm extends SimpleForm {
@@ -74,10 +69,6 @@ public class DashboardForm extends SimpleForm {
         return uiColor("Panel.background", getBackground());
     }
 
-    private Color borderColor() {
-        return uiColor("Component.borderColor", new Color(0, 0, 0, 30));
-    }
-
     private Color textColor() {
         boolean isDark = FlatLaf.isLafDark();
         return isDark ? new Color(234, 234, 234) : new Color(30, 30, 30);
@@ -99,19 +90,7 @@ public class DashboardForm extends SimpleForm {
         return c != null ? c : Color.decode("#5856D6");
     }
 
-    private Color buttonBg() {
-        return uiColor("Button.background", panelBg());
-    }
-
-    private Color buttonHoverBg(Color base) {
-        boolean dark = FlatLaf.isLafDark();
-        int delta = dark ? 20 : -20;
-        return new Color(
-                Math.max(0, Math.min(255, base.getRed() + delta)),
-                Math.max(0, Math.min(255, base.getGreen() + delta)),
-                Math.max(0, Math.min(255, base.getBlue() + delta)),
-                base.getAlpha());
-    }
+    // helper color methods were removed to keep the class focused; calendar-specific helpers remain
 
     private Color todayColor() {
         return Color.decode("#30CC72"); // Green in both modes
@@ -156,6 +135,18 @@ public class DashboardForm extends SimpleForm {
         init();
     }
 
+    /**
+     * DashboardForm initializer. SimpleForm defines a private init() which is not
+     * visible to subclasses, so provide a local init() to perform component
+     * initialization and kick off the usual refresh.
+     */
+    private void init() {
+        // keep panel transparent by default and let formRefresh set layout/content
+        setOpaque(false);
+        // Ensure any subclass-specific initialization runs via formRefresh
+        formRefresh();
+    }
+
     @Override
     public void formRefresh() {
         // Update background color
@@ -173,25 +164,17 @@ public class DashboardForm extends SimpleForm {
         // Force repaint of all components to pick up new theme colors
         revalidate();
         repaint();
-
-        // Start animations when the form becomes visible
-        if (cgpaCard != null) {
-            cgpaCard.startAnimation();
-        }
-        if (creditsCard != null) {
-            creditsCard.startAnimation();
-        }
-        if (coursesCard != null) {
-            coursesCard.startAnimation();
-        }
-    }
-
-    private void init() {
         // Use theme-aware background
         setBackground(panelBg());
         setLayout(new MigLayout("fill,insets 20", "[fill,grow]20[340!]", "[]30[]20[]20[grow,fill]"));
 
-        JLabel welcomeLabel = new JLabel("Welcome back, Pramag!") {
+        String username = "";
+        try {
+            edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+            if (cu != null) username = cu.getUsername();
+        } catch (Throwable ignore) {}
+
+        JLabel welcomeLabel = new JLabel("Welcome back" + (username.isEmpty() ? ", Student!" : ", " + username + "!")) {
             @Override
             protected void paintComponent(Graphics g) {
                 setForeground(textColor());
@@ -210,9 +193,10 @@ public class DashboardForm extends SimpleForm {
         // Start fade after layout
         SwingUtilities.invokeLater(() -> welcomeWrapper.startFadeIn(0));
 
-        cgpaCard = createGaugeCard("CGPA", 7.5, 10, new Color(48, 204, 114));
-        creditsCard = createGaugeCard("Credits", 112, 120, new Color(52, 152, 219));
-        coursesCard = createGaugeCard("My Courses", 5, 6, new Color(241, 196, 15));
+    // Create placeholder cards; actual values will be filled by an async fetch
+    cgpaCard = createGaugeCard("CGPA", 0.0, 10, new Color(48, 204, 114));
+    creditsCard = createGaugeCard("Credits", 0, 120, new Color(52, 152, 219));
+    coursesCard = createGaugeCard("My Courses", 0, 20, new Color(241, 196, 15));
 
         // Create and store calendar reference
         calendarPanel = (InteractiveCalendarPanel) createCalendarPanel();
@@ -266,6 +250,8 @@ public class DashboardForm extends SimpleForm {
                     }
                     if (cgpaCard != null) {
                         cgpaCard.startAnimation();
+                        // fetch fresh CGPA & courses asynchronously
+                        fetchAndPopulateStudentMetrics();
                     }
                     if (creditsCard != null) {
                         creditsCard.startAnimation();
@@ -294,6 +280,56 @@ public class DashboardForm extends SimpleForm {
             public void componentResized(java.awt.event.ComponentEvent e) {
                 scheduleResizeSync();
             }
+        });
+    }
+
+    // Fetch CGPA, credits and course count from the server and update UI
+    private void fetchAndPopulateStudentMetrics() {
+        edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
+        if (u == null) return;
+        edu.univ.erp.ui.utils.UIHelper.runAsync(() -> {
+            edu.univ.erp.ui.actions.StudentActions actions = new edu.univ.erp.ui.actions.StudentActions();
+            edu.univ.erp.api.student.StudentAPI.CgpaResponse resp = null;
+            int courseCount = 0;
+            try {
+                resp = actions.getCgpa(u.getUserId());
+            } catch (Exception ex) {
+                throw ex;
+            }
+            try {
+                java.util.List<edu.univ.erp.domain.CourseCatalog> list = actions.getCourseCatalog();
+                if (list != null) courseCount = list.size();
+            } catch (Exception ex) {
+                // propagate the error so MessagePresenter can show it
+                throw ex;
+            }
+            // Pack results into a small array: [cgpa, credits, courseCount]
+            Double cg = resp == null ? null : resp.cgpa;
+            Double cr = resp == null ? null : resp.totalCreditsEarned;
+            return new Object[]{cg, cr, Integer.valueOf(courseCount)};
+        }, (Object result) -> {
+            try {
+                Object[] arr = (Object[]) result;
+                Double cg = (Double) arr[0];
+                Double cr = (Double) arr[1];
+                Integer cc = (Integer) arr[2];
+                if (cg != null || cr != null || (cc != null && cc > 0)) {
+                    double cgVal = cg != null ? cg : 0.0;
+                    double crVal = cr != null ? cr : 0.0;
+                    int ccVal = cc != null ? cc.intValue() : 0;
+                    try {
+                        if (cgpaCard != null) cgpaCard.updateGauge(cgVal, 10);
+                        if (creditsCard != null) creditsCard.updateGauge(crVal, 120);
+                        if (coursesCard != null) coursesCard.updateGauge(ccVal, 20);
+                    } catch (Throwable t) {
+                        edu.univ.erp.ui.utils.MessagePresenter.showError(this, "Failed to update dashboard UI: " + t.getMessage());
+                    }
+                }
+            } catch (Throwable t) {
+                edu.univ.erp.ui.utils.MessagePresenter.showError(this, t.getMessage());
+            }
+        }, (Exception ex) -> {
+            edu.univ.erp.ui.utils.MessagePresenter.showError(this, ex.getMessage());
         });
     }
 
@@ -379,27 +415,7 @@ public class DashboardForm extends SimpleForm {
 
     // Nudge layout system to recompute sizes fully after maximize/restore
     private void forceRelayout() {
-        java.awt.Window w = SwingUtilities.getWindowAncestor(this);
-        if (w == null) {
-            return;
-        }
-        // Skip the size nudge when the window is maximized
-        if (w instanceof java.awt.Frame) {
-            int state = ((java.awt.Frame) w).getExtendedState();
-            if ((state & java.awt.Frame.MAXIMIZED_BOTH) != 0) {
-                w.doLayout();
-                w.validate();
-                w.repaint();
-                return;
-            }
-        }
-        java.awt.Dimension sz = w.getSize();
-        // Tiny size nudge to trigger a full layout pass without visible flicker
-        w.setSize(sz.width + 1, sz.height + 1);
-        w.setSize(sz);
-        w.doLayout();
-        w.validate();
-        w.repaint();
+        // forceRelayout removed - layout nudges handled in scheduleResizeSync/performResizeSync
     }
 
     // Draw a transient overlay after children to create a smooth transition feel
@@ -669,7 +685,7 @@ public class DashboardForm extends SimpleForm {
     private class GlassCardPanel extends JPanel {
 
         private final AnimatedGaugeChart gauge;
-        private boolean isHovered = false;
+    // hover state not stored separately; hoverProgress drives visuals
         private float hoverProgress = 0f; // 0..1
         private float hoverTarget = 0f;
         private Timer hoverTimer;
@@ -691,14 +707,12 @@ public class DashboardForm extends SimpleForm {
             addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) {
-                    isHovered = true;
                     hoverTo(1f);
                     startAnimation();
                 }
 
                 @Override
                 public void mouseExited(MouseEvent e) {
-                    isHovered = false;
                     hoverTo(0f);
                 }
             });
@@ -725,8 +739,20 @@ public class DashboardForm extends SimpleForm {
             gauge.startAnimation();
         }
 
-        public void stopAnimation() {
-            gauge.stopAnimation();
+        // stopAnimation removed (unused)
+
+        /** Update the gauge displayed in this card (double value). */
+        public void updateGauge(double value, double max) {
+            try {
+                gauge.updateValue(value, max);
+            } catch (Throwable t) {
+                System.err.println("CLIENT WARN: updateGauge(double) failed: " + t.getMessage());
+            }
+        }
+
+        /** Update the gauge displayed in this card (int value). */
+        public void updateGauge(int value, int max) {
+            updateGauge((double) value, (double) max);
         }
 
         @Override
@@ -765,8 +791,8 @@ public class DashboardForm extends SimpleForm {
     private class AnimatedGaugeChart extends JComponent {
 
         private final String title;
-        private final double value;
-        private final double maxValue;
+        private double value;
+        private double maxValue;
         private final Color color;
         private float animatedValue = 0f;
         private Timer timer;
@@ -779,6 +805,16 @@ public class DashboardForm extends SimpleForm {
             setOpaque(false);
             // start from 0 to animate on load
             this.animatedValue = 0f;
+        }
+
+        /**
+         * Update the target value and optionally max value, then start animation towards it.
+         */
+        public synchronized void updateValue(double newValue, double newMax) {
+            this.value = newValue;
+            this.maxValue = newMax;
+            // restart animation towards the new target
+            startAnimation();
         }
 
         public void startAnimation() {
@@ -802,13 +838,7 @@ public class DashboardForm extends SimpleForm {
             timer.start();
         }
 
-        public void stopAnimation() {
-            if (timer != null && timer.isRunning()) {
-                timer.stop();
-            }
-            // keep current animatedValue so gauge remains filled
-            repaint();
-        }
+        // stopAnimation removed (unused) - animation is controlled via startAnimation/updateValue
 
         @Override
         protected void paintComponent(Graphics g) {
@@ -1002,7 +1032,6 @@ public class DashboardForm extends SimpleForm {
                 return;
             }
 
-            int oldMode = viewMode;
             viewMode = newMode;
             animationProgress = 0.0f;
 
@@ -1198,16 +1227,7 @@ public class DashboardForm extends SimpleForm {
             return footer;
         }
 
-        private JButton createNavButton(String text) {
-            JButton button = new JButton(text);
-            button.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-            button.setForeground(Color.decode("#EAEAEA"));
-            button.setBackground(Color.decode("#333333"));
-            button.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
-            button.setFocusPainted(false);
-            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            return button;
-        }
+        // createNavButton removed - calendar buttons use inline styling
 
         private JPanel createDayView() {
             JPanel panel = new JPanel(new GridLayout(0, 7, 5, 5));

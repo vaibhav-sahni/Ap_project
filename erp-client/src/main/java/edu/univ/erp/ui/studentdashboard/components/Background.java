@@ -1,12 +1,14 @@
-package components;
+package edu.univ.erp.ui.studentdashboard.components;
+
+import java.awt.BorderLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+
+import javax.swing.JPanel;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.ui.FlatUIUtils;
 import com.formdev.flatlaf.util.UIScale;
-import java.awt.BorderLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import javax.swing.JPanel;
 public class Background extends JPanel {
 
     private final boolean udecorated;

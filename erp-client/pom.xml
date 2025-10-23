@@ -111,8 +111,29 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
-                    <!-- Run the new student dashboard Application by default -->
-                    <mainClass>edu.univ.erp.ui.studentdashboard.application.Application</mainClass>
+                    <!-- Run the original Login main class by default -->
+                    <mainClass>edu.univ.erp.ui.loginpage.main.Login</mainClass>
+                    <classpathScope>runtime</classpathScope>
+                    <includeProjectDependencies>true</includeProjectDependencies>
+                    <includePluginDependencies>false</includePluginDependencies>
+                    <additionalClasspathElements>
+                        <additionalClasspathElement>${project.basedir}/lib/flatlaf-3.4.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/flatlaf-extras-3.4.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/flatlaf-fonts-roboto-2.137.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/miglayout-core-5.3.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/miglayout-swing-5.3.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/datechooser-swing-1.4.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/jsvg-1.4.0.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/swing-glasspane-popup-1.5.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/swing-chart-1.1.0-beta.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/timingframework-1.0.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/imageio-core-3.10.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/imageio-jpeg-3.10.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/imageio-metadata-3.10.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/common-image-3.10.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/common-lang-3.10.1.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${project.basedir}/lib/jsvg-1.4.0.jar</additionalClasspathElement>
+                    </additionalClasspathElements>
                 </configuration>
             </plugin>
         </plugins>

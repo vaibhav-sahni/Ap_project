@@ -1,7 +1,5 @@
-package swing.slider;
+package edu.univ.erp.ui.studentdashboard.swing.slider;
 
-import com.formdev.flatlaf.ui.FlatUIUtils;
-import com.formdev.flatlaf.util.UIScale;
 import java.awt.AlphaComposite;
 import java.awt.Component;
 import java.awt.Graphics;
@@ -11,7 +9,11 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.Area;
 import java.awt.geom.RoundRectangle2D;
+
 import javax.swing.UIManager;
+
+import com.formdev.flatlaf.ui.FlatUIUtils;
+import com.formdev.flatlaf.util.UIScale;
 
 public class SimpleTransition {
 

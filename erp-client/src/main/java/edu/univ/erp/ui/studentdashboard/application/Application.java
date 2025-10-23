@@ -1,4 +1,4 @@
-package application;
+package edu.univ.erp.ui.studentdashboard.application;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -14,10 +14,10 @@ import com.formdev.flatlaf.fonts.roboto.FlatRobotoFont;
 import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import com.formdev.flatlaf.util.UIScale;
 
-import components.Background;
-import forms.DashboardForm;
-import menu.FormManager;
-import model.ModelUser;
+import edu.univ.erp.ui.studentdashboard.components.Background;
+import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
+import edu.univ.erp.ui.studentdashboard.menu.FormManager;
+import edu.univ.erp.ui.studentdashboard.model.ModelUser;
 import raven.popup.GlassPanePopup;
 
 public class Application extends JFrame {
@@ -44,8 +44,24 @@ public class Application extends JFrame {
         setContentPane(new Background(UNDECORATED));
         GlassPanePopup.install(this);
         FormManager.install(this, UNDECORATED);
-        // Simulate a student login to show the complete dashboard UI with profile and menu
-        FormManager.login(new ModelUser("Student User", false));
+        // Use current authenticated user (set by Login) when available so the dashboard
+        // shows the real user rather than hardcoded values used during development.
+        try {
+            edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+            if (cu != null) {
+                boolean isAdmin = "Admin".equals(cu.getRole());
+                System.out.println("Client LOG: Application.init using ClientContext user=" + cu.getUsername());
+                FormManager.login(new ModelUser(cu.getUsername(), isAdmin));
+            } else {
+                // fallback to guest/development user
+                System.out.println("Client LOG: Application.init no ClientContext user; using dev user");
+                FormManager.login(new ModelUser("Student User", false));
+            }
+        } catch (Throwable t) {
+            System.err.println("Client WARN: Application.init failed to read ClientContext: " + t.getMessage());
+            t.printStackTrace(System.err);
+            FormManager.login(new ModelUser("Student User", false));
+        }
         FormManager.showForm(new DashboardForm());
         // FormManager.logout(); // Disabled for development so dashboard stays open
         // applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);

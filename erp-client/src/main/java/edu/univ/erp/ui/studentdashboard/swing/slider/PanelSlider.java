@@ -1,15 +1,17 @@
-package swing.slider;
+package edu.univ.erp.ui.studentdashboard.swing.slider;
 
-import com.formdev.flatlaf.util.Animator;
-import com.formdev.flatlaf.util.CubicBezierEasing;
 import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.VolatileImage;
+
 import javax.swing.JComponent;
 import javax.swing.JLayeredPane;
 import javax.swing.SwingUtilities;
+
+import com.formdev.flatlaf.util.Animator;
+import com.formdev.flatlaf.util.CubicBezierEasing;
 
 public class PanelSlider extends JLayeredPane {
 

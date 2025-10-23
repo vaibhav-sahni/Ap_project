@@ -1,17 +1,20 @@
-package components;
+package edu.univ.erp.ui.studentdashboard.components;
 
-import com.formdev.flatlaf.FlatClientProperties;
-import com.formdev.flatlaf.extras.FlatSVGIcon;
 import java.awt.Component;
+
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+
+import com.formdev.flatlaf.FlatClientProperties;
+import com.formdev.flatlaf.extras.FlatSVGIcon;
+
+import edu.univ.erp.ui.studentdashboard.menu.FormManager;
+import edu.univ.erp.ui.studentdashboard.swing.slider.PanelSlider;
+import edu.univ.erp.ui.studentdashboard.swing.slider.SimpleTransition;
+import edu.univ.erp.ui.studentdashboard.swing.slider.SliderTransition;
 import net.miginfocom.swing.MigLayout;
-import menu.FormManager;
-import swing.slider.PanelSlider;
-import swing.slider.SimpleTransition;
-import swing.slider.SliderTransition;
 
 /**
  *

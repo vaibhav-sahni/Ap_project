@@ -1,4 +1,4 @@
-package swing.slider;
+package edu.univ.erp.ui.studentdashboard.swing.slider;
 
 import java.awt.Component;
 import java.awt.Graphics;
