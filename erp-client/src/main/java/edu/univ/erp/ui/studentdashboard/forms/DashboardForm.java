@@ -294,8 +294,9 @@ public class DashboardForm extends SimpleForm {
                 throw ex;
             }
             try {
-                java.util.List<edu.univ.erp.domain.CourseCatalog> list = actions.getCourseCatalog();
-                if (list != null) courseCount = list.size();
+                // Use the student's timetable (ongoing registered courses) rather than full catalog
+                java.util.List<edu.univ.erp.domain.CourseCatalog> timetable = actions.getTimetable(u.getUserId());
+                if (timetable != null) courseCount = timetable.size();
             } catch (Exception ex) {
                 // propagate the error so MessagePresenter can show it
                 throw ex;

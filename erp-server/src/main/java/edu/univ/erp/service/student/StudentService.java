@@ -120,6 +120,11 @@ public class StudentService {
             throw new Exception("You are already registered in another section of this course.");
         }
 
+        // --- 2c. Prevent registering again for a course already completed in any section ---
+        if (enrollmentDAO.hasCompletedCourseForSameCode(userId, sectionId)) {
+            throw new Exception("You have completed this course");
+        }
+
         // --- 3. Check Prerequisites (Placeholder for future feature) ---
         // if (!PrerequisiteDAO.check(userId, sectionId)) {
         //      throw new Exception("Prerequisites not met for this course.");

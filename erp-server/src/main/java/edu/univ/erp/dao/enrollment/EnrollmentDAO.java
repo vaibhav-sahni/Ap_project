@@ -45,9 +45,9 @@ public class EnrollmentDAO {
     private static final String CHECK_REGISTERED_SAME_COURSE_SQL =
         "SELECT 1 FROM enrollments e " +
         "JOIN sections s ON e.section_id = s.section_id " +
-        "JOIN course_catalog c ON s.course_code = c.course_code " +
-        "WHERE e.student_id = ? AND e.status = 'Registered' AND c.course_code = (" +
-        "    SELECT c2.course_code FROM sections s2 JOIN course_catalog c2 ON s2.course_code = c2.course_code WHERE s2.section_id = ?" +
+        "JOIN courses c ON s.course_code = c.code " +
+        "WHERE e.student_id = ? AND e.status = 'Registered' AND c.code = (" +
+        "    SELECT c2.code FROM sections s2 JOIN courses c2 ON s2.course_code = c2.code WHERE s2.section_id = ?" +
         ") AND s.section_id <> ? LIMIT 1";
         
     // --- NEW SQL QUERY: Update status from 'Registered' to 'Dropped' (Rule #2) ---
@@ -184,6 +184,29 @@ public class EnrollmentDAO {
             stmt.setInt(1, studentId);
             stmt.setInt(2, targetSectionId);
             stmt.setInt(3, targetSectionId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /**
+     * Returns true if the student has any enrollment with status 'Completed' for the same course
+     * as the provided target section. This prevents re-registering for a course already completed.
+     */
+    public boolean hasCompletedCourseForSameCode(int studentId, int targetSectionId) throws SQLException {
+        final String CHECK_COMPLETED_SAME_COURSE_SQL =
+            "SELECT 1 FROM enrollments e " +
+            "JOIN sections s ON e.section_id = s.section_id " +
+            "JOIN courses c ON s.course_code = c.code " +
+            "WHERE e.student_id = ? AND e.status = 'Completed' AND c.code = (" +
+            "    SELECT c2.code FROM sections s2 JOIN courses c2 ON s2.course_code = c2.code WHERE s2.section_id = ?" +
+            ") LIMIT 1";
+
+        try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(CHECK_COMPLETED_SAME_COURSE_SQL)) {
+            stmt.setInt(1, studentId);
+            stmt.setInt(2, targetSectionId);
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next();
             }

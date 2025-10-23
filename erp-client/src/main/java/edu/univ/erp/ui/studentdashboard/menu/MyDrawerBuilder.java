@@ -14,6 +14,7 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
 import edu.univ.erp.ui.studentdashboard.forms.InboxForm;
 import edu.univ.erp.ui.studentdashboard.forms.ReadForm;
+import edu.univ.erp.ui.studentdashboard.forms.RegisterCoursesForm;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
 import raven.drawer.component.DrawerPanel;
 import raven.drawer.component.SimpleDrawerBuilder;
@@ -289,6 +290,26 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
 
                 // Two-level menu items (submenus)
                 if (index != null && index.length == 2) {
+                    // Use top-level actionable label to decide submenu actions (more robust than hardcoded indices)
+                    String topLabel = null;
+                    if (index[0] >= 0 && index[0] < actionableLabels.length) {
+                        topLabel = actionableLabels[index[0]];
+                    }
+
+                    if (topLabel != null && topLabel.equalsIgnoreCase("Course Catalog")) {
+                        // "All Courses" selected
+                        if (index[1] == 0) {
+                            FormManager.showForm(new RegisterCoursesForm());
+                            return;
+                        }
+                        // "My Registered Courses" selected - reuse RegisterCoursesForm for now
+                        if (index[1] == 1) {
+                            FormManager.showForm(new RegisterCoursesForm());
+                            return;
+                        }
+                    }
+
+                    // legacy email mapping (kept for compatibility if menu structure differs)
                     if (index[0] == 1) {
                         if (index[1] == 0) {
                             FormManager.showForm(new InboxForm());

@@ -5,10 +5,12 @@ edu\univ\erp\server\ClientHandler.class
 edu\univ\erp\domain\Admin.class
 edu\univ\erp\dao\instructor\InstructorDAO.class
 edu\univ\erp\domain\MaintenanceMode.class
+edu\univ\erp\domain\Notification.class
 edu\univ\erp\domain\CourseCatalog.class
 edu\univ\erp\access\AccessChecker.class
 edu\univ\erp\domain\GradeComponent.class
 edu\univ\erp\server\session\SessionManager.class
+edu\univ\erp\util\GradeUtils.class
 edu\univ\erp\dao\auth\AuthDAO.class
 edu\univ\erp\security\PasswordHasher.class
 edu\univ\erp\util\DBConnectionTest.class
@@ -22,6 +24,7 @@ edu\univ\erp\server\AnsiLogFormatter.class
 edu\univ\erp\service\admin\MysqldumpBackupService$DbInfo.class
 edu\univ\erp\dao\course\CourseDAO.class
 edu\univ\erp\domain\Instructor.class
+edu\univ\erp\server\NotificationService.class
 edu\univ\erp\domain\Section.class
 org\mindrot\jbcrypt\BCrypt.class
 edu\univ\erp\domain\Grade.class
@@ -33,6 +36,7 @@ edu\univ\erp\dao\auth\AuthDAO$AuthDetails.class
 edu\univ\erp\domain\EnrollmentRecord.class
 edu\univ\erp\dao\grade\GradeDAO.class
 edu\univ\erp\dao\admin\AdminDAO.class
+edu\univ\erp\dao\notification\NotificationDAO.class
 edu\univ\erp\dao\settings\SettingDAO.class
 edu\univ\erp\service\auth\AuthService.class
 edu\univ\erp\util\TranscriptFormatter.class

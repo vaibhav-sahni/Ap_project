@@ -788,6 +788,24 @@ private String handleToggleMaintenance(String[] parts) throws Exception {
 
   boolean on = parts[1].equalsIgnoreCase("ON");
   adminService.toggleMaintenance(on);
+  // Best-effort: create a broadcast notification announcing maintenance mode change
+  try {
+    String title = on ? "Maintenance mode ON" : "Maintenance mode OFF";
+    String message = on
+        ? "The system is now under maintenance. Enrollment changes and grading operations are temporarily disabled."
+        : "Maintenance has ended. Normal operations have resumed.";
+    java.time.LocalDateTime now = java.time.LocalDateTime.now();
+    edu.univ.erp.domain.Notification n = new edu.univ.erp.domain.Notification(0, current.getUserId(), "ALL", 0, title, message, now, false);
+    edu.univ.erp.dao.notification.NotificationDAO dao = new edu.univ.erp.dao.notification.NotificationDAO();
+    boolean ok = dao.insertNotification(n);
+    if (!ok) {
+      LOGGER.log(Level.WARNING, "Failed to persist maintenance notification (insert returned false)");
+    }
+  } catch (Exception ex) {
+    // Non-fatal: log and continue. The maintenance toggle should not fail because notifications couldn't be saved.
+    LOGGER.log(Level.WARNING, "Non-fatal: failed to create maintenance notification: " + ex.getMessage(), ex);
+  }
+
   return "SUCCESS:Maintenance mode turned " + (on ? "ON" : "OFF");
 }
 
