@@ -26,7 +26,6 @@ import edu.univ.erp.ui.loginpage.shadow.ShadowRenderer;
 
 public class Background extends JComponent {
 
-
     public Component getBlur() {
         return blur;
     }
@@ -42,11 +41,12 @@ public class Background extends JComponent {
     private Icon image;
     private BufferedImage bufferedImage;
     private Component blur;
-    private edu.univ.erp.ui.loginpage.login.CrossButton closeButton;
     private edu.univ.erp.ui.loginpage.login.LogoComponent iiitdLogo;
 
-
     public Background() {
+        // Set null layout for absolute positioning
+        setLayout(null);
+
         // --- Load the background image ---
         try {
 //            int randomNumber = new java.util.Random().nextInt(3) + 1;
@@ -58,15 +58,13 @@ public class Background extends JComponent {
             java.util.logging.Logger.getLogger(Background.class.getName()).log(java.util.logging.Level.WARNING, "Failed to load background image", e);
         }
 
-        // --- 2. Initialize components as class fields ---
+        // --- Initialize logo component ---
         iiitdLogo = new LogoComponent();
-        closeButton = new CrossButton(); // Changed from BlurButton to CrossButton
 
-        // --- Add components to the panel ---
+        // --- Add logo to the panel ---
         add(iiitdLogo);
-        add(closeButton);
 
-        // --- Add ONE listener to position BOTH components ---
+        // --- Add listener to position logo ---
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
@@ -74,10 +72,6 @@ public class Background extends JComponent {
                 int logoWidth = 450;
                 int logoHeight = 100;
                 iiitdLogo.setBounds(5, 5, logoWidth, logoHeight);
-
-                // Position the close button (top-right)
-                int closeButtonSize = 30;
-                closeButton.setBounds(getWidth() - closeButtonSize - 5, 5, closeButtonSize, closeButtonSize);
             }
         });
 
