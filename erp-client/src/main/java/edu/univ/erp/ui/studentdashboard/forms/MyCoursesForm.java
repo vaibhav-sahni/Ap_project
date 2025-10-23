@@ -60,15 +60,30 @@ import com.formdev.flatlaf.FlatLaf;
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import net.miginfocom.swing.MigLayout;
 
+/**
+ * MyCoursesForm
+ * <p>
+ * Student-facing view showing the courses the current user has taken or is
+ * currently registered for. This form merges three data sources:
+ * - timetable (registered/currently enrolled sections),
+ * - course catalog (metadata like credits, section, instructor), and
+ * - grades/transcript (to mark completed courses).
+ *
+ * The UI displays a searchable, filterable table with columns for code,
+ * title, credits, section, schedule, room, instructor, status and actions.
+ */
 public class MyCoursesForm extends SimpleForm {
 
+    // Main table showing courses (backed by CourseTableModel)
     private JTable courseTable;
     private CourseTableModel tableModel;
     private JTextField searchField;
     private JComboBox<String> deptFilter;
     private JComboBox<String> creditsFilter;
     private JButton clearBtn;
-    private JLabel statsLabel; // shows "X courses available"
+    /** Label used to show current count, e.g. "5 courses registered" */
+    private JLabel statsLabel;
+    /** Title label for the form */
     private JLabel titleLabel;
     private JPanel filterPanel;
     private JPanel searchPanelContainer; // holds the rounded search box for re-theming
@@ -89,20 +104,36 @@ public class MyCoursesForm extends SimpleForm {
 
     // Data model for a course section
     private static class CourseSection {
-
+        /** Short unique course identifier shown in table (e.g., CS101) */
         String courseCode;
+        /** Human-readable course title */
         String courseTitle;
+        /** Number of credits for the course (may be 0 if unknown) */
         int credits;
+        /** Section id as string (may be "N/A" for unknown) */
         String sectionId;
+        /** Day/time string (display-only) */
         String dayTime;
+        /** Room / location */
         String room;
+        /** Instructor name */
         String instructorName;
+        /** Number of students currently enrolled in this section */
         int enrolledCount;
+        /** Maximum capacity for the section */
         int capacity;
-        boolean isRegistered; // controls registration status
-    boolean dropAllowed = true; // whether the student can drop this course (deadline)
-    boolean isCompleted = false; // whether the course is completed (final grade recorded)
+        /** Whether the current user is currently registered in this section */
+        boolean isRegistered;
+        /** Whether the student is allowed to drop this section (deadline checks) */
+        boolean dropAllowed = true;
+        /** Whether this course/section is completed (final grade recorded) */
+        boolean isCompleted = false;
 
+        /**
+         * Construct a lightweight CourseSection used by the UI. Fields are
+         * intentionally simple and mostly display-oriented; the authoritative
+         * data comes from server APIs (timetable/catalog/grades).
+         */
         public CourseSection(String code, String title, int credits, String secId, String time, String room, String instr, int enrolled, int cap, boolean registered) {
             this.courseCode = code;
             this.courseTitle = title;
@@ -116,7 +147,13 @@ public class MyCoursesForm extends SimpleForm {
             this.isRegistered = registered;
         }
 
+        /**
+         * Compute a simple availability metric used for UI hints. Note:
+         * capacity may be 0 (unknown) which would cause division by zero; the
+         * surrounding code never relies on this method for correctness.
+         */
         public double getAvailability() {
+            if (capacity <= 0) return 0.0;
             return (double) enrolledCount / capacity;
         }
     }
@@ -418,6 +455,7 @@ public class MyCoursesForm extends SimpleForm {
     }
 
     private JPanel createTitlePanel() {
+        // Title area: shows the page title and a compact stats label
         JPanel titlePanel = new JPanel(new MigLayout("insets 0, fillx", "[grow][]"));
         titlePanel.setOpaque(false);
 
@@ -432,7 +470,7 @@ public class MyCoursesForm extends SimpleForm {
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 32));
         titlePanel.add(titleLabel);
 
-        // Stats label (promoted to field)
+        // Stats label (promoted to field) - updated via updateStats()
         statsLabel = new JLabel(courses.size() + " courses registered") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -514,7 +552,7 @@ public class MyCoursesForm extends SimpleForm {
         header.setBorder(BorderFactory.createEmptyBorder(10, 9, 10, 10));
         header.setDefaultRenderer(new SortHeaderRenderer(courseTable));
 
-        // Track hover for advanced render behaviors (capacity cell shows text on hover)
+    // Track hover for advanced render behaviors (capacity cell shows text on hover)
         courseTable.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
@@ -669,13 +707,13 @@ public class MyCoursesForm extends SimpleForm {
         searchPanel.setOpaque(false);
         this.searchPanelContainer = searchPanel;
 
-        // Search icon
+    // Search icon (visual only)
         JLabel searchIcon = new JLabel("🔍");
         searchIcon.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
         searchIcon.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 5));
         searchPanel.add(searchIcon, BorderLayout.WEST);
 
-        // Placeholder text
+    // Placeholder text used when field is empty
         final String placeholder = "Search by code, title, or instructor...";
 
         // Search field with dynamic theme colors
@@ -727,7 +765,7 @@ public class MyCoursesForm extends SimpleForm {
             }
         });
 
-        // Real-time search
+        // Real-time search: apply filters as the user types
         searchField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -782,7 +820,7 @@ public class MyCoursesForm extends SimpleForm {
         });
 
         clearBtn.addActionListener(e -> clearFilters());
-        // Place controls: Department | Credits | Clear (clear at extreme right)
+    // Place controls: Department | Credits | Clear (clear at extreme right)
         rightCluster.add(creditsFilter, "h 40!, aligny center");
         rightCluster.add(clearBtn, "h 40!, aligny center");
 
@@ -793,6 +831,7 @@ public class MyCoursesForm extends SimpleForm {
     }
 
     private void applyFilters() {
+        // Build filter parameters from UI controls
         String searchText = searchField.getText().trim();
         String placeholder = "Search by code, title, or instructor...";
 
@@ -812,7 +851,7 @@ public class MyCoursesForm extends SimpleForm {
         filterPanel.revalidate();
         filterPanel.repaint();
 
-        // Filter the master courses list
+    // Filter the master courses list using the selected filters and search text
         List<CourseSection> filtered = courses.stream()
                 .filter(course -> {
                     // Search filter
@@ -851,7 +890,7 @@ public class MyCoursesForm extends SimpleForm {
     }
 
     private void clearFilters() {
-        // Reset search field
+        // Reset search field to placeholder and UI combos to defaults
         String placeholder = "Search by code, title, or instructor...";
         searchField.setText(placeholder);
         searchField.setForeground(Color.decode("#666666"));
@@ -867,7 +906,7 @@ public class MyCoursesForm extends SimpleForm {
         filterPanel.revalidate();
         filterPanel.repaint();
 
-        // Refresh table
+        // Refresh table to show all courses (reset filters)
         tableModel.updateCourses(new ArrayList<>(courses));
         updateStats();
     }
@@ -1313,6 +1352,10 @@ public class MyCoursesForm extends SimpleForm {
     }
 
     // Simple renderer for Status column
+    /**
+     * Renderer for the Status column. Reads flags from CourseSection and
+     * renders a centered text label: "Registered" or "Completed".
+     */
     private class StatusRenderer extends DefaultTableCellRenderer {
 
         @Override
@@ -1343,6 +1386,12 @@ public class MyCoursesForm extends SimpleForm {
     }
 
     // Custom Renderer/Editor for the Actions column
+    /**
+     * Renderer + Editor for the Actions column. Displays a contextual
+     * button (e.g., Drop) when applicable. This class implements both the
+     * TableCellRenderer and TableCellEditor interfaces so that the same UI
+     * component is shown while editing.
+     */
     private class ActionsCellEditor extends AbstractCellEditor implements TableCellRenderer, TableCellEditor {
 
         private final JPanel panel = new JPanel(new GridBagLayout());
