@@ -37,6 +37,71 @@
             <version>2.10.1</version>
         </dependency>
 
+        <!-- Local jars placed in lib/ (system scope) to support the rich dashboard UI. -->
+        <dependency>
+            <groupId>com.formdev.flatlaf</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.4.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/flatlaf-3.4.1.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.formdev.flatlaf</groupId>
+            <artifactId>flatlaf-extras</artifactId>
+            <version>3.4.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/flatlaf-extras-3.4.1.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.formdev.flatlaf.fonts</groupId>
+            <artifactId>flatlaf-fonts-roboto</artifactId>
+            <version>2.137</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/flatlaf-fonts-roboto-2.137.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>net.miginfocom</groupId>
+            <artifactId>miglayout-core</artifactId>
+            <version>5.3</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/miglayout-core-5.3.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>net.miginfocom</groupId>
+            <artifactId>miglayout-swing</artifactId>
+            <version>5.3</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/miglayout-swing-5.3.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.github.datechooser</groupId>
+            <artifactId>datechooser-swing</artifactId>
+            <version>1.4.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/datechooser-swing-1.4.1.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xmlgraphics</groupId>
+            <artifactId>jsvg</artifactId>
+            <version>1.4.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/jsvg-1.4.0.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.swinglabs</groupId>
+            <artifactId>swing-glasspane-popup</artifactId>
+            <version>1.5.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/swing-glasspane-popup-1.5.1.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.swing</groupId>
+            <artifactId>swing-chart</artifactId>
+            <version>1.1.0-beta</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/swing-chart-1.1.0-beta.jar</systemPath>
+        </dependency>
+
         </dependencies>
     
     <build>
@@ -46,7 +111,8 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
-                    <mainClass>edu.univ.erp.ui.loginpage.main.Login</mainClass> 
+                    <!-- Run the new student dashboard Application by default -->
+                    <mainClass>edu.univ.erp.ui.studentdashboard.application.Application</mainClass>
                 </configuration>
             </plugin>
         </plugins>

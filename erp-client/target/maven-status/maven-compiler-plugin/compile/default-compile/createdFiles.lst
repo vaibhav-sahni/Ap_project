@@ -11,6 +11,7 @@ edu\univ\erp\ui\preview\GradesPreviewFrame$1.class
 edu\univ\erp\ui\preview\InstructorDashboardFrame$1.class
 edu\univ\erp\util\AnsiConsole.class
 edu\univ\erp\ui\preview\DashboardPreviewFrame.class
+edu\univ\erp\api\student\StudentAPI$CgpaResponse.class
 edu\univ\erp\ui\preview\CatalogPreviewFrame$1.class
 edu\univ\erp\ui\handlers\InstructorUiHandlers$2.class
 edu\univ\erp\ui\loginpage\swing\PasswordField$1.class
@@ -18,9 +19,11 @@ edu\univ\erp\ui\preview\RosterPreviewFrame.class
 edu\univ\erp\tools\QuickInstructorSectionsTest.class
 edu\univ\erp\domain\UserAuth.class
 edu\univ\erp\ui\handlers\AdminUiHandlers.class
+edu\univ\erp\ui\components\ProgressDialog.class
 edu\univ\erp\ui\handlers\AdminUiHandlers$1.class
 edu\univ\erp\api\admin\AdminAPI$2.class
 edu\univ\erp\api\student\StudentAPI$1.class
+edu\univ\erp\ui\handlers\AdminUiHandlers$4.class
 edu\univ\erp\domain\AssessmentComponent.class
 edu\univ\erp\ui\preview\RosterTableModel.class
 edu\univ\erp\ui\loginpage\login\CrossButton$1.class
@@ -31,6 +34,7 @@ edu\univ\erp\ui\preview\AdminDashboardFrame$1.class
 edu\univ\erp\ui\handlers\StudentUiHandlers$1.class
 edu\univ\erp\ui\loginpage\login\Background$1.class
 edu\univ\erp\net\ClientConnection.class
+edu\univ\erp\ui\components\ProgressDialog$1.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect$1.class
 edu\univ\erp\ui\preview\StudentDashboardFrame$1.class
 edu\univ\erp\ui\handlers\AdminUiHandlers$3.class
@@ -81,6 +85,7 @@ edu\univ\erp\ui\loginpage\swing\TextField$2.class
 edu\univ\erp\api\admin\AdminAPI.class
 edu\univ\erp\ui\actions\InstructorActions.class
 edu\univ\erp\ui\preview\RosterPreviewFrame$1.class
+edu\univ\erp\ui\handlers\InstructorUiHandlers$3.class
 edu\univ\erp\ui\loginpage\shadow\GraphicsUtilities.class
 edu\univ\erp\api\ClientRequest.class
 edu\univ\erp\ui\loginpage\main\Login.class
