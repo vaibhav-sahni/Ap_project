@@ -40,6 +40,7 @@ public class AdminDashboardFrame extends JFrame {
         JButton setDrop = new JButton("Set Drop Deadline");
     JButton downloadBackup = new JButton("Download DB Backup");
     JButton restoreBackup = new JButton("Restore DB Backup");
+        JButton sendNotification = new JButton("Send Notification");
         JButton exit = new JButton("Logout");
 
         edu.univ.erp.ui.handlers.AdminUiHandlers adminHandlers = new edu.univ.erp.ui.handlers.AdminUiHandlers(user);
@@ -59,12 +60,13 @@ public class AdminDashboardFrame extends JFrame {
         setDrop.addActionListener(e -> adminHandlers.handleSetDropDeadlineClick());
         downloadBackup.addActionListener(e -> adminHandlers.handleDownloadBackupClick());
         restoreBackup.addActionListener(e -> adminHandlers.handleRestoreBackupClick());
+    sendNotification.addActionListener(e -> adminHandlers.handleSendNotificationClick());
         exit.addActionListener(e -> {
             if (controller != null) controller.handleLogoutClick();
             else dispose();
         });
 
-    add(allStudents); add(allCourses); add(viewSections); add(createCourse); add(createStudent); add(createInstructor); add(createSection); add(reassignInstructor); add(toggleMaintenance); add(setDrop); add(downloadBackup); add(restoreBackup); add(exit);
+    add(allStudents); add(allCourses); add(viewSections); add(createCourse); add(createStudent); add(createInstructor); add(createSection); add(reassignInstructor); add(toggleMaintenance); add(setDrop); add(downloadBackup); add(restoreBackup); add(sendNotification); add(exit);
     }
 
     public void setController(DashboardController controller) {

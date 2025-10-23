@@ -202,4 +202,21 @@ public class AdminAPI {
         if (response.startsWith("SUCCESS:")) return response.substring("SUCCESS:".length());
         throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error reassigning instructor");
     }
+
+    /**
+     * Send a notification. Format: SEND_NOTIFICATION:recipientType:recipientId:BASE64:<payload>
+     * payload is JSON: { title, message }
+     */
+    public String sendNotification(String recipientType, int recipientId, String title, String message) throws Exception {
+        // Build JSON payload
+        java.util.Map<String,String> payload = new java.util.HashMap<>();
+        payload.put("title", title);
+        payload.put("message", message);
+        String json = gson.toJson(payload);
+        String base64 = java.util.Base64.getEncoder().encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String request = String.format("SEND_NOTIFICATION:%s:%d:BASE64:%s", recipientType, recipientId, base64);
+        String response = ClientRequest.send(request);
+        if (response.startsWith("SUCCESS:")) return response.substring("SUCCESS:".length());
+        throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error sending notification");
+    }
 }

@@ -2,6 +2,7 @@ c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\api\auth\AuthAPI.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\api\ClientRequest.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\api\instructor\InstructorAPI.java
+c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\api\NotificationAPI.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\api\student\StudentAPI.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\ClientContext.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\Admin.java
@@ -12,6 +13,7 @@ c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\GradeComponent.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\Instructor.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\MaintenanceMode.java
+c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\Notification.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\Section.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\Student.java
 c:\Users\sahni\Documents\GitHub\Ap_project\erp-client\src\main\java\edu\univ\erp\domain\UserAuth.java

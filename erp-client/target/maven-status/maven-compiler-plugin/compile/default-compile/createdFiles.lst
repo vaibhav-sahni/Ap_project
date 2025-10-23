@@ -107,7 +107,6 @@ edu\univ\erp\ui\studentdashboard\forms\DashboardForm$8.class
 edu\univ\erp\api\instructor\InstructorAPI.class
 edu\univ\erp\ui\components\ProgressDialog$1.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$1.class
-edu\univ\erp\ui\studentdashboard\forms\DashboardForm$Notification.class
 edu\univ\erp\ui\preview\_CatalogPreviewRunner.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$GlassCardPanel$1.class
 edu\univ\erp\ui\preview\DashboardMainPanel$1.class

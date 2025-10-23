@@ -187,6 +187,10 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
       return handleCreateInstructor(parts);
   case "REASSIGN_INSTRUCTOR":
     return handleReassignInstructor(parts);
+  case "SEND_NOTIFICATION":
+    return handleSendNotification(parts);
+  case "GET_NOTIFICATIONS":
+    return handleGetNotifications(parts);
   default:
       return "ERROR:UNKNOWN_COMMAND";
   }
@@ -900,5 +904,77 @@ private String handleReassignInstructor(String[] parts) throws Exception {
   this.adminService.setDropDeadline(isoDate);
   return "SUCCESS:Drop deadline set to " + isoDate;
   }
+  /**
+   * Handles SEND_NOTIFICATION:recipientType:recipientId:BASE64:<payload>
+   * payload JSON: { "title": "...", "message": "..." }
+   */
+  private String handleSendNotification(String[] parts) throws Exception {
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    requireAdmin(current);
+    if (parts.length < 5) throw new Exception("Missing parameters for SEND_NOTIFICATION. Expected SEND_NOTIFICATION:recipientType:recipientId:BASE64:<payload>");
+    String recipientType = parts[1];
+    int recipientId;
+    try { recipientId = Integer.parseInt(parts[2]); } catch (NumberFormatException e) { throw new Exception("Invalid recipientId"); }
+    if (!"BASE64".equalsIgnoreCase(parts[3])) throw new Exception("Unsupported payload encoding. Expected BASE64.");
+    String base64 = parts[4];
+    if (parts.length > 5) {
+      StringBuilder sb = new StringBuilder(base64);
+      for (int i = 5; i < parts.length; i++) sb.append(":").append(parts[i]);
+      base64 = sb.toString();
+    }
+    byte[] decoded = java.util.Base64.getDecoder().decode(base64);
+    String json = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
+  com.google.gson.Gson gson = new com.google.gson.Gson();
+  @SuppressWarnings("unchecked")
+  java.util.Map<String,String> map = (java.util.Map<String,String>) gson.fromJson(json, java.util.Map.class);
+    String title = map.getOrDefault("title", "(no title)");
+    String message = map.getOrDefault("message", "");
 
+    // Build notification and insert (use LocalDateTime for DB Timestamp)
+    java.time.LocalDateTime now = java.time.LocalDateTime.now();
+    edu.univ.erp.domain.Notification n = new edu.univ.erp.domain.Notification(0, current.getUserId(), recipientType, recipientId, title, message, now, false);
+    edu.univ.erp.dao.notification.NotificationDAO dao = new edu.univ.erp.dao.notification.NotificationDAO();
+    boolean ok = dao.insertNotification(n);
+    if (!ok) throw new Exception("Failed to persist notification");
+    return "SUCCESS:Notification sent";
+  }
+
+  /**
+   * Handles GET_NOTIFICATIONS:userId:recipientType:limit
+   */
+  private String handleGetNotifications(String[] parts) throws Exception {
+    if (parts.length < 4) throw new Exception("Missing parameters. Expected GET_NOTIFICATIONS:userId:recipientType:limit");
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    int userId;
+    try { userId = Integer.parseInt(parts[1]); } catch (NumberFormatException e) { throw new Exception("Invalid userId"); }
+    String recipientType = parts[2];
+    int limit;
+    try { limit = Integer.parseInt(parts[3]); } catch (NumberFormatException e) { limit = 10; }
+
+    // allow the user themselves or admins
+    edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
+    if (current.getUserId() != userId && !checker.isAdmin(current.getUserId())) {
+      throw new Exception("NOT_AUTHORIZED:Only the user or admins may fetch notifications.");
+    }
+
+    edu.univ.erp.dao.notification.NotificationDAO dao = new edu.univ.erp.dao.notification.NotificationDAO();
+    java.util.List<edu.univ.erp.domain.Notification> list = dao.fetchRecentForUser(userId, recipientType, limit);
+    // Convert server Notification objects to simple maps, serializing timestamp as ISO string
+    java.util.List<java.util.Map<String,Object>> out = new java.util.ArrayList<>();
+    for (edu.univ.erp.domain.Notification nn : list) {
+      java.util.Map<String,Object> m = new java.util.HashMap<>();
+      m.put("id", nn.getId());
+      m.put("senderId", nn.getSenderId());
+      m.put("recipientType", nn.getRecipientType());
+      m.put("recipientId", nn.getRecipientId());
+      m.put("title", nn.getTitle());
+      m.put("message", nn.getMessage());
+      java.time.LocalDateTime ts = nn.getTimestamp();
+      m.put("timestamp", ts != null ? ts.toString() : null);
+      m.put("read", nn.isRead());
+      out.add(m);
+    }
+    String json = new com.google.gson.Gson().toJson(out);
+    return "SUCCESS:" + json;
+  }
 }

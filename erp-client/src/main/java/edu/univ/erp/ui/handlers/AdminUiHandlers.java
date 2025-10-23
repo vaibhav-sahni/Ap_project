@@ -22,6 +22,70 @@ public class AdminUiHandlers {
         this.user = user;
     }
 
+    /**
+     * Show a dialog for admin to compose and send a notification to Students, Instructors or All.
+     */
+    public void handleSendNotificationClick() {
+        if (!"Admin".equals(user.getRole())) return;
+        try {
+            String[] options = new String[] {"ALL", "STUDENT", "INSTRUCTOR"};
+            String recipientType = (String) JOptionPane.showInputDialog(null, "Choose recipient type:", "Send Notification", JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
+            if (recipientType == null) return;
+
+            int recipientId = 0;
+            if (!"ALL".equals(recipientType)) {
+                try {
+                    if ("STUDENT".equals(recipientType)) {
+                        java.util.List<Student> students = fetchAllStudentsReturn();
+                        java.util.List<String> opts = new java.util.ArrayList<>();
+                        opts.add("0 - All Students");
+                        if (students != null) {
+                            for (Student s : students) {
+                                String uname = s.getUsername() == null ? "" : s.getUsername();
+                                String roll = s.getRollNo() == null ? "" : s.getRollNo();
+                                opts.add(String.format("%d - %s (%s)", s.getUserId(), uname, roll));
+                            }
+                        }
+                        javax.swing.JComboBox<String> box = new javax.swing.JComboBox<>(opts.toArray(new String[0]));
+                        int sel = JOptionPane.showConfirmDialog(null, box, "Select Student", JOptionPane.OK_CANCEL_OPTION);
+                        if (sel != JOptionPane.OK_OPTION) return;
+                        recipientId = Integer.parseInt(((String)box.getSelectedItem()).split(" - ")[0]);
+                    } else if ("INSTRUCTOR".equals(recipientType)) {
+                        java.util.List<java.util.Map<String,Object>> instructors = adminActions.fetchAllInstructors();
+                        java.util.List<String> opts = new java.util.ArrayList<>();
+                        opts.add("0 - All Instructors");
+                        if (instructors != null) {
+                            for (java.util.Map<String,Object> m : instructors) {
+                                Number uid = (Number) m.get("user_id");
+                                String username = m.get("username") == null ? "" : m.get("username").toString();
+                                String name = m.get("name") == null ? username : m.get("name").toString();
+                                opts.add(String.format("%d - %s", uid == null ? 0 : uid.intValue(), name));
+                            }
+                        }
+                        javax.swing.JComboBox<String> box = new javax.swing.JComboBox<>(opts.toArray(new String[0]));
+                        int sel = JOptionPane.showConfirmDialog(null, box, "Select Instructor", JOptionPane.OK_CANCEL_OPTION);
+                        if (sel != JOptionPane.OK_OPTION) return;
+                        recipientId = Integer.parseInt(((String)box.getSelectedItem()).split(" - ")[0]);
+                    }
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(null, "Failed to fetch recipients: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            String title = JOptionPane.showInputDialog(null, "Enter notification title:");
+            if (title == null) return;
+            String message = JOptionPane.showInputDialog(null, "Enter notification message:");
+            if (message == null) return;
+
+            String resp = adminActions.sendNotification(recipientType, recipientId, title, message);
+            JOptionPane.showMessageDialog(null, resp, "Notification Sent", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, e.getMessage(), "Send Notification Failed", JOptionPane.ERROR_MESSAGE);
+            System.err.println("CLIENT ERROR: SendNotification: " + e.getMessage());
+        }
+    }
+
     // Headless fetch methods for future UI to call
     public java.util.List<Student> fetchAllStudentsReturn() throws Exception {
         return adminActions.fetchAllStudents();

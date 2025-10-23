@@ -43,6 +43,8 @@ import javax.swing.border.Border;
 import java.awt.Window;
 
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
+import edu.univ.erp.api.NotificationAPI;
+import edu.univ.erp.ui.utils.UIHelper;
 import com.formdev.flatlaf.FlatLaf;
 // theme classes imported where needed elsewhere; remove unused imports here
 import net.miginfocom.swing.MigLayout;
@@ -53,6 +55,8 @@ public class DashboardForm extends SimpleForm {
     private GlassCardPanel creditsCard;
     private GlassCardPanel coursesCard;
     private JPanel notificationListPanel;
+    // Sequence id to ignore stale async notification fetch responses
+    private volatile long notificationsFetchSeq = 0L;
     private InteractiveCalendarPanel calendarPanel;
     private Timer resizeSyncTimer; // debounce timer for resize sync
     private boolean windowListenersInstalled = false; // ensure we install once
@@ -101,35 +105,23 @@ public class DashboardForm extends SimpleForm {
         return Color.decode("#EF4444");
     }
 
-    // Notification class to hold notification data
-    private static class Notification {
+    // Fallback dummy notifications as domain Notification objects (used when fetch fails)
+    private List<edu.univ.erp.domain.Notification> getDummyDomainNotifications() {
+    List<edu.univ.erp.domain.Notification> notifications = new ArrayList<>();
+    LocalDateTime now = LocalDateTime.now();
 
-        LocalDateTime timestamp;
-        String title;
-        String message;
+    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
+        "Prelim payment due", "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", now.toString(), false));
+    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
+        "Exam schedule", "Norem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit.", now.minusHours(2).toString(), false));
+    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
+        "Assignment reminder", "Your CS101 assignment is due in 2 days.", now.minusHours(5).toString(), false));
+    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
+        "Library book reminder", "Your borrowed book 'Java Fundamentals' is due tomorrow.", now.minusDays(1).minusHours(3).toString(), false));
+    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
+        "Grade posted", "Your grade for Database Systems midterm has been posted.", now.minusDays(1).minusHours(8).toString(), false));
 
-        public Notification(LocalDateTime timestamp, String title, String message) {
-            this.timestamp = timestamp;
-            this.title = title;
-            this.message = message;
-        }
-    }
-
-    // Dummy notification data
-    private List<Notification> getDummyNotifications() {
-        List<Notification> notifications = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-
-        // Today notifications
-        notifications.add(new Notification(now.minusMinutes(30), "Prelim payment due", "Lorem ipsum dolor sit amet, consectetur adipiscing elit."));
-        notifications.add(new Notification(now.minusHours(2), "Exam schedule", "Norem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit."));
-        notifications.add(new Notification(now.minusHours(5), "Assignment reminder", "Your CS101 assignment is due in 2 days."));
-
-        // Yesterday notifications
-        notifications.add(new Notification(now.minusDays(1).minusHours(3), "Library book reminder", "Your borrowed book 'Java Fundamentals' is due tomorrow."));
-        notifications.add(new Notification(now.minusDays(1).minusHours(8), "Grade posted", "Your grade for Database Systems midterm has been posted."));
-
-        return notifications;
+    return notifications;
     }
 
     public DashboardForm() {
@@ -448,17 +440,21 @@ public class DashboardForm extends SimpleForm {
         }
     }
 
-    private JPanel createNoticeItem(Notification notif) {
+    private JPanel createNoticeItem(edu.univ.erp.domain.Notification notif, int index) {
         JPanel item = new JPanel();
         item.setOpaque(false);
         item.setLayout(new BoxLayout(item, BoxLayout.Y_AXIS));
+        // Add a small outer padding and left indent so the whole notice is inset
+        item.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 0));
 
         // Title and time in one line
         JPanel titleRow = new JPanel();
         titleRow.setOpaque(false);
         titleRow.setLayout(new BorderLayout(10, 0));
 
-        JLabel titleLabel = new JLabel(notif.title) {
+        // Prepend a small numeric marker to the title
+        String titleText = (notif.getTitle() == null ? "" : notif.getTitle());
+        JLabel titleLabel = new JLabel(String.format("%d. %s", index, titleText)) {
             @Override
             protected void paintComponent(Graphics g) {
                 setForeground(textColor());
@@ -467,7 +463,7 @@ public class DashboardForm extends SimpleForm {
         };
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
 
-        JLabel timeLabel = new JLabel(getTimeAgo(notif.timestamp)) {
+        JLabel timeLabel = new JLabel(getTimeAgo(parseTimestamp(notif.getTimestamp()))) {
             @Override
             protected void paintComponent(Graphics g) {
                 setForeground(secondaryTextColor());
@@ -480,18 +476,22 @@ public class DashboardForm extends SimpleForm {
         titleRow.add(timeLabel, BorderLayout.EAST);
 
         // Message
-        JTextArea messageLabel = new JTextArea(notif.message);
+        JTextArea messageLabel = new JTextArea(notif.getMessage() == null ? "" : notif.getMessage());
         messageLabel.setLineWrap(true);
         messageLabel.setWrapStyleWord(true);
         messageLabel.setOpaque(false);
         messageLabel.setEditable(false);
         messageLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         messageLabel.setForeground(secondaryTextColor());
-        messageLabel.setBorder(null);
+        // Slight left indent for the message to visually separate from the title
+        messageLabel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+        // Remove any internal top margin so the body sits closer to the title
+        messageLabel.setMargin(new java.awt.Insets(0, 8, 0, 0));
         messageLabel.setFocusable(false);
 
         item.add(titleRow);
-        item.add(Box.createVerticalStrut(5));
+        // Remove extra vertical gap between title and body (keep very tight)
+        // small gap handled via the JTextArea Insets and the card padding
         item.add(messageLabel);
         item.setAlignmentX(Component.LEFT_ALIGNMENT);
         return item;
@@ -583,30 +583,140 @@ public class DashboardForm extends SimpleForm {
     }
 
     private void refreshNotificationList() {
-        if (notificationListPanel == null) {
-            return;
+        if (notificationListPanel == null) return;
+        notificationListPanel.removeAll();
+        // bump sequence id so old async responses are ignored
+        final long mySeq = ++notificationsFetchSeq;
+
+        // Async fetch notifications for current user; fall back to dummy data on error
+        UIHelper.runAsync(() -> {
+            edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
+            if (u == null) return getDummyDomainNotifications();
+            String recipientType = "STUDENT";
+            try {
+                String role = u.getRole();
+                if (role != null && role.toUpperCase().contains("INSTRUCTOR")) recipientType = "INSTRUCTOR";
+            } catch (Throwable ignore) {}
+            NotificationAPI api = new NotificationAPI();
+            try {
+                java.util.List<edu.univ.erp.domain.Notification> list = api.fetchNotificationsForUser(u.getUserId(), recipientType, 3);
+                return list == null ? new java.util.ArrayList<>() : list; // allow empty list
+            } catch (Exception ex) {
+                return getDummyDomainNotifications();
+            }
+        }, (java.util.List<edu.univ.erp.domain.Notification> result) -> {
+            try {
+                    // Ignore stale responses
+                    if (mySeq != notificationsFetchSeq) return;
+
+                    if (result == null || result.isEmpty()) {
+                    JLabel none = new JLabel("No notifications") {
+                        @Override
+                        protected void paintComponent(Graphics g) {
+                            setForeground(secondaryTextColor());
+                            super.paintComponent(g);
+                        }
+                    };
+                    none.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 12));
+                    none.setHorizontalAlignment(SwingConstants.CENTER);
+                    notificationListPanel.add(none);
+                    } else {
+                        int count = Math.min(3, result.size());
+                        for (int i = 0; i < count; i++) {
+                            edu.univ.erp.domain.Notification n = result.get(i);
+                            JPanel item = createNoticeItem(n, i + 1);
+                            FadePanel wrapper = new FadePanel(0f);
+                            wrapper.setOpaque(false);
+                            wrapper.setLayout(new BorderLayout());
+                            wrapper.add(item, BorderLayout.CENTER);
+                            notificationListPanel.add(wrapper);
+                            final int delay = i * 60;
+                            SwingUtilities.invokeLater(() -> wrapper.startFadeIn(delay));
+                            if (i < count - 1) {
+                                // subtle 1px separator line that adapts to theme via secondaryTextColor
+                                JPanel divider = new JPanel() {
+                                    @Override
+                                    protected void paintComponent(Graphics g) {
+                                        super.paintComponent(g);
+                                        g.setColor(secondaryTextColor());
+                                        g.fillRect(0, 0, getWidth(), 1);
+                                    }
+                                };
+                                divider.setOpaque(false);
+                                divider.setPreferredSize(new java.awt.Dimension(0, 8));
+                                divider.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 8));
+                                notificationListPanel.add(divider);
+                            }
+                        }
+                }
+                notificationListPanel.revalidate();
+                notificationListPanel.repaint();
+            } catch (Throwable t) {
+                // Ensure UI remains stable
+                notificationListPanel.revalidate();
+                notificationListPanel.repaint();
+            }
+        }, (Exception ex) -> {
+            // On error, show fallback dummy notifications
+            // Ignore stale responses
+            if (mySeq != notificationsFetchSeq) return;
+
+            java.util.List<edu.univ.erp.domain.Notification> fallback = getDummyDomainNotifications();
+            for (int i = 0; i < Math.min(3, fallback.size()); i++) {
+                edu.univ.erp.domain.Notification n = fallback.get(i);
+                JPanel item = createNoticeItem(n, i + 1);
+                FadePanel wrapper = new FadePanel(0f);
+                wrapper.setOpaque(false);
+                wrapper.setLayout(new BorderLayout());
+                wrapper.add(item, BorderLayout.CENTER);
+                notificationListPanel.add(wrapper);
+                if (i < 2) {
+                    JPanel divider = new JPanel() {
+                        @Override
+                        protected void paintComponent(Graphics g) {
+                            super.paintComponent(g);
+                            g.setColor(secondaryTextColor());
+                            g.fillRect(0, 0, getWidth(), 1);
+                        }
+                    };
+                    divider.setOpaque(false);
+                    divider.setPreferredSize(new java.awt.Dimension(0, 8));
+                    divider.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 8));
+                    notificationListPanel.add(divider);
+                }
+            }
+            notificationListPanel.revalidate();
+            notificationListPanel.repaint();
+        });
+    }
+
+    // Parse timestamp string into LocalDateTime. Accepts ISO with 'T', offsets, and SQL DATETIME formats.
+    private LocalDateTime parseTimestamp(String ts) {
+        if (ts == null) return LocalDateTime.now();
+        // Try ISO-8601 LocalDateTime first
+        try {
+            return LocalDateTime.parse(ts);
+        } catch (Exception ignored) {}
+
+        // Try OffsetDateTime (e.g., 2025-10-23T11:00:00Z or with offset)
+        try {
+            java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(ts);
+            return odt.toLocalDateTime();
+        } catch (Exception ignored) {}
+
+        // Try common SQL DATETIME formats: 'yyyy-MM-dd HH:mm:ss' and fractional seconds
+        java.time.format.DateTimeFormatter[] fmts = new java.time.format.DateTimeFormatter[] {
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"),
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        };
+        for (java.time.format.DateTimeFormatter fmt : fmts) {
+            try {
+                return LocalDateTime.parse(ts, fmt);
+            } catch (Exception ignored) {}
         }
 
-        notificationListPanel.removeAll();
-        List<Notification> all = getDummyNotifications();
-        int count = Math.min(3, all.size());
-        for (int i = 0; i < count; i++) {
-            Notification n = all.get(i);
-            JPanel item = createNoticeItem(n);
-            // Wrap in fade panel for smooth appearance; stagger slightly
-            FadePanel wrapper = new FadePanel(0f);
-            wrapper.setOpaque(false);
-            wrapper.setLayout(new BorderLayout());
-            wrapper.add(item, BorderLayout.CENTER);
-            notificationListPanel.add(wrapper);
-            final int delay = i * 60; // stagger by 60ms each
-            SwingUtilities.invokeLater(() -> wrapper.startFadeIn(delay));
-            if (i < count - 1) {
-                notificationListPanel.add(Box.createVerticalStrut(12));
-            }
-        }
-        notificationListPanel.revalidate();
-        notificationListPanel.repaint();
+        // Fallback to now
+        return LocalDateTime.now();
     }
 
     // Custom Components as Inner Classes

@@ -72,4 +72,13 @@ public class AdminActions {
     public String reassignInstructor(int sectionId, int newInstructorId) throws Exception {
         return adminApi.reassignInstructor(sectionId, newInstructorId);
     }
+
+    /**
+     * Send a notification from admin to recipients.
+     * recipientType: STUDENT | INSTRUCTOR | ALL
+     * recipientId: 0 for ALL or when not required
+     */
+    public String sendNotification(String recipientType, int recipientId, String title, String message) throws Exception {
+        return adminApi.sendNotification(recipientType, recipientId, title, message);
+    }
 }
