@@ -115,6 +115,31 @@ public class FormManager {
         }
     }
 
+    /**
+     * Refresh student-related views (Dashboard, MyCourses) if they are present
+     * in the form stack. This is used by actions like register/drop to ensure
+     * gauges and course lists are updated after server-side changes.
+     */
+    public static void refreshStudentViews() {
+        for (SimpleForm f : instance.forms) {
+            if (f == null) continue;
+            // Compare by class name to avoid import cycles
+            String cname = f.getClass().getName();
+            if (cname.equals("edu.univ.erp.ui.studentdashboard.forms.DashboardForm") || cname.equals("edu.univ.erp.ui.studentdashboard.forms.MyCoursesForm")) {
+                try {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            f.formRefresh();
+                        } catch (Throwable t) {
+                            // best-effort refresh; swallow errors
+                        }
+                    });
+                } catch (Throwable ignore) {
+                }
+            }
+        }
+    }
+
     public static UndoRedo<SimpleForm> getForms() {
         return instance.forms;
     }

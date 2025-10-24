@@ -414,11 +414,13 @@ public class MyCoursesForm extends SimpleForm {
 
                                     String secId = matched != null ? String.valueOf(matched.getSectionId()) : "N/A";
                                     if (seenSections.contains(secId)) {
-                                        // If the student is already registered in this section (seen via timetable), mark that row as completed if appropriate
+                                        // If the student is already registered in this section (seen via timetable),
+                                        // mark that row as completed and ensure it is no longer treated as an active registration.
                                         for (CourseSection csExisting : courses) {
                                             if (csExisting.sectionId.equals(secId)) {
                                                 csExisting.isCompleted = true;
                                                 csExisting.dropAllowed = false; // completed -> not droppable
+                                                csExisting.isRegistered = false; // ensure completed rows are not considered registered
                                             }
                                         }
                                         continue;
@@ -1366,12 +1368,13 @@ public class MyCoursesForm extends SimpleForm {
                 setText("");
                 return this;
             }
-            // Determine status: Registered, Completed, or blank. Use explicit isCompleted flag first.
+            // Determine status: Completed takes precedence over Registered so
+            // a section with a final grade is shown as Completed (not Registered).
             String statusText = "";
-            if (course.isRegistered) {
-                statusText = "Registered";
-            } else if (course.isCompleted) {
+            if (course.isCompleted) {
                 statusText = "Completed";
+            } else if (course.isRegistered) {
+                statusText = "Registered";
             } else if (course.enrolledCount >= course.capacity) {
                 statusText = "Completed"; // legacy fallback: treat full as completed
             }
@@ -1478,6 +1481,11 @@ public class MyCoursesForm extends SimpleForm {
                         tableModel.updateCourses(new ArrayList<>(courses));
                         updateStats();
                         JOptionPane.showMessageDialog(table, msg == null || msg.isEmpty() ? "Dropped successfully." : msg, "Drop", JOptionPane.INFORMATION_MESSAGE);
+                        // Refresh student views (dashboard gauges and my courses) to reflect server state
+                        try {
+                            javax.swing.SwingUtilities.invokeLater(() -> edu.univ.erp.ui.studentdashboard.menu.FormManager.refreshStudentViews());
+                        } catch (Throwable ignore) {
+                        }
                     }, (Exception ex) -> {
                         // Re-enable button and show error
                         actionButton.setEnabled(true);

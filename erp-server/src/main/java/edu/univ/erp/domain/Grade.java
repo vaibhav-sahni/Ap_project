@@ -8,8 +8,13 @@ public class Grade implements Serializable {
     
     private String courseName;
     private String finalGrade; // Letter grade (A, B+, F)
-    private double credits; // number of credits for the course
     private List<AssessmentComponent> components; 
+    /**
+     * Optional numeric score or points associated with this grade. Some
+     * server code historically constructed Grade with an additional double
+     * value; keep a field to remain backward-compatible.
+     */
+    private double numericScore = Double.NaN;
 
     // Constructor used by StudentService for final aggregation
     public Grade(String courseName, String finalGrade, List<AssessmentComponent> components) {
@@ -18,12 +23,14 @@ public class Grade implements Serializable {
         this.components = components;
     }
 
-    // Overloaded constructor that includes credits
-    public Grade(String courseName, String finalGrade, List<AssessmentComponent> components, double credits) {
+    /**
+     * Backward-compatible constructor that accepts an extra numeric score.
+     */
+    public Grade(String courseName, String finalGrade, List<AssessmentComponent> components, double numericScore) {
         this.courseName = courseName;
         this.finalGrade = finalGrade;
         this.components = components;
-        this.credits = credits;
+        this.numericScore = numericScore;
     }
     
     // Default constructor required by Gson
@@ -36,6 +43,6 @@ public class Grade implements Serializable {
     public void setFinalGrade(String finalGrade) { this.finalGrade = finalGrade; }
     public List<AssessmentComponent> getComponents() { return components; }
     public void setComponents(List<AssessmentComponent> components) { this.components = components; }
-    public double getCredits() { return credits; }
-    public void setCredits(double credits) { this.credits = credits; }
+    public double getNumericScore() { return numericScore; }
+    public void setNumericScore(double numericScore) { this.numericScore = numericScore; }
 }

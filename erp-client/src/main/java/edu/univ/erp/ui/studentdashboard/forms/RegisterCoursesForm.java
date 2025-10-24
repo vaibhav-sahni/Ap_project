@@ -1383,6 +1383,11 @@ public class RegisterCoursesForm extends SimpleForm {
                     // success: update UI
                     addToRegistered(cs);
                     JOptionPane.showMessageDialog(table, result == null || result.isEmpty() ? "Registered successfully." : result, "Register", JOptionPane.INFORMATION_MESSAGE);
+                    // Refresh student views (dashboard gauges and my courses) to reflect server state
+                    try {
+                        javax.swing.SwingUtilities.invokeLater(() -> edu.univ.erp.ui.studentdashboard.menu.FormManager.refreshStudentViews());
+                    } catch (Throwable ignore) {
+                    }
                 }, (Exception ex) -> {
                     String msg = ex.getMessage() == null ? "" : ex.getMessage();
                     String lower = msg.toLowerCase();

@@ -46,6 +46,17 @@ public class CourseCatalog {
         this.enrollmentStatus = enrollmentStatus;
     }
 
+    /**
+     * Backward-compatible constructor used in some DAO call sites that do not
+     * provide the enrollmentStatus field. Keeps behavior identical and sets
+     * enrollmentStatus to null.
+     */
+    public CourseCatalog(String courseCode, String courseTitle, int credits, int sectionId, String dayTime,
+                         String room, int capacity, int enrolledCount, String semester, int year,
+                         int instructorId, String instructorName) {
+        this(courseCode, courseTitle, credits, sectionId, dayTime, room, capacity, enrolledCount, semester, year, instructorId, instructorName, null);
+    }
+
     // --- GETTERS (Required for Client UI and JSON Serialization) ---
     public String getCourseCode() { return courseCode; }
     public String getCourseTitle() { return courseTitle; }

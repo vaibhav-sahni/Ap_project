@@ -33,7 +33,11 @@ public class CourseDAO {
         GET_CATALOG_SQL.replace("GROUP BY s.section_id, c.code, c.title, c.credits, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, i.name ",
                                  "WHERE s.section_id = ? GROUP BY s.section_id, c.code, c.title, c.credits, s.day_time, s.room, s.capacity, s.semester, s.year, s.instructor_id, i.name ");
 
-    // --- 3. NEW SQL QUERY: To fetch a student's Timetable (Registered sections only) ---
+    // --- 3. SQL QUERY: To fetch a student's Timetable (ONLY currently 'Registered' sections) ---
+    // Note: Previously this query returned both 'Registered' and 'Completed' enrollments,
+    // which caused the client to treat completed enrollments as still active. We now only
+    // select rows where enrollment status = 'Registered' so the timetable represents
+    // the student's ongoing schedule. Completed courses are surfaced from the grades API.
     private static final String GET_TIMETABLE_SQL = 
         "SELECT " +
         "    c.code AS course_code, c.title, c.credits, " +
@@ -45,7 +49,7 @@ public class CourseDAO {
         "JOIN sections s ON er.section_id = s.section_id " +
         "JOIN courses c ON s.course_code = c.code " +
         "JOIN instructors i ON s.instructor_id = i.user_id " +
-        "WHERE er.student_id = ? AND er.status IN ('Registered','Completed') " +
+        "WHERE er.student_id = ? AND er.status = 'Registered' " +
         "ORDER BY s.day_time, c.code";
 
 
