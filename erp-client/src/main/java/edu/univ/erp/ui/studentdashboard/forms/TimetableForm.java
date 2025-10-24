@@ -415,27 +415,10 @@ public class TimetableForm extends SimpleForm {
 
     @Override
     public void formRefresh() {
-        // Refresh the timetable entries like other forms: reload data,
-        // re-parse and update the grid panel so the main Refresh button
-        // triggers the same behaviour across forms.
-        List<CourseSection> allCourses = loadDummyData();
-        List<CourseSection> registeredCourses = allCourses.stream()
-                .filter(c -> c.isRegistered)
-                .collect(Collectors.toList());
-
-        List<TimetableEntry> timetableEntries = parseCourses(registeredCourses);
-        if (gridPanel != null) {
-            gridPanel.updateEntries(timetableEntries);
-            gridPanel.applyThemeColors();
-            gridPanel.revalidate();
-            gridPanel.repaint();
-            // Play fade animation on content area
-            if (contentFadePanel != null) {
-                contentFadePanel.startFadeIn(0);
-            }
-            // Also animate the title text to match the box fade
-            playTitleFade();
-        }
+        // On refresh, fetch the authoritative timetable from server and
+        // update the grid asynchronously. This avoids falling back to the
+        // hardcoded dummy data which was used only for initial design-time view.
+        fetchTimetableAndPopulate();
     }
 
     /**
