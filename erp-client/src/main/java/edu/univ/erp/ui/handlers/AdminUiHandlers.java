@@ -364,7 +364,7 @@ public class AdminUiHandlers {
             if (instrSel != JOptionPane.OK_OPTION) return;
             int instrId = Integer.parseInt(((String)instrBox.getSelectedItem()).split(" - ")[0]);
 
-            String dayTime = JOptionPane.showInputDialog(null, "Enter Day/Time (e.g., Mon 9-11):");
+            String dayTime = showDayTimeDialog();
             if (dayTime == null) dayTime = "";
 
             String room = JOptionPane.showInputDialog(null, "Enter Room:");
@@ -445,7 +445,7 @@ public class AdminUiHandlers {
             if (instrSel != JOptionPane.OK_OPTION) return;
             int instrId = Integer.parseInt(((String)instrBox.getSelectedItem()).split(" - ")[0]);
 
-            String dayTime = JOptionPane.showInputDialog(null, "Enter Day/Time (e.g., Mon 9-11):");
+            String dayTime = showDayTimeDialog();
             if (dayTime == null) dayTime = "";
 
             String room = JOptionPane.showInputDialog(null, "Enter Room:");
@@ -767,5 +767,55 @@ public class AdminUiHandlers {
             javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Restore Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
             System.err.println("CLIENT ERROR: DB Restore: " + e.getMessage());
         }
+    }
+
+    /**
+     * Show a dialog that lets admin pick days (Mon-Fri) and a fixed time slot.
+     * Returns a normalized dayTime string using compact day codes (e.g. "MWF 09:00-10:00" or "TTh 11:00-12:30").
+     * Returns null if user cancelled.
+     */
+    private String showDayTimeDialog() {
+        javax.swing.JCheckBox cbMon = new javax.swing.JCheckBox("Mon");
+        javax.swing.JCheckBox cbTue = new javax.swing.JCheckBox("Tue");
+        javax.swing.JCheckBox cbWed = new javax.swing.JCheckBox("Wed");
+        javax.swing.JCheckBox cbThu = new javax.swing.JCheckBox("Thu");
+        javax.swing.JCheckBox cbFri = new javax.swing.JCheckBox("Fri");
+
+        String[] slots = new String[] {
+            "08:00-09:00",
+            "09:00-10:00",
+            "10:00-11:00",
+            "11:00-12:30",
+            "13:00-14:00",
+            "14:00-15:30",
+            "16:00-17:00"
+        };
+        javax.swing.JComboBox<String> slotBox = new javax.swing.JComboBox<>(slots);
+
+        javax.swing.JPanel panel = new javax.swing.JPanel(new net.miginfocom.swing.MigLayout("wrap 1", "[grow]"));
+        panel.add(new javax.swing.JLabel("Select Days:"));
+        javax.swing.JPanel days = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
+        days.add(cbMon); days.add(cbTue); days.add(cbWed); days.add(cbThu); days.add(cbFri);
+        panel.add(days);
+        panel.add(new javax.swing.JLabel("Select Time Slot:"));
+        panel.add(slotBox);
+
+        int choice = JOptionPane.showConfirmDialog(null, panel, "Select Day(s) and Time Slot", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) return null;
+
+        StringBuilder daysCode = new StringBuilder();
+        if (cbMon.isSelected()) daysCode.append("M");
+        if (cbTue.isSelected()) daysCode.append("T");
+        if (cbWed.isSelected()) daysCode.append("W");
+        if (cbThu.isSelected()) daysCode.append("Th");
+        if (cbFri.isSelected()) daysCode.append("F");
+
+        if (daysCode.length() == 0) {
+            JOptionPane.showMessageDialog(null, "Please select at least one day.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+
+        String slot = (String) slotBox.getSelectedItem();
+        return daysCode.toString() + " " + slot;
     }
 }

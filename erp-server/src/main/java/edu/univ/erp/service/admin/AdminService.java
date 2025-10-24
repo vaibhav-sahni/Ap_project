@@ -54,6 +54,18 @@ public class AdminService {
             throw new Exception("Instructor with id " + course.getInstructorId() + " does not exist.");
         }
 
+        // Validate day/time format for the section if provided. CourseCatalog is immutable
+        // (no setters), so construct a normalized copy when needed.
+        if (course.getDayTime() != null && !course.getDayTime().trim().isEmpty()) {
+            String normalized = validateAndNormalizeDayTime(course.getDayTime());
+            course = new CourseCatalog(
+                    course.getCourseCode(), course.getCourseTitle(), course.getCredits(),
+                    course.getSectionId(), normalized, course.getRoom(), course.getCapacity(),
+                    course.getEnrolledCount(), course.getSemester(), course.getYear(),
+                    course.getInstructorId(), course.getInstructorName(), course.getEnrollmentStatus()
+            );
+        }
+
         boolean created = adminDAO.createCourseAndSection(course);
         if (!created) throw new Exception("Failed to create course and section.");
         return "Course and section created successfully: " + course.getCourseCode();
@@ -88,9 +100,79 @@ public class AdminService {
             throw new Exception("Cannot create section: course with code '" + course.getCourseCode() + "' does not exist.");
         }
 
+        // Validate/normalize dayTime before creating the section. Use a normalized copy
+        if (course.getDayTime() != null && !course.getDayTime().trim().isEmpty()) {
+            String normalized = validateAndNormalizeDayTime(course.getDayTime());
+            course = new CourseCatalog(
+                    course.getCourseCode(), course.getCourseTitle(), course.getCredits(),
+                    course.getSectionId(), normalized, course.getRoom(), course.getCapacity(),
+                    course.getEnrolledCount(), course.getSemester(), course.getYear(),
+                    course.getInstructorId(), course.getInstructorName(), course.getEnrollmentStatus()
+            );
+        }
+
         boolean created = adminDAO.createSection(course);
         if (!created) throw new Exception("Failed to create section. Check DB constraints.");
         return "Section created successfully for course: " + course.getCourseCode();
+    }
+
+    /**
+     * Validate and normalize a dayTime string produced by the admin UI.
+     * Expected form: compact day codes (M, T, W, Th, F) concatenated, a space,
+     * then a time slot in 24-hour HH:MM-HH:MM. Examples: "MWF 09:00-10:00", "TTh 11:00-12:30".
+     * Returns a normalized string (trimmed) or throws Exception on invalid input.
+     */
+    private String validateAndNormalizeDayTime(String dayTime) throws Exception {
+        if (dayTime == null) throw new Exception("dayTime cannot be null");
+        String s = dayTime.trim();
+        if (s.isEmpty()) throw new Exception("dayTime cannot be empty");
+
+        String[] parts = s.split("\\s+", 2);
+        if (parts.length < 2) throw new Exception("Invalid day/time format. Expected e.g. 'MWF 09:00-10:00'.");
+        String daysPart = parts[0];
+        String slotPart = parts[1];
+
+        // Validate slot: HH:MM-HH:MM (24-hour)
+        if (!slotPart.matches("\\d{2}:\\d{2}-\\d{2}:\\d{2}")) {
+            throw new Exception("Invalid time slot format. Expected HH:MM-HH:MM (24-hour). Got: " + slotPart);
+        }
+        // further validate that start < end
+        try {
+            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("H:mm");
+            String[] times = slotPart.split("-", 2);
+            java.time.LocalTime st = java.time.LocalTime.parse(times[0], fmt);
+            java.time.LocalTime et = java.time.LocalTime.parse(times[1], fmt);
+            if (!st.isBefore(et)) throw new Exception("Start time must be before end time in slot: " + slotPart);
+        } catch (java.time.format.DateTimeParseException ex) {
+            throw new Exception("Invalid time values in slot: " + slotPart, ex);
+        }
+
+        // Parse daysPart into tokens (M, T, W, Th, F) in a single left-to-right scan
+        java.util.List<String> tokens = new java.util.ArrayList<>();
+        for (int i = 0; i < daysPart.length(); i++) {
+            char c = daysPart.charAt(i);
+            if (c == 'M') tokens.add("M");
+            else if (c == 'W') tokens.add("W");
+            else if (c == 'F') tokens.add("F");
+            else if (c == 'T') {
+                // Could be T or Th
+                if (i + 1 < daysPart.length() && daysPart.charAt(i + 1) == 'h') {
+                    tokens.add("Th");
+                    i++; // skip 'h'
+                } else {
+                    tokens.add("T");
+                }
+            } else {
+                throw new Exception("Invalid day code character: '" + c + "' in days part: " + daysPart);
+            }
+        }
+        if (tokens.isEmpty()) throw new Exception("No day codes found in days part: " + daysPart);
+
+        // Reconstruct normalized days string using same token order
+        StringBuilder normalizedDays = new StringBuilder();
+        for (String t : tokens) normalizedDays.append(t);
+
+        return normalizedDays.toString() + " " + slotPart;
     }
 
     // --------------------------

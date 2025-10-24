@@ -1390,10 +1390,27 @@ public class RegisterCoursesForm extends SimpleForm {
                     }
                 }, (Exception ex) -> {
                     String msg = ex.getMessage() == null ? "" : ex.getMessage();
+                    // Server may return structured conflict responses prefixed with "CONFLICT:{...}"
+                    if (msg.startsWith("CONFLICT:")) {
+                        String json = msg.substring("CONFLICT:".length());
+                        try {
+                            com.google.gson.JsonObject obj = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+                            int existingSectionId = obj.has("existingSectionId") ? obj.get("existingSectionId").getAsInt() : -1;
+                            String existingDayTime = obj.has("existingDayTime") ? obj.get("existingDayTime").getAsString() : "";
+                            String existingCourseCode = obj.has("existingCourseCode") ? obj.get("existingCourseCode").getAsString() : "";
+                            String existingCourseTitle = obj.has("existingCourseTitle") ? obj.get("existingCourseTitle").getAsString() : "";
+                            String friendly = "Registration conflict: " + existingCourseCode + " - " + existingCourseTitle + "\nSection: " + existingSectionId + "\nWhen: " + existingDayTime;
+                            JOptionPane.showMessageDialog(table, friendly, "Schedule Conflict", JOptionPane.WARNING_MESSAGE);
+                            return;
+                        } catch (Exception parseEx) {
+                            // fall through to generic handler
+                        }
+                    }
+
                     String lower = msg.toLowerCase();
                     // Map various server error messages to a user-friendly completed message
                     if (lower.contains("completed") || lower.contains("already completed") || lower.contains("you have completed")
-                            || msg.contains("Duplicate entry") && msg.contains("enrollments.uq_student_section")) {
+                            || (msg.contains("Duplicate entry") && msg.contains("enrollments.uq_student_section"))) {
                         JOptionPane.showMessageDialog(table, "You have completed this course already", "Register", JOptionPane.INFORMATION_MESSAGE);
                     } else {
                         JOptionPane.showMessageDialog(table, "Register failed: " + msg, "Register", JOptionPane.ERROR_MESSAGE);

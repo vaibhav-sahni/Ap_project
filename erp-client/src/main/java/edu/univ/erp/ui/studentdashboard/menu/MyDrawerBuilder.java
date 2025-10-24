@@ -13,9 +13,10 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
 import edu.univ.erp.ui.studentdashboard.forms.InboxForm;
+import edu.univ.erp.ui.studentdashboard.forms.MyCoursesForm;
 import edu.univ.erp.ui.studentdashboard.forms.ReadForm;
 import edu.univ.erp.ui.studentdashboard.forms.RegisterCoursesForm;
-import edu.univ.erp.ui.studentdashboard.forms.MyCoursesForm;
+import edu.univ.erp.ui.studentdashboard.forms.TimetableForm;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
 import raven.drawer.component.DrawerPanel;
 import raven.drawer.component.SimpleDrawerBuilder;
@@ -30,7 +31,6 @@ import raven.drawer.component.menu.SimpleMenuStyle;
 import raven.drawer.component.menu.data.Item;
 import raven.drawer.component.menu.data.MenuItem;
 import raven.swing.AvatarIcon;
-
 public class MyDrawerBuilder extends SimpleDrawerBuilder {
 
     private ModelUser user;
@@ -131,6 +131,7 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
             MenuItem mi = items[i];
             String label = null;
             try {
+
                 java.lang.reflect.Method m = null;
                 for (String name : new String[]{"getText", "getName", "getTitle", "getLabel"}) {
                     try {
@@ -280,6 +281,12 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                         t.printStackTrace(System.err);
                         FormManager.logout();
                     }
+                    return;
+                }
+
+                // Open full timetable in main area when My Timetable is selected
+                if (detectedLabel != null && detectedLabel.equalsIgnoreCase("My Timetable")) {
+                    FormManager.showForm(new edu.univ.erp.ui.studentdashboard.forms.TimetableForm());
                     return;
                 }
 

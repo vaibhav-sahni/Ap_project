@@ -29,6 +29,12 @@ public class EnrollmentDAO {
         "JOIN sections s ON e.section_id = s.section_id " +
         "WHERE e.student_id = ? AND e.status = 'Registered'";
 
+    // New: get section id and day_time for student's registered enrollments
+    private static final String GET_STUDENT_SCHEDULE_WITH_SECTION_SQL =
+        "SELECT s.section_id, s.day_time FROM enrollments e " +
+        "JOIN sections s ON e.section_id = s.section_id " +
+        "WHERE e.student_id = ? AND e.status = 'Registered'";
+
     // 4. Register the student (Insert a new active enrollment)
     private static final String REGISTER_COURSE_SQL =
         "INSERT INTO enrollments (student_id, section_id, status) VALUES (?, ?, 'Registered')";
@@ -110,6 +116,25 @@ public class EnrollmentDAO {
             }
         }
         return scheduleTimes;
+    }
+
+    /**
+     * Returns a mapping of section_id -> day_time for the student's current Registered enrollments.
+     */
+    public java.util.Map<Integer, String> getStudentScheduleEntries(int studentId) throws SQLException {
+        java.util.Map<Integer, String> map = new java.util.HashMap<>();
+        try (Connection conn = DBConnector.getErpConnection();
+             PreparedStatement stmt = conn.prepareStatement(GET_STUDENT_SCHEDULE_WITH_SECTION_SQL)) {
+            stmt.setInt(1, studentId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int sid = rs.getInt("section_id");
+                    String dt = rs.getString("day_time");
+                    map.put(sid, dt);
+                }
+            }
+        }
+        return map;
     }
 
     /**

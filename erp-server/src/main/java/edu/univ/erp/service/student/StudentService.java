@@ -136,13 +136,25 @@ public class StudentService {
             throw new Exception("Target section data not found.");
         }
         
-        List<String> currentScheduleTimes = enrollmentDAO.getStudentScheduleDayTimes(userId);
+        java.util.Map<Integer, String> currentSchedule = enrollmentDAO.getStudentScheduleEntries(userId);
         String newSectionDayTime = targetSection.getDayTime();
 
-        // SIMPLIFIED CONFLICT CHECK
-        for (String existingTime : currentScheduleTimes) {
+        // Robust conflict check: check every registered section for overlap even on a single day
+        for (java.util.Map.Entry<Integer, String> e : currentSchedule.entrySet()) {
+            Integer existingSectionId = e.getKey();
+            String existingTime = e.getValue();
             if (hasTimeConflict(existingTime, newSectionDayTime)) {
-                throw new Exception("Time conflict detected with an existing course: " + existingTime);
+                // Get course info for the conflicting section so client can display useful details
+                CourseCatalog existing = courseDAO.getCatalogItemBySectionId(existingSectionId);
+                String existingCourseCode = existing == null ? "" : existing.getCourseCode();
+                String existingCourseTitle = existing == null ? "" : existing.getCourseTitle();
+                // Return a structured conflict error so client can parse it
+                String json = "{\"type\":\"time_conflict\"," +
+                        "\"existingSectionId\":" + existingSectionId + "," +
+                        "\"existingDayTime\":\"" + escapeForJson(existingTime) + "\"," +
+                        "\"existingCourseCode\":\"" + escapeForJson(existingCourseCode) + "\"," +
+                        "\"existingCourseTitle\":\"" + escapeForJson(existingCourseTitle) + "\"}";
+                throw new Exception("CONFLICT:" + json);
             }
         }
         
@@ -186,15 +198,16 @@ public class StudentService {
 
             if (!daysOverlap) return false;
 
-            // Parse time ranges: "HH:mm-HH:mm"
+            // Parse time ranges: "HH:mm-HH:mm" or "H:mm-H:mm"
             String[] exTimes = exTimePart.split("-", 2);
             String[] newTimes = newTimePart.split("-", 2);
             if (exTimes.length < 2 || newTimes.length < 2) return false;
+            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("H:mm");
 
-            LocalTime exStart = LocalTime.parse(exTimes[0]);
-            LocalTime exEnd = LocalTime.parse(exTimes[1]);
-            LocalTime newStart = LocalTime.parse(newTimes[0]);
-            LocalTime newEnd = LocalTime.parse(newTimes[1]);
+            LocalTime exStart = LocalTime.parse(exTimes[0].trim(), fmt);
+            LocalTime exEnd = LocalTime.parse(exTimes[1].trim(), fmt);
+            LocalTime newStart = LocalTime.parse(newTimes[0].trim(), fmt);
+            LocalTime newEnd = LocalTime.parse(newTimes[1].trim(), fmt);
 
             // Overlap exists unless one ends before the other starts
             return !(exEnd.compareTo(newStart) <= 0 || newEnd.compareTo(exStart) <= 0);
@@ -215,22 +228,69 @@ public class StudentService {
         String[] tokens = cleaned.split("[\\/\\,\\s]+");
         for (String t : tokens) {
             if (t.isEmpty()) continue;
-            String norm = t.substring(0, Math.min(3, t.length())).toLowerCase();
-            // normalize common day names/abbreviations
-            switch (norm) {
-                case "mon": days.add("mon"); break;
-                case "tue": days.add("tue"); break;
-                case "wed": days.add("wed"); break;
-                case "thu": days.add("thu"); break;
-                case "fri": days.add("fri"); break;
-                case "sat": days.add("sat"); break;
-                case "sun": days.add("sun"); break;
-                default:
-                    // unknown token: attempt to use first three letters
-                    days.add(norm);
+            // If token looks like compact codes e.g., MWF, TTh, parse char-by-char
+            if (t.matches("(?i)^[MTWThfhr]+$")) {
+                // iterate and detect 'Th' as Thursday
+                for (int i = 0; i < t.length(); i++) {
+                    char c = t.charAt(i);
+                    if (c == 'M' || c == 'm') {
+                        days.add("mon");
+                    } else if (c == 'W' || c == 'w') {
+                        days.add("wed");
+                    } else if (c == 'F' || c == 'f') {
+                        days.add("fri");
+                    } else if (c == 'T' || c == 't') {
+                        // Could be 'Th' for Thursday
+                        if (i + 1 < t.length() && (t.charAt(i + 1) == 'h' || t.charAt(i + 1) == 'H')) {
+                            days.add("thu");
+                            i++; // skip the 'h'
+                        } else {
+                            days.add("tue");
+                        }
+                    } else if (c == 'h' || c == 'H') {
+                        // standalone 'h' unlikely, skip
+                        continue;
+                    } else {
+                        // fallback to generic handling below
+                        String norm = t.substring(0, Math.min(3, t.length())).toLowerCase();
+                        switch (norm) {
+                            case "mon": days.add("mon"); break;
+                            case "tue": days.add("tue"); break;
+                            case "wed": days.add("wed"); break;
+                            case "thu": days.add("thu"); break;
+                            case "fri": days.add("fri"); break;
+                            case "sat": days.add("sat"); break;
+                            case "sun": days.add("sun"); break;
+                            default:
+                                days.add(norm);
+                        }
+                        break;
+                    }
+                }
+            } else {
+                String norm = t.substring(0, Math.min(3, t.length())).toLowerCase();
+                // normalize common day names/abbreviations
+                switch (norm) {
+                    case "mon": days.add("mon"); break;
+                    case "tue": days.add("tue"); break;
+                    case "wed": days.add("wed"); break;
+                    case "thu": days.add("thu"); break;
+                    case "fri": days.add("fri"); break;
+                    case "sat": days.add("sat"); break;
+                    case "sun": days.add("sun"); break;
+                    default:
+                        // unknown token: attempt to use first three letters
+                        days.add(norm);
+                }
             }
         }
         return days;
+    }
+
+    /** Escape a string to be safely embedded in a JSON string value (very small helper). */
+    private static String escapeForJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
     }
     
     // ----------------------------------------------------------------------
@@ -284,8 +344,7 @@ public class StudentService {
             finalGrades.add(new Grade(
                 raw.courseTitle(),
                 raw.finalGrade(),
-                components,
-                raw.credits()
+                components
             ));
         }
         return finalGrades;
