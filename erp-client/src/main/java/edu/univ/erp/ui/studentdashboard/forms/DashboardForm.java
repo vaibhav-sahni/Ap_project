@@ -45,6 +45,7 @@ import java.awt.Window;
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import edu.univ.erp.api.NotificationAPI;
 import edu.univ.erp.ui.utils.UIHelper;
+import edu.univ.erp.ui.studentdashboard.menu.FormManager;
 import com.formdev.flatlaf.FlatLaf;
 // theme classes imported where needed elsewhere; remove unused imports here
 import net.miginfocom.swing.MigLayout;
@@ -538,8 +539,13 @@ public class DashboardForm extends SimpleForm {
         showAllLink.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // TODO: Navigate to full notifications page
-                JOptionPane.showMessageDialog(DashboardForm.this, "Show all notifications feature coming soon!");
+                // Navigate to the full notifications form
+                try {
+                    FormManager.showForm(new NotificationForm());
+                } catch (Throwable t) {
+                    // Fallback: show message if navigation fails
+                    JOptionPane.showMessageDialog(DashboardForm.this, "Unable to open notifications: " + t.getMessage());
+                }
             }
 
             @Override

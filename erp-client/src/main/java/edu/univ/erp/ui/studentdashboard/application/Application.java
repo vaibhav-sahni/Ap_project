@@ -4,8 +4,11 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.UIManager;
 
 import com.formdev.flatlaf.FlatClientProperties;
@@ -14,6 +17,7 @@ import com.formdev.flatlaf.fonts.roboto.FlatRobotoFont;
 import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import com.formdev.flatlaf.util.UIScale;
 
+import edu.univ.erp.api.auth.AuthAPI;
 import edu.univ.erp.ui.studentdashboard.components.Background;
 import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
 import edu.univ.erp.ui.studentdashboard.menu.FormManager;
@@ -29,12 +33,33 @@ public class Application extends JFrame {
     }
 
     private void init() {
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(UIScale.scale(new Dimension(1366, 768)));
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(UIScale.scale(new Dimension(1366, 768)));
-        setLocationRelativeTo(null);
+        // Perform graceful logout when user presses the window close (X) button.
+        // We set DO_NOTHING_ON_CLOSE and handle the event so FormManager.logout()
+        // can cleanly dispose the dashboard and open the login window.
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                int choice = JOptionPane.showConfirmDialog(Application.this,
+                        "Log out and exit?",
+                        "Confirm",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE);
+                if (choice == JOptionPane.YES_OPTION) {
+                    // Attempt server-side logout; ignore errors but try best-effort.
+                    try {
+                        new AuthAPI().logout();
+                    } catch (Throwable ex) {
+                        // ignore - we'll still exit
+                    }
+                    try { dispose(); } catch (Throwable ignore) {}
+                    System.exit(0);
+                }
+                // If NO_OPTION, just return and keep the app open
+            }
+        });
+    setSize(UIScale.scale(new Dimension(1366, 768)));
+    setLocationRelativeTo(null);
         if (UNDECORATED) {
             setUndecorated(UNDECORATED);
             setBackground(new Color(0, 0, 0, 0));

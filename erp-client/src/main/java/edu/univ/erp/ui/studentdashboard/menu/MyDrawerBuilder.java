@@ -11,12 +11,8 @@ import javax.swing.JLabel;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
-import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
-import edu.univ.erp.ui.studentdashboard.forms.InboxForm;
-import edu.univ.erp.ui.studentdashboard.forms.MyCoursesForm;
-import edu.univ.erp.ui.studentdashboard.forms.ReadForm;
-import edu.univ.erp.ui.studentdashboard.forms.RegisterCoursesForm;
-import edu.univ.erp.ui.studentdashboard.forms.TimetableForm;
+
+import edu.univ.erp.ui.studentdashboard.forms.*;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
 import raven.drawer.component.DrawerPanel;
 import raven.drawer.component.SimpleDrawerBuilder;
@@ -286,13 +282,19 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
 
                 // Open full timetable in main area when My Timetable is selected
                 if (detectedLabel != null && detectedLabel.equalsIgnoreCase("My Timetable")) {
-                    FormManager.showForm(new edu.univ.erp.ui.studentdashboard.forms.TimetableForm());
+                    FormManager.showForm(new TimetableForm());
                     return;
                 }
 
                 // Open My Grades when selected
                 if (detectedLabel != null && detectedLabel.equalsIgnoreCase("My Grades")) {
-                    FormManager.showForm(new edu.univ.erp.ui.studentdashboard.forms.MyGradesForm());
+                    FormManager.showForm(new MyGradesForm());
+                    return;
+                }
+
+                // Open Notifications when selected
+                if (detectedLabel != null && detectedLabel.equalsIgnoreCase("Notification")) {
+                    FormManager.showForm(new NotificationForm());
                     return;
                 }
 
