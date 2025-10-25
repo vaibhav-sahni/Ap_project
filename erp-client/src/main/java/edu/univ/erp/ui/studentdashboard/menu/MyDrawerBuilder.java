@@ -290,6 +290,12 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                     return;
                 }
 
+                // Open My Grades when selected
+                if (detectedLabel != null && detectedLabel.equalsIgnoreCase("My Grades")) {
+                    FormManager.showForm(new edu.univ.erp.ui.studentdashboard.forms.MyGradesForm());
+                    return;
+                }
+
                 // Top-level Dashboard
                 if (index != null && index.length == 1 && index[0] == 0) {
                     FormManager.showForm(new DashboardForm());

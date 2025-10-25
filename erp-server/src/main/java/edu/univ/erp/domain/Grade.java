@@ -10,11 +10,12 @@ public class Grade implements Serializable {
     private String finalGrade; // Letter grade (A, B+, F)
     private List<AssessmentComponent> components; 
     /**
-     * Optional numeric score or points associated with this grade. Some
-     * server code historically constructed Grade with an additional double
-     * value; keep a field to remain backward-compatible.
+     * Optional numeric score or points associated with this grade.
+     * Historically the server used Double.NaN as a sentinel; to avoid
+     * emitting invalid JSON tokens (NaN) we use a nullable Double and
+     * leave it null when no numeric score is available.
      */
-    private double numericScore = Double.NaN;
+    private Double numericScore = null;
 
     // Constructor used by StudentService for final aggregation
     public Grade(String courseName, String finalGrade, List<AssessmentComponent> components) {
@@ -26,7 +27,7 @@ public class Grade implements Serializable {
     /**
      * Backward-compatible constructor that accepts an extra numeric score.
      */
-    public Grade(String courseName, String finalGrade, List<AssessmentComponent> components, double numericScore) {
+    public Grade(String courseName, String finalGrade, List<AssessmentComponent> components, Double numericScore) {
         this.courseName = courseName;
         this.finalGrade = finalGrade;
         this.components = components;
@@ -43,6 +44,6 @@ public class Grade implements Serializable {
     public void setFinalGrade(String finalGrade) { this.finalGrade = finalGrade; }
     public List<AssessmentComponent> getComponents() { return components; }
     public void setComponents(List<AssessmentComponent> components) { this.components = components; }
-    public double getNumericScore() { return numericScore; }
-    public void setNumericScore(double numericScore) { this.numericScore = numericScore; }
+    public Double getNumericScore() { return numericScore; }
+    public void setNumericScore(Double numericScore) { this.numericScore = numericScore; }
 }

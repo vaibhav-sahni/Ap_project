@@ -366,6 +366,15 @@ public class AdminUiHandlers {
 
             String dayTime = showDayTimeDialog();
             if (dayTime == null) dayTime = "";
+            // Normalize/validate dayTime on client side before sending to server
+            if (!dayTime.trim().isEmpty()) {
+                try {
+                    dayTime = normalizeDayTimeClient(dayTime);
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(null, "Invalid day/time: " + e.getMessage(), "Input Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
 
             String room = JOptionPane.showInputDialog(null, "Enter Room:");
             if (room == null) room = "";
@@ -374,8 +383,11 @@ public class AdminUiHandlers {
             if (capacityStr == null) return;
             int capacity = Integer.parseInt(capacityStr);
 
-            String semester = JOptionPane.showInputDialog(null, "Enter Semester:");
-            if (semester == null) semester = "";
+            String[] semOptions = new String[] {"Monsoon", "Winter", "Summer"};
+            javax.swing.JComboBox<String> semBox = new javax.swing.JComboBox<>(semOptions);
+            int semChoice = JOptionPane.showConfirmDialog(null, semBox, "Select Semester", JOptionPane.OK_CANCEL_OPTION);
+            if (semChoice != JOptionPane.OK_OPTION) return;
+            String semester = (String) semBox.getSelectedItem();
 
             String yearStr = JOptionPane.showInputDialog(null, "Enter Year:");
             if (yearStr == null) return;
@@ -447,6 +459,15 @@ public class AdminUiHandlers {
 
             String dayTime = showDayTimeDialog();
             if (dayTime == null) dayTime = "";
+            // Normalize/validate dayTime on client side before sending to server
+            if (!dayTime.trim().isEmpty()) {
+                try {
+                    dayTime = normalizeDayTimeClient(dayTime);
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(null, "Invalid day/time: " + e.getMessage(), "Input Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
 
             String room = JOptionPane.showInputDialog(null, "Enter Room:");
             if (room == null) room = "";
@@ -455,8 +476,11 @@ public class AdminUiHandlers {
             if (capacityStr == null) return;
             int capacity = Integer.parseInt(capacityStr);
 
-            String semester = JOptionPane.showInputDialog(null, "Enter Semester:");
-            if (semester == null) semester = "";
+            String[] semOptions = new String[] {"Monsoon", "Winter", "Summer"};
+            javax.swing.JComboBox<String> semBox = new javax.swing.JComboBox<>(semOptions);
+            int semChoice = JOptionPane.showConfirmDialog(null, semBox, "Select Semester", JOptionPane.OK_CANCEL_OPTION);
+            if (semChoice != JOptionPane.OK_OPTION) return;
+            String semester = (String) semBox.getSelectedItem();
 
             String yearStr = JOptionPane.showInputDialog(null, "Enter Year:");
             if (yearStr == null) return;
@@ -817,5 +841,77 @@ public class AdminUiHandlers {
 
         String slot = (String) slotBox.getSelectedItem();
         return daysCode.toString() + " " + slot;
+    }
+
+    /**
+     * Normalize a dayTime string supplied by the UI. Accepts friendly variants and
+     * returns a string of the form: "<days> HH:MM-HH:MM". Throws Exception on invalid input.
+     * Examples accepted: "MWF 11", "MWF 11-12", "11", "11:30", "TTh 11:00-12:30".
+     */
+    private String normalizeDayTimeClient(String dayTime) throws Exception {
+        if (dayTime == null) throw new Exception("dayTime cannot be null");
+        String s = dayTime.trim();
+        if (s.isEmpty()) throw new Exception("dayTime cannot be empty");
+
+        String[] parts = s.split("\\s+", 2);
+        String daysPart;
+        String slotPart;
+        if (parts.length == 1) {
+            // No explicit days provided. We'll treat this as slot-only and require caller to provide days
+            // in the UI; however, accept it by using an empty days part (server expects days present in many flows).
+            // To avoid surprising the server, require days to be present here.
+            throw new Exception("Please select days (e.g. MWF) and a time slot.");
+        } else {
+            daysPart = parts[0];
+            slotPart = parts[1];
+        }
+
+        // Normalize slot: accept variants like "11", "11-12", "11:30", or "11:00-12:30"
+        String normalizedSlot;
+        try {
+            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("H:mm");
+            String[] times = slotPart.split("-", 2);
+            if (times.length == 1) {
+                String startRaw = times[0].trim();
+                if (startRaw.isEmpty()) throw new Exception("Empty time value in slot: " + slotPart);
+                String startNorm = startRaw.contains(":") ? startRaw : startRaw + ":00";
+                java.time.LocalTime st = java.time.LocalTime.parse(startNorm, fmt);
+                java.time.LocalTime et = st.plusHours(1);
+                normalizedSlot = String.format("%02d:%02d-%02d:%02d", st.getHour(), st.getMinute(), et.getHour(), et.getMinute());
+            } else {
+                String startRaw = times[0].trim();
+                String endRaw = times[1].trim();
+                if (startRaw.isEmpty() || endRaw.isEmpty()) throw new Exception("Empty start or end time in slot: " + slotPart);
+                String startNorm = startRaw.contains(":") ? startRaw : startRaw + ":00";
+                String endNorm = endRaw.contains(":") ? endRaw : endRaw + ":00";
+                java.time.LocalTime st = java.time.LocalTime.parse(startNorm, fmt);
+                java.time.LocalTime et = java.time.LocalTime.parse(endNorm, fmt);
+                if (!st.isBefore(et)) throw new Exception("Start time must be before end time in slot: " + slotPart);
+                normalizedSlot = String.format("%02d:%02d-%02d:%02d", st.getHour(), st.getMinute(), et.getHour(), et.getMinute());
+            }
+        } catch (java.time.format.DateTimeParseException ex) {
+            throw new Exception("Invalid time values in slot: " + slotPart, ex);
+        }
+
+        // Validate daysPart tokens
+        java.util.List<String> tokens = new java.util.ArrayList<>();
+        for (int i = 0; i < daysPart.length(); i++) {
+            char c = daysPart.charAt(i);
+            if (c == 'M') tokens.add("M");
+            else if (c == 'W') tokens.add("W");
+            else if (c == 'F') tokens.add("F");
+            else if (c == 'T') {
+                if (i + 1 < daysPart.length() && daysPart.charAt(i + 1) == 'h') {
+                    tokens.add("Th"); i++; 
+                } else tokens.add("T");
+            } else {
+                throw new Exception("Invalid day code character: '" + c + "' in days part: " + daysPart);
+            }
+        }
+        if (tokens.isEmpty()) throw new Exception("No day codes found in days part: " + daysPart);
+
+        StringBuilder normalizedDays = new StringBuilder();
+        for (String t : tokens) normalizedDays.append(t);
+        return normalizedDays.toString() + " " + normalizedSlot;
     }
 }

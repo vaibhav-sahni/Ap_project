@@ -132,17 +132,37 @@ public class AdminService {
         String daysPart = parts[0];
         String slotPart = parts[1];
 
-        // Validate slot: HH:MM-HH:MM (24-hour)
-        if (!slotPart.matches("\\d{2}:\\d{2}-\\d{2}:\\d{2}")) {
-            throw new Exception("Invalid time slot format. Expected HH:MM-HH:MM (24-hour). Got: " + slotPart);
-        }
-        // further validate that start < end
+        // Normalize and validate slot. Accept several friendly formats such as:
+        //  - "11" -> treated as 11:00-12:00
+        //  - "11:30" -> treated as 11:30-12:30
+        //  - "11-12" -> treated as 11:00-12:00
+        //  - "11:00-12:30" -> kept as-is
+        // The goal is to be permissive on input while storing a normalized HH:MM-HH:MM slot.
+        String normalizedSlot;
         try {
             java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("H:mm");
             String[] times = slotPart.split("-", 2);
-            java.time.LocalTime st = java.time.LocalTime.parse(times[0], fmt);
-            java.time.LocalTime et = java.time.LocalTime.parse(times[1], fmt);
-            if (!st.isBefore(et)) throw new Exception("Start time must be before end time in slot: " + slotPart);
+            if (times.length == 1) {
+                // Single token: treat as start time and add 1 hour for end
+                String startRaw = times[0].trim();
+                if (startRaw.isEmpty()) throw new Exception("Empty time value in slot: " + slotPart);
+                String startNorm = startRaw.contains(":") ? startRaw : startRaw + ":00";
+                java.time.LocalTime st = java.time.LocalTime.parse(startNorm, fmt);
+                java.time.LocalTime et = st.plusHours(1);
+                normalizedSlot = String.format("%02d:%02d-%02d:%02d", st.getHour(), st.getMinute(), et.getHour(), et.getMinute());
+            } else if (times.length == 2) {
+                String startRaw = times[0].trim();
+                String endRaw = times[1].trim();
+                if (startRaw.isEmpty() || endRaw.isEmpty()) throw new Exception("Empty start or end time in slot: " + slotPart);
+                String startNorm = startRaw.contains(":") ? startRaw : startRaw + ":00";
+                String endNorm = endRaw.contains(":") ? endRaw : endRaw + ":00";
+                java.time.LocalTime st = java.time.LocalTime.parse(startNorm, fmt);
+                java.time.LocalTime et = java.time.LocalTime.parse(endNorm, fmt);
+                if (!st.isBefore(et)) throw new Exception("Start time must be before end time in slot: " + slotPart);
+                normalizedSlot = String.format("%02d:%02d-%02d:%02d", st.getHour(), st.getMinute(), et.getHour(), et.getMinute());
+            } else {
+                throw new Exception("Invalid time slot format. Expected single time or range. Got: " + slotPart);
+            }
         } catch (java.time.format.DateTimeParseException ex) {
             throw new Exception("Invalid time values in slot: " + slotPart, ex);
         }
@@ -172,7 +192,7 @@ public class AdminService {
         StringBuilder normalizedDays = new StringBuilder();
         for (String t : tokens) normalizedDays.append(t);
 
-        return normalizedDays.toString() + " " + slotPart;
+    return normalizedDays.toString() + " " + normalizedSlot;
     }
 
     // --------------------------

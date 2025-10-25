@@ -43,6 +43,8 @@ public class AdminAPI {
     // --- 2. CREATE COURSE AND SECTION ------------------------------------
     // ----------------------------------------------------------------------
     public String createCourseAndSection(CourseCatalog course) throws Exception {
+        // URL-encode dayTime to avoid breaking the colon-separated protocol (dayTime contains ':' characters)
+        String encodedDayTime = java.net.URLEncoder.encode(course.getDayTime() == null ? "" : course.getDayTime(), java.nio.charset.StandardCharsets.UTF_8.toString());
         String request = String.format("CREATE_COURSE_SECTION:%s:%s:%d:%d:%s:%d:%s:%d:%s:%d:%s:%d",
             course.getCourseCode(),
             course.getCourseTitle(),
@@ -50,15 +52,12 @@ public class AdminAPI {
             course.getSectionId(),
             course.getRoom(),
             course.getCapacity(),
-            course.getDayTime(),
+            encodedDayTime,
             course.getEnrolledCount(),
             course.getSemester(),
             course.getInstructorId(),
             course.getInstructorName(),
             course.getYear()
-
-
-
         );
         String response = ClientRequest.send(request);
 
@@ -81,14 +80,16 @@ public class AdminAPI {
 
     /** Create only a section for an existing course */
     public String createSection(CourseCatalog section) throws Exception {
-        String request = String.format("CREATE_SECTION:%s:%d:%s:%s:%d:%s:%d",
-                section.getCourseCode(),
-                section.getInstructorId(),
-                section.getDayTime(),
-                section.getRoom(),
-                section.getCapacity(),
-                section.getSemester(),
-                section.getYear());
+    // Encode dayTime to keep colons from splitting the protocol
+    String encodedDayTime = java.net.URLEncoder.encode(section.getDayTime() == null ? "" : section.getDayTime(), java.nio.charset.StandardCharsets.UTF_8.toString());
+    String request = String.format("CREATE_SECTION:%s:%d:%s:%s:%d:%s:%d",
+        section.getCourseCode(),
+        section.getInstructorId(),
+        encodedDayTime,
+        section.getRoom(),
+        section.getCapacity(),
+        section.getSemester(),
+        section.getYear());
         String response = ClientRequest.send(request);
         if (response.startsWith("SUCCESS:")) return response.substring("SUCCESS:".length());
         throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating section");

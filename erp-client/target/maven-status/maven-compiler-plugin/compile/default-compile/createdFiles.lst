@@ -22,6 +22,7 @@ edu\univ\erp\ui\handlers\StudentUiHandlers$1.class
 edu\univ\erp\ui\studentdashboard\forms\TimetableForm$CourseBlockPanel.class
 edu\univ\erp\net\ClientConnection.class
 edu\univ\erp\ui\studentdashboard\forms\InboxForm.class
+edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$10.class
 edu\univ\erp\ui\preview\StudentDashboardFrame$1.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$AnimatedGaugeChart.class
 edu\univ\erp\tools\ClientDbBackupTool.class

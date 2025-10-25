@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -369,42 +368,7 @@ public class TimetableForm extends SimpleForm {
         }
     }
 
-    /**
-     * Loads dummy data. Copied from MyCoursesForm. In a real app, this data
-     * would come from a service.
-     */
-    private List<CourseSection> loadDummyData() {
-        List<CourseSection> allCourses = new ArrayList<>();
-        // Expand dummy data so we have many visible courses on the grid.
-        // Many are marked registered=true so they will show in the timetable.
-    CourseSection cs1 = new CourseSection("CS101", "Introduction to Programming", 4, "A", "MWF 9:00-10:00", "A-101", "Dr. Johnson", 95, 120, true, false);
-    CourseSection cs2 = new CourseSection("MATH201", "Calculus II", 4, "B", "TTh 11:00-12:30", "B-205", "Prof. Chen", 72, 80, true, false);
-    CourseSection cs3 = new CourseSection("PHYS150", "General Physics", 3, "A", "MWF 14:00-15:00", "C-112", "Dr. Rodriguez", 60, 60, true, false);
-    CourseSection cs5 = new CourseSection("CS250", "Data Structures", 3, "A", "MWF 13:00-14:00", "A-102", "Dr. Lisa Park", 90, 90, true, false);
-    CourseSection cs6 = new CourseSection("MATH301", "Linear Algebra", 3, "A", "TTh 14:00-15:30", "B-205", "Prof. Chen", 58, 70, true, false);
-    CourseSection cs7 = new CourseSection("HIST210", "World History", 2, "A", "MWF 10:00-11:00", "E-101", "Dr. Smith", 40, 60, true, false);
-    CourseSection cs8 = new CourseSection("BIO101", "Intro to Biology", 3, "A", "TTh 8:30-9:45", "F-201", "Dr. Evans", 50, 70, true, false);
-    CourseSection cs9 = new CourseSection("CS101", "Introduction to Programming", 4, "B", "TTh 16:00-17:00", "A-101", "Dr. Johnson", 60, 80, true, false); // same code, different slot
-    CourseSection cs10 = new CourseSection("ART105", "Design Fundamentals", 2, "A", "MWF 11:00-12:00", "G-12", "Prof. Lee", 25, 30, true, false);
-    CourseSection cs11 = new CourseSection("CHEM110", "Organic Chemistry", 3, "A", "TTh 12:30-14:00", "H-22", "Dr. Patel", 45, 60, true, false);
-    CourseSection cs12 = new CourseSection("PHIL101", "Introduction to Philosophy", 2, "A", "MWF 15:00-16:00", "I-10", "Prof. Gomez", 30, 40, true, false);
-    CourseSection cs14 = new CourseSection("MUS120", "Music Theory", 2, "A", "MWF 8:00-9:00", "K-5", "Prof. Brown", 20, 25, true, false);
-
-        allCourses.add(cs1);
-        allCourses.add(cs2);
-        allCourses.add(cs3);
-        allCourses.add(cs5);
-        allCourses.add(cs6);
-        allCourses.add(cs7);
-        allCourses.add(cs8);
-        allCourses.add(cs9);
-        allCourses.add(cs10);
-        allCourses.add(cs11);
-        allCourses.add(cs12);
-        allCourses.add(cs14);
-
-        return allCourses;
-    }
+    // Dummy timetable data removed. Timetable now relies on server fetch only.
 
     @Override
     public void formRefresh() {

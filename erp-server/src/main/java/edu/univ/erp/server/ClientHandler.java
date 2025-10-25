@@ -259,6 +259,8 @@ private String handleCreateSection(String[] parts) throws Exception {
   int instrId;
   try { instrId = Integer.parseInt(parts[2]); } catch (NumberFormatException e) { throw new Exception("Invalid instructor id."); }
   String dayTime = parts[3];
+  // decode URL-encoded dayTime (client may encode to preserve ':' characters)
+  try { dayTime = java.net.URLDecoder.decode(dayTime, java.nio.charset.StandardCharsets.UTF_8.toString()); } catch (IllegalArgumentException ex) { /* keep as-is */ }
   String room = parts[4];
   int capacity;
   try { capacity = Integer.parseInt(parts[5]); } catch (NumberFormatException e) { throw new Exception("Invalid capacity."); }
@@ -767,9 +769,11 @@ private String handleCreateCourseSection(String[] parts) throws Exception {
     String title = parts[2];
     int credits = Integer.parseInt(parts[3]);
     int sectionID = Integer.parseInt(parts[4]);
-    String room = parts[5];
-    int capacity = Integer.parseInt(parts[6]);
-    String dayTime = parts[7];
+  String room = parts[5];
+  int capacity = Integer.parseInt(parts[6]);
+  String dayTime = parts[7];
+  // decode URL-encoded dayTime (client encodes to preserve ':' characters)
+  try { dayTime = java.net.URLDecoder.decode(dayTime, java.nio.charset.StandardCharsets.UTF_8.toString()); } catch (IllegalArgumentException ex) { /* keep as-is */ }
     int enrolledCount = Integer.parseInt(parts[8]);
     String semester = parts[9];
     int instructorId = Integer.parseInt(parts[10]);
