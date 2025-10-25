@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -37,7 +36,6 @@ import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.ToolTipManager;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import java.awt.Window;
@@ -47,7 +45,7 @@ import edu.univ.erp.api.NotificationAPI;
 import edu.univ.erp.ui.utils.UIHelper;
 import edu.univ.erp.ui.studentdashboard.menu.FormManager;
 import com.formdev.flatlaf.FlatLaf;
-// theme classes imported where needed elsewhere; remove unused imports here
+
 import net.miginfocom.swing.MigLayout;
 
 public class DashboardForm extends SimpleForm {
@@ -56,7 +54,7 @@ public class DashboardForm extends SimpleForm {
     private GlassCardPanel creditsCard;
     private GlassCardPanel coursesCard;
     private JPanel notificationListPanel;
-    // Sequence id to ignore stale async notification fetch responses
+    
     private volatile long notificationsFetchSeq = 0L;
     private InteractiveCalendarPanel calendarPanel;
     private Timer resizeSyncTimer; // debounce timer for resize sync
