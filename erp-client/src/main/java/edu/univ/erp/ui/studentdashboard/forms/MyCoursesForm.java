@@ -226,11 +226,8 @@ public class MyCoursesForm extends SimpleForm {
     }
 
     private void init() {
-        // Initialize master course list
-        courses = new ArrayList<>();
-
-        // Load simple dummy data into courses (some registered, some completed)
-        loadDummyData();
+    // Initialize master course list (will be populated from server on open)
+    courses = new ArrayList<>();
 
         // Background will be set by applyThemeColors()
         setLayout(new MigLayout("fill, insets 20", "[fill]", "[]20[]20[grow,fill]"));
@@ -443,8 +440,13 @@ public class MyCoursesForm extends SimpleForm {
                             tableModel.updateCourses(new ArrayList<>(courses));
                             updateStats();
                         }, (Exception ex) -> {
-                            // On any failure in the async task, keep dummy data and inform user
+                            // On any failure in the async task, clear any placeholder data and notify the user
                             javax.swing.SwingUtilities.invokeLater(() -> {
+                                try {
+                                    courses.clear();
+                                    tableModel.updateCourses(new ArrayList<>(courses));
+                                    updateStats();
+                                } catch (Throwable ignore) {}
                                 javax.swing.JOptionPane.showMessageDialog(this, "Failed to fetch courses: " + ex.getMessage(), "Fetch Error", javax.swing.JOptionPane.WARNING_MESSAGE);
                             });
                         });
@@ -487,42 +489,7 @@ public class MyCoursesForm extends SimpleForm {
         return titlePanel;
     }
 
-    private void loadDummyData() {
-        // Some items are marked registered or completed for demo
-        CourseSection cs1 = new CourseSection("CS101", "Introduction to Programming", 4, "A", "MWF 9:00-10:00", "A-101", "Dr. Johnson", 95, 120, false);
-        CourseSection cs2 = new CourseSection("MATH201", "Calculus II", 4, "B", "TTh 11:00-12:30", "B-205", "Prof. Chen", 72, 80, true); // registered
-        CourseSection cs3 = new CourseSection("PHYS150", "General Physics", 3, "A", "MWF 2:00-3:00", "C-112", "Dr. Rodriguez", 60, 60, false); // completed (full)
-        CourseSection cs4 = new CourseSection("ENG102", "Academic Writing", 2, "C", "TTh 9:30-10:45", "D-301", "Prof. Wilson", 88, 100, false);
-        CourseSection cs5 = new CourseSection("CS250", "Data Structures", 3, "A", "MWF 1:00-2:00", "A-102", "Dr. Lisa Park", 90, 90, true); // registered but full
-        CourseSection cs6 = new CourseSection("MATH301", "Linear Algebra", 3, "A", "TTh 2:00-3:30", "B-205", "Prof. Chen", 58, 70, false);
-        // Set dropAllowed according to dummy deadlines: cs2 allowed, cs5 drop locked (past deadline), completed courses not droppable
-        cs1.dropAllowed = true;
-        cs2.dropAllowed = true;
-        cs3.dropAllowed = false; // completed/full - no drops
-        cs4.dropAllowed = true;
-        cs5.dropAllowed = false; // registered but past deadline - cannot drop
-        cs6.dropAllowed = true;
-
-        // For MyCoursesForm we only want to show courses the student has taken: registered OR completed (full)
-        if (cs1.isRegistered || cs1.enrolledCount >= cs1.capacity) {
-            courses.add(cs1);
-        }
-        if (cs2.isRegistered || cs2.enrolledCount >= cs2.capacity) {
-            courses.add(cs2);
-        }
-        if (cs3.isRegistered || cs3.enrolledCount >= cs3.capacity) {
-            courses.add(cs3);
-        }
-        if (cs4.isRegistered || cs4.enrolledCount >= cs4.capacity) {
-            courses.add(cs4);
-        }
-        if (cs5.isRegistered || cs5.enrolledCount >= cs5.capacity) {
-            courses.add(cs5);
-        }
-        if (cs6.isRegistered || cs6.enrolledCount >= cs6.capacity) {
-            courses.add(cs6);
-        }
-    }
+    // Dummy data removed. UI will rely on server-provided timetable/catalog/grades.
 
     private void setupTableStyles() {
         courseTable.setRowHeight(50);
@@ -1116,9 +1083,7 @@ public class MyCoursesForm extends SimpleForm {
         }
     }
 
-    private List<CourseSection> getDummyCourses() {
-        return new ArrayList<>(courses);
-    }
+    // getDummyCourses removed; callers should rely on server-populated 'courses' list
 
     // Getter methods for data management
     // Keep legacy getters but map to the single 'courses' list

@@ -116,17 +116,10 @@ public class TimetableForm extends SimpleForm {
     private void init() {
         setLayout(new MigLayout("fill, insets 20", "[fill]", "[][grow,fill]"));
 
-        // 1. Load and process data (from server). If fetching fails, fall back to dummy data.
+        // 1. Initialize empty entries; fetch and populate asynchronously from server
         List<TimetableEntry> timetableEntries = new ArrayList<>();
-        try {
-            // Will asynchronously populate the grid and animate when done
-            fetchTimetableAndPopulate();
-        } catch (Exception e) {
-            // fallback to dummy data synchronously
-            List<CourseSection> allCourses = loadDummyData();
-            List<CourseSection> registeredCourses = allCourses.stream().filter(c -> c.isRegistered).collect(Collectors.toList());
-            timetableEntries = parseCourses(registeredCourses);
-        }
+        // Will asynchronously populate the grid and animate when done
+        fetchTimetableAndPopulate();
 
         // 2. Create Title
         add(createTitlePanel(), "wrap");

@@ -194,12 +194,9 @@ public class RegisterCoursesForm extends SimpleForm {
     private final StudentAPI studentAPI = new StudentAPI();
 
     private void init() {
-        // Initialize data lists
-        unregisteredCourses = new ArrayList<>();
-        registeredCourses = new ArrayList<>();
-
-        // Load dummy data into unregistered courses
-        loadDummyData();
+    // Initialize data lists (will be populated from server on open)
+    unregisteredCourses = new ArrayList<>();
+    registeredCourses = new ArrayList<>();
 
         // Background will be set by applyThemeColors()
         setLayout(new MigLayout("fill, insets 20", "[fill]", "[]20[]20[grow,fill]"));
@@ -325,14 +322,7 @@ public class RegisterCoursesForm extends SimpleForm {
         return titlePanel;
     }
 
-    private void loadDummyData() {
-        unregisteredCourses.add(new CourseSection("CS101", "Introduction to Programming", 4, "A", "MWF 9:00-10:00", "A-101", "Dr. Johnson", 95, 120, false));
-        unregisteredCourses.add(new CourseSection("MATH201", "Calculus II", 4, "B", "TTh 11:00-12:30", "B-205", "Prof. Chen", 72, 80, false));
-        unregisteredCourses.add(new CourseSection("PHYS150", "General Physics", 3, "A", "MWF 2:00-3:00", "C-112", "Dr. Rodriguez", 45, 60, false));
-        unregisteredCourses.add(new CourseSection("ENG102", "Academic Writing", 2, "C", "TTh 9:30-10:45", "D-301", "Prof. Wilson", 88, 100, false));
-        unregisteredCourses.add(new CourseSection("CS250", "Data Structures", 3, "A", "MWF 1:00-2:00", "A-102", "Dr. Lisa Park", 90, 90, false));
-        unregisteredCourses.add(new CourseSection("MATH301", "Linear Algebra", 3, "A", "TTh 2:00-3:30", "B-205", "Prof. Chen", 58, 70, false));
-    }
+    // Dummy data removed. UI will rely on server-provided course catalog/timetable.
 
     private void setupTableStyles() {
         courseTable.setRowHeight(50);

@@ -105,16 +105,7 @@ public class DashboardForm extends SimpleForm {
         return Color.decode("#EF4444");
     }
 
-    // Fallback dummy notifications as domain Notification objects (used when fetch fails)
-    private List<edu.univ.erp.domain.Notification> getDummyDomainNotifications() {
-    List<edu.univ.erp.domain.Notification> notifications = new ArrayList<>();
-    LocalDateTime now = LocalDateTime.now();
-
-    notifications.add(new edu.univ.erp.domain.Notification(0, 0, "STUDENT", 0,
-        "Fetch error", "Client was unable to fetch notifications from server.", now.toString(), false));
-
-    return notifications;
-    }
+    // Dummy notifications removed; dashboard will show an explicit empty state when no notifications are available.
 
     public DashboardForm() {
         init();
@@ -584,7 +575,7 @@ public class DashboardForm extends SimpleForm {
         // Async fetch notifications for current user; fall back to dummy data on error
         UIHelper.runAsync(() -> {
             edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
-            if (u == null) return getDummyDomainNotifications();
+            if (u == null) return new java.util.ArrayList<edu.univ.erp.domain.Notification>();
             String recipientType = "STUDENT";
             try {
                 String role = u.getRole();
@@ -593,9 +584,9 @@ public class DashboardForm extends SimpleForm {
             NotificationAPI api = new NotificationAPI();
             try {
                 java.util.List<edu.univ.erp.domain.Notification> list = api.fetchNotificationsForUser(u.getUserId(), recipientType, 3);
-                return list == null ? new java.util.ArrayList<>() : list; // allow empty list
+                return list == null ? new java.util.ArrayList<edu.univ.erp.domain.Notification>() : list; // allow empty list
             } catch (Exception ex) {
-                return getDummyDomainNotifications();
+                return new java.util.ArrayList<edu.univ.erp.domain.Notification>();
             }
         }, (java.util.List<edu.univ.erp.domain.Notification> result) -> {
             try {
@@ -650,34 +641,18 @@ public class DashboardForm extends SimpleForm {
                 notificationListPanel.repaint();
             }
         }, (Exception ex) -> {
-            // On error, show fallback dummy notifications
-            // Ignore stale responses
+            // On error, show a concise empty/failure state instead of dummy data
             if (mySeq != notificationsFetchSeq) return;
-
-            java.util.List<edu.univ.erp.domain.Notification> fallback = getDummyDomainNotifications();
-            for (int i = 0; i < Math.min(3, fallback.size()); i++) {
-                edu.univ.erp.domain.Notification n = fallback.get(i);
-                JPanel item = createNoticeItem(n, i + 1);
-                FadePanel wrapper = new FadePanel(0f);
-                wrapper.setOpaque(false);
-                wrapper.setLayout(new BorderLayout());
-                wrapper.add(item, BorderLayout.CENTER);
-                notificationListPanel.add(wrapper);
-                if (i < 2) {
-                    JPanel divider = new JPanel() {
-                        @Override
-                        protected void paintComponent(Graphics g) {
-                            super.paintComponent(g);
-                            g.setColor(secondaryTextColor());
-                            g.fillRect(0, 0, getWidth(), 1);
-                        }
-                    };
-                    divider.setOpaque(false);
-                    divider.setPreferredSize(new java.awt.Dimension(0, 8));
-                    divider.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 8));
-                    notificationListPanel.add(divider);
+            javax.swing.JLabel failed = new javax.swing.JLabel("Failed to load notifications") {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    setForeground(secondaryTextColor());
+                    super.paintComponent(g);
                 }
-            }
+            };
+            failed.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 12));
+            failed.setHorizontalAlignment(SwingConstants.CENTER);
+            notificationListPanel.add(failed);
             notificationListPanel.revalidate();
             notificationListPanel.repaint();
         });
