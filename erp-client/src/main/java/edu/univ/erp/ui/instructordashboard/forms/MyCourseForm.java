@@ -72,6 +72,10 @@ public class MyCourseForm extends SimpleForm {
     private TableRowSorter<GradeTableModel> sorter;
     private JPanel statsNumbersPanel;
 
+    // Card that contains the roster table or an empty-state message
+    private CardPanel tableCard;
+    private JScrollPane tableScrollPane;
+
     private boolean isFinalized = false;
 
     public MyCourseForm(Section section) {
@@ -146,7 +150,16 @@ public class MyCourseForm extends SimpleForm {
         backBtn = new ThemeableButton("Back to Dashboard");
         backBtn.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
         backBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        backBtn.addActionListener(e -> FormManager.showForm(new DashboardForm()));
+        backBtn.addActionListener(e -> {
+            FormManager.showForm(new DashboardForm());
+            // Ensure the destination form is refreshed to avoid UI staleness
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    FormManager.refresh();
+                } catch (Throwable ignore) {
+                }
+            });
+        });
 
         titleRow.add(titles, "grow");
         titleRow.add(backBtn, "aligny center");
@@ -162,18 +175,18 @@ public class MyCourseForm extends SimpleForm {
         sorter = new TableRowSorter<>(tableModel);
         gradeTable.setRowSorter(sorter);
 
-        JScrollPane sp = new JScrollPane(gradeTable);
-        sp.setOpaque(false);
-        sp.getViewport().setOpaque(false);
-        sp.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-        sp.getVerticalScrollBar().setUI(new CustomScrollBarUI());
-        sp.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
+    tableScrollPane = new JScrollPane(gradeTable);
+    tableScrollPane.setOpaque(false);
+    tableScrollPane.getViewport().setOpaque(false);
+    tableScrollPane.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
+    tableScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+    tableScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
 
-        CardPanel tableCard = new CardPanel();
-        tableCard.setLayout(new BorderLayout());
-        tableCard.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        tableCard.add(sp, BorderLayout.CENTER);
-        add(tableCard, "grow, push");
+    tableCard = new CardPanel();
+    tableCard.setLayout(new BorderLayout());
+    tableCard.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+    tableCard.add(tableScrollPane, BorderLayout.CENTER);
+    add(tableCard, "grow, push");
 
         // Load roster from server (falls back to demo data on error)
         loadRosterFromServer();
@@ -515,27 +528,32 @@ public class MyCourseForm extends SimpleForm {
         }
     }
 
-    private void loadDummyData() {
-        gradeEntries.clear();
-        Map<String, Double> s1 = new HashMap<>();
-        s1.put("Quiz", 8.0);
-        s1.put("Assignment", 17.0);
-        s1.put("Midterm", 75.0);
-        s1.put("Endterm", 88.0);
-        Map<String, Double> s2 = new HashMap<>();
-        s2.put("Quiz", 9.5);
-        s2.put("Assignment", 19.0);
-        s2.put("Midterm", 92.0);
-        s2.put("Endterm", 95.0);
-        Map<String, Double> s3 = new HashMap<>();
-        s3.put("Quiz", 7.0);
-        s3.put("Assignment", 15.0);
-        s3.put("Midterm", 65.0);
-        s3.put("Endterm", 72.0);
-        gradeEntries.add(new GradeEntry("Alice Smith", "2023CS01", s1, null));
-        gradeEntries.add(new GradeEntry("Bob Johnson", "2023CS02", s2, null));
-        gradeEntries.add(new GradeEntry("Charlie Brown", "2023ME05", s3, null));
-        tableModel.updateData(gradeEntries);
+
+    /**
+     * Show an empty-state message inside the table card.
+     */
+    private void showEmptyMessage(String message) {
+        SwingUtilities.invokeLater(() -> {
+            tableCard.removeAll();
+            JLabel lbl = new JLabel(message, SwingConstants.CENTER);
+            lbl.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 14));
+            lbl.setForeground(secondaryTextColor());
+            tableCard.add(lbl, BorderLayout.CENTER);
+            tableCard.revalidate();
+            tableCard.repaint();
+        });
+    }
+
+    /**
+     * Restore the table view inside the card.
+     */
+    private void showTableView() {
+        SwingUtilities.invokeLater(() -> {
+            tableCard.removeAll();
+            tableCard.add(tableScrollPane, BorderLayout.CENTER);
+            tableCard.revalidate();
+            tableCard.repaint();
+        });
     }
 
     // Load roster using InstructorUiHandlers; fall back to dummy data if any error occurs
@@ -543,7 +561,16 @@ public class MyCourseForm extends SimpleForm {
         gradeEntries.clear();
         edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
         if (u == null) {
-            loadDummyData();
+            // No logged-in user: show empty roster and leave UI in a neutral state.
+            gradeEntries.clear();
+            tableModel.updateData(gradeEntries);
+            isFinalized = false;
+            tableModel.setEditable(true);
+            finalizeBtn.setText("Finalize Grades");
+            finalizeBtn.setBackground(new Color(220, 38, 38));
+            saveBtn.setEnabled(true);
+            importBtn.setEnabled(true);
+            showEmptyMessage("No students enrolled.");
             return;
         }
         UIHelper.runAsync(() -> {
@@ -551,6 +578,7 @@ public class MyCourseForm extends SimpleForm {
                 edu.univ.erp.ui.handlers.InstructorUiHandlers handlers = new edu.univ.erp.ui.handlers.InstructorUiHandlers(u);
                 java.util.List<edu.univ.erp.domain.EnrollmentRecord> roster = handlers.fetchRoster(u.getUserId(), section.getSectionId());
                 if (roster == null || roster.isEmpty()) {
+                    // Return an empty list so UI shows an empty table instead of demo data.
                     return new ArrayList<GradeEntry>();
                 }
                 java.util.List<GradeEntry> out = new ArrayList<>();
@@ -572,12 +600,22 @@ public class MyCourseForm extends SimpleForm {
         }, (Object result) -> {
             try {
                 java.util.List<GradeEntry> list = (java.util.List<GradeEntry>) result;
+                // Show empty table when server returns no data; do NOT populate demo rows.
                 if (list == null || list.isEmpty()) {
-                    loadDummyData();
+                    gradeEntries.clear();
+                    tableModel.updateData(gradeEntries);
+                    isFinalized = false;
+                    tableModel.setEditable(true);
+                    finalizeBtn.setText("Finalize Grades");
+                    finalizeBtn.setBackground(new Color(220, 38, 38));
+                    saveBtn.setEnabled(true);
+                    importBtn.setEnabled(true);
+                    showEmptyMessage("No students enrolled.");
                 } else {
                     gradeEntries.clear();
                     gradeEntries.addAll(list);
                     tableModel.updateData(gradeEntries);
+                    showTableView();
                     // Auto-lock if server indicates final grades already present for all
                     boolean allFinal = gradeEntries.stream().allMatch(e -> e.finalGrade != null && !e.finalGrade.isBlank());
                     isFinalized = allFinal;
@@ -595,10 +633,30 @@ public class MyCourseForm extends SimpleForm {
                     }
                 }
             } catch (Exception ex) {
-                loadDummyData();
+                // On unexpected exception, show empty table and log the error.
+                gradeEntries.clear();
+                tableModel.updateData(gradeEntries);
+                isFinalized = false;
+                tableModel.setEditable(true);
+                finalizeBtn.setText("Finalize Grades");
+                finalizeBtn.setBackground(new Color(220, 38, 38));
+                saveBtn.setEnabled(true);
+                importBtn.setEnabled(true);
+                    showEmptyMessage("No students enrolled.");
+                System.err.println("Client WARN: Failed to parse roster response: " + ex.getMessage());
             }
         }, (Exception ex) -> {
-            loadDummyData();
+            // On async error, show empty table and surface a UI message
+            gradeEntries.clear();
+            tableModel.updateData(gradeEntries);
+            isFinalized = false;
+            tableModel.setEditable(true);
+            finalizeBtn.setText("Finalize Grades");
+            finalizeBtn.setBackground(new Color(220, 38, 38));
+            saveBtn.setEnabled(true);
+            importBtn.setEnabled(true);
+                showEmptyMessage("No students enrolled.");
+            System.err.println("Client WARN: Failed to load roster from server: " + ex.getMessage());
         });
     }
 

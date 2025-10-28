@@ -7,7 +7,7 @@ import javax.swing.JOptionPane;
 import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.ui.controller.DashboardController;
 import edu.univ.erp.ui.preview.AdminDashboardFrame;
-import edu.univ.erp.ui.preview.InstructorDashboardFrame;
+
 
 
 public class Login extends javax.swing.JFrame {
@@ -210,10 +210,75 @@ public class Login extends javax.swing.JFrame {
                     });
                 }
                 case "Instructor" -> {
-                    InstructorDashboardFrame f = new InstructorDashboardFrame(user);
-                    DashboardController controller = new DashboardController(user, f);
-                    f.setController(controller);
-                    f.setVisible(true);
+                    // Prefer launching the new instructor dashboard Application reflectively
+                    // to avoid introducing a compile-time dependency on that package.
+                    java.awt.EventQueue.invokeLater(() -> {
+                        try {
+                            // 1) Try to instantiate Application and call setVisible(true)
+                            try {
+                                Class<?> appClass = Class.forName("edu.univ.erp.ui.instructordashboard.application.Application");
+                                Object app = appClass.getDeclaredConstructor().newInstance();
+                                try {
+                                    java.lang.reflect.Method setVisible = appClass.getMethod("setVisible", boolean.class);
+                                    setVisible.invoke(app, true);
+                                } catch (NoSuchMethodException ignored) {
+                                }
+                            } catch (ClassNotFoundException ignored) {
+                                // Application class not present; dashboard not available
+                            }
+
+                            // 2) Build a ModelUser instance reflectively (try common package names)
+                            Object muObj = null;
+                            String[] muCandidates = new String[]{"edu.univ.erp.ui.instructordashboard.model.ModelUser", "model.ModelUser"};
+                            for (String muName : muCandidates) {
+                                try {
+                                    Class<?> muClass = Class.forName(muName);
+                                    try {
+                                        java.lang.reflect.Constructor<?> ctor = muClass.getConstructor(String.class, boolean.class);
+                                        muObj = ctor.newInstance(user.getUsername(), false);
+                                    } catch (NoSuchMethodException ns) {
+                                        try {
+                                            muObj = muClass.getDeclaredConstructor().newInstance();
+                                            try {
+                                                java.lang.reflect.Method setName = muClass.getMethod("setUserName", String.class);
+                                                java.lang.reflect.Method setAdmin = muClass.getMethod("setAdmin", boolean.class);
+                                                setName.invoke(muObj, user.getUsername());
+                                                setAdmin.invoke(muObj, false);
+                                            } catch (NoSuchMethodException ignored) {
+                                            }
+                                        } catch (Throwable ignored) {
+                                        }
+                                    }
+                                    if (muObj != null) {
+                                        break;
+                                    }
+                                } catch (ClassNotFoundException ignored) {
+                                }
+                            }
+
+                            // 3) If we have a ModelUser, try to call menu.FormManager.login(mu) reflectively
+                            if (muObj != null) {
+                                try {
+                                    Class<?> fmClass = Class.forName("edu.univ.erp.ui.instructordashboard.menu.FormManager");
+                                    // try to find a login method accepting the ModelUser type or Object
+                                    java.lang.reflect.Method m = null;
+                                    for (java.lang.reflect.Method mm : fmClass.getMethods()) {
+                                        if (mm.getName().equals("login") && mm.getParameterCount() == 1) {
+                                            m = mm;
+                                            break;
+                                        }
+                                    }
+                                    if (m != null) {
+                                        m.invoke(null, muObj);
+                                    }
+                                } catch (ClassNotFoundException ignored) {
+                                }
+                            }
+                        } catch (Throwable t) {
+                            System.err.println("Client WARN: Failed to launch instructor dashboard reflectively: " + t);
+                            t.printStackTrace(System.err);
+                        }
+                    });
                 }
                 case "Admin" -> {
                     AdminDashboardFrame f = new AdminDashboardFrame(user);

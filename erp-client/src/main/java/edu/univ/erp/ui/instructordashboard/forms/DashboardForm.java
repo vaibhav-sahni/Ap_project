@@ -493,9 +493,12 @@ public class DashboardForm extends SimpleForm {
                     // Force immediate validate/repaint and pack() then schedule nudges
                     SwingUtilities.invokeLater(() -> {
                         try {
+                            // Avoid calling pack() here — it can shrink the window when
+                            // preferred sizes are smaller than current size. Use validate
+                            // and repaint to stabilize layout without changing window size.
                             w.invalidate();
                             w.validate();
-                            w.pack(); // Force window to recompute preferred sizes
+                            //w.pack();
                             w.repaint();
                         } catch (Throwable ignore) {
                         }
@@ -522,9 +525,11 @@ public class DashboardForm extends SimpleForm {
                 public void windowActivated(WindowEvent e) {
                     SwingUtilities.invokeLater(() -> {
                         try {
+                            // Avoid pack() on activation — prefer validate/repaint to
+                            // prevent unexpected window size changes when returning
+                            // focus to the application.
                             w.invalidate();
                             w.validate();
-                            w.pack();
                             w.repaint();
                         } catch (Throwable ignore) {
                         }
@@ -536,9 +541,10 @@ public class DashboardForm extends SimpleForm {
                 public void windowDeiconified(WindowEvent e) {
                     SwingUtilities.invokeLater(() -> {
                         try {
+                            // Avoid pack() after deiconify as well — rely on the resize
+                            // sync to adjust layout without enforcing a pack().
                             w.invalidate();
                             w.validate();
-                            w.pack();
                             w.repaint();
                         } catch (Throwable ignore) {
                         }
