@@ -1,0 +1,32 @@
+{
+  // VS Code tasks to run the ERP Server and Student Dashboard locally
+  "$schema": "vscode://schemas/tasks",
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ERP Server: Run",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "-q",
+        "-f",
+        "Ap_project/erp-server",
+        "exec:java"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Student Dashboard: Run",
+      "type": "shell",
+      "command": "java",
+      "args": [
+        "-cp",
+        ".\\Ap_project\\erp-client\\target\\classes;.\\Ap_project\\erp-client\\lib\\*",
+        "application.Application"
+      ],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

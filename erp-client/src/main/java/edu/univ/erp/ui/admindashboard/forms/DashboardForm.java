@@ -39,6 +39,9 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import java.awt.Window;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import edu.univ.erp.ui.admindashboard.components.SimpleForm;
 import edu.univ.erp.api.NotificationAPI;
@@ -59,6 +62,7 @@ public class DashboardForm extends SimpleForm {
     private InteractiveCalendarPanel calendarPanel;
     private Timer resizeSyncTimer; // debounce timer for resize sync
     private boolean windowListenersInstalled = false; // ensure we install once
+    private Window attachedWindow = null; // the window we attached listeners to
     private boolean lafListenerInstalled = false; // ensure we add Look&Feel listener once
     private Timer stateTransitionTimer; // fade overlay timer during window state changes
     private float stateTransitionAlpha = 0f; // 0..1 overlay alpha for transition
@@ -118,6 +122,17 @@ public class DashboardForm extends SimpleForm {
         setOpaque(false);
         // Ensure any subclass-specific initialization runs via formRefresh
         formRefresh();
+
+        // When the admin dashboard becomes visible again after navigation, ensure
+        // listeners are attached and a resize sync runs to stabilize layout.
+        addHierarchyListener(evt -> {
+            if ((evt.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                SwingUtilities.invokeLater(() -> {
+                    installWindowListeners();
+                    scheduleResizeSync();
+                });
+            }
+        });
     }
 
     @Override
@@ -276,6 +291,20 @@ public class DashboardForm extends SimpleForm {
         });
     }
 
+    @Override
+    public void formInitAndOpen() {
+        SwingUtilities.invokeLater(() -> {
+            installWindowListeners();
+            scheduleResizeSync();
+            Timer t = new Timer(220, ev -> {
+                scheduleResizeSync();
+                ((Timer) ev.getSource()).stop();
+            });
+            t.setRepeats(false);
+            t.start();
+        });
+    }
+
     // Fetch CGPA, credits and course count from the server and update UI
     private void fetchAndPopulateStudentMetrics() {
         edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
@@ -358,13 +387,15 @@ public class DashboardForm extends SimpleForm {
 
     // Install window-level listeners once to reliably handle maximize/restore
     private void installWindowListeners() {
-        if (windowListenersInstalled) {
-            return;
-        }
         Window w = SwingUtilities.getWindowAncestor(this);
         if (w == null) {
             return; // not yet attached
         }
+        // If we've already attached to the same window, nothing to do.
+        if (attachedWindow == w && windowListenersInstalled) {
+            return;
+        }
+        attachedWindow = w;
         windowListenersInstalled = true;
 
         // Listen to window size changes (covers manual resize and OS-driven toggles)
@@ -383,6 +414,66 @@ public class DashboardForm extends SimpleForm {
                 // Kick a quick fade overlay to make the transition feel smoother
                 startWindowTransition();
             });
+        }
+
+        // Also listen for focus/activation events to handle switching away and back
+        try {
+            w.addWindowFocusListener(new WindowAdapter() {
+                @Override
+                public void windowGainedFocus(WindowEvent e) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            w.invalidate();
+                            w.validate();
+                            w.repaint();
+                        } catch (Throwable ignore) {
+                        }
+                    });
+                    scheduleResizeSync();
+                    Timer t1 = new Timer(120, ev -> {
+                        scheduleResizeSync();
+                        ((Timer) ev.getSource()).stop();
+                    });
+                    t1.setRepeats(false);
+                    t1.start();
+                    Timer t2 = new Timer(350, ev -> {
+                        scheduleResizeSync();
+                        ((Timer) ev.getSource()).stop();
+                    });
+                    t2.setRepeats(false);
+                    t2.start();
+                }
+            });
+
+            w.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowActivated(WindowEvent e) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            w.invalidate();
+                            w.validate();
+                            w.repaint();
+                        } catch (Throwable ignore) {
+                        }
+                    });
+                    scheduleResizeSync();
+                }
+
+                @Override
+                public void windowDeiconified(WindowEvent e) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            w.invalidate();
+                            w.validate();
+                            w.repaint();
+                        } catch (Throwable ignore) {
+                        }
+                    });
+                    scheduleResizeSync();
+                }
+            });
+        } catch (Throwable ignore) {
+            // Ignore if some window impl doesn't support these listeners
         }
     }
 

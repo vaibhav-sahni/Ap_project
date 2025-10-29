@@ -9,6 +9,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Window;
+import java.awt.event.HierarchyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -46,11 +47,16 @@ public class DashboardForm extends SimpleForm {
     // Removed gauge card fields
     private JPanel notificationListPanel;
     private JPanel courseCardsContainer; // Panel to hold the new CourseCardPanels
+    private javax.swing.JScrollPane courseListScrollPane;
+    private javax.swing.JScrollPane notifScrollPane;
+    private JPanel courseWrapperPanel;
+    private JPanel notifWrapperPanel;
 
     private volatile long notificationsFetchSeq = 0L;
     // private InteractiveCalendarPanel calendarPanel; // REMOVED
     private Timer resizeSyncTimer; // debounce timer for resize sync
     private boolean windowListenersInstalled = false; // ensure we install once
+    private Window attachedWindow = null; // the window we attached listeners to
     private boolean lafListenerInstalled = false; // ensure we add Look&Feel listener once
     private Timer stateTransitionTimer; // fade overlay timer during window state changes
     private float stateTransitionAlpha = 0f; // 0..1 overlay alpha for transition
@@ -101,6 +107,17 @@ public class DashboardForm extends SimpleForm {
         setOpaque(false);
         // Ensure any subclass-specific initialization runs via formRefresh
         formRefresh();
+
+        // When the panel's showing state changes (e.g., after PanelSlider transitions),
+        // schedule a relayout so the scroll panes and cards size correctly.
+        addHierarchyListener(evt -> {
+            if ((evt.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                SwingUtilities.invokeLater(() -> {
+                    installWindowListeners(); // idempotent
+                    scheduleResizeSync();
+                });
+            }
+        });
     }
 
     @Override
@@ -128,11 +145,10 @@ public class DashboardForm extends SimpleForm {
 
         // Use theme-aware background
         setBackground(panelBg());
-        // UPDATED LAYOUT: [left_column, grow]20[right_column, fixed_width]
-        // Row 1: Welcome label (spans both columns)
-        // Row 2: Course list (left) | Notifications (right)
-        // Slightly reduce outer insets and the gap under the welcome row to pull content up
-        setLayout(new MigLayout("fill,insets 18", "[fill,grow]24[360!]", "[]24[grow,fill]"));
+
+        // Layout: welcome row, section headers, then main content row with two columns
+        // Left column grows, right column uses a fixed width for notifications for visual balance
+        setLayout(new MigLayout("fill,insets 18", "[grow][360!]", "[]12[]8[grow]"));
 
         String username = "";
         try {
@@ -143,7 +159,7 @@ public class DashboardForm extends SimpleForm {
         } catch (Throwable ignore) {
         }
 
-        // Updated Welcome Label for Instructor
+        // Welcome label (spans both columns)
         JLabel welcomeLabel = new JLabel("Welcome back" + (username.isEmpty() ? ", Instructor!" : ", " + username + "!")) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -151,42 +167,42 @@ public class DashboardForm extends SimpleForm {
                 super.paintComponent(g);
             }
         };
-        // Slightly smaller welcome font to save vertical space
         welcomeLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 28));
-
-        // Wrap welcome label in fade panel for smooth appearance
         FadePanel welcomeWrapper = new FadePanel(0f);
         welcomeWrapper.setOpaque(false);
         welcomeWrapper.setLayout(new BorderLayout());
         welcomeWrapper.add(welcomeLabel, BorderLayout.CENTER);
-        add(welcomeWrapper, "span,wrap"); // 'span' to cover both columns, 'wrap' to move to next row
-
-        // Start fade after layout
+        add(welcomeWrapper, "span,wrap");
         SwingUtilities.invokeLater(() -> welcomeWrapper.startFadeIn(0));
 
-        // REMOVED Gauge Card creation
-        // REMOVED Calendar panel creation
-        // --- NEW ROW ---
-        // Left Column: Course List Panel — make it expand and push available space while
-        // keeping its contents scrollable internally.
-        add(createCourseListPanel(), "grow, push");
+        // Add section headers above the cards
+        JLabel sectionsLabel = new JLabel("My Sections") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                setForeground(textColor());
+                super.paintComponent(g);
+            }
+        };
+        sectionsLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 
-        // Right Column: Notifications Panel — allow it to grow vertically to
-        // fill the available window height while keeping a fixed column width.
+        JLabel notifsLabel = new JLabel("Notifications") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                setForeground(textColor());
+                super.paintComponent(g);
+            }
+        };
+        notifsLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+
+        add(sectionsLabel, "growx");
+        add(notifsLabel, "growx, wrap");
+
+        // Main content row: left = course list card (grows), right = notifications card (fixed width and height)
+        add(createCourseListPanel(), "grow, push");
         add(createNotificationsPanel(), "grow, push, wrap");
 
-        // REMOVED old gauge/calendar/notification add() calls
-        // REMOVED gauge card animation starts
-        // Fetch instructor courses instead of student metrics
+        // Ensure courses are fetched to populate the list
         fetchAndPopulateInstructorCourses();
-
-        // Small deferred layout nudge: sometimes the parent window hasn't
-        // fully laid out the newly shown form immediately after login which
-        // can make components collapse to minimal size. Schedule a short
-        // resize/layout sync to force the top-level window to validate and
-        // repaint. This restores the correct full-height appearance without
-        // waiting for an explicit user resize/restore.
-        SwingUtilities.invokeLater(() -> scheduleResizeSync());
 
         // Refresh the entire window when Look & Feel (mode) changes.
         // This logic is PRESERVED as requested.
@@ -248,76 +264,99 @@ public class DashboardForm extends SimpleForm {
         });
     }
 
+    @Override
+    public void formInitAndOpen() {
+        // Called by FormManager when this form becomes the active form.
+        SwingUtilities.invokeLater(() -> {
+            installWindowListeners(); // idempotent
+            scheduleResizeSync();
+            // Extra delayed nudge to ensure layout stabilizes after animation
+            Timer t = new Timer(220, ev -> {
+                scheduleResizeSync();
+                ((Timer) ev.getSource()).stop();
+            });
+            t.setRepeats(false);
+            t.start();
+        });
+    }
+
     /**
      * Creates the main panel for the left column, which includes a header and a
-     * scrollable container for the course cards.
+     * scrollable container for the course cards. REDESIGNED: Small bordered box
+     * like student dashboard gauge charts, but wider.
      */
     private JPanel createCourseListPanel() {
-        // Use CardPanel to get the same professional background/border
-        CardPanel mainPanel = new CardPanel();
-        mainPanel.setLayout(new BorderLayout(0, 10));
-        // Slightly reduce inner padding to pull content up and avoid overflow
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        // Build a wrapper with NO separate header (header is in the top summary row)
+        courseWrapperPanel = new JPanel(new BorderLayout());
+        courseWrapperPanel.setOpaque(false);
 
-        // Header (sub-header style) -- placed outside the card so it remains
-        // visible when users scroll through the fixed card content.
-        JPanel headerBox = new JPanel(new MigLayout("insets 0, gapy 0", "[grow]", "[]0[]"));
-        headerBox.setOpaque(false);
-        // Reduce bottom spacing under the subtitle
-        headerBox.setBorder(BorderFactory.createEmptyBorder(0, 4, 8, 4));
-        JLabel header = new JLabel("My Sections") {
+        // Container for course cards
+        courseCardsContainer = new JPanel();
+        courseCardsContainer.setOpaque(false);
+        courseCardsContainer.setLayout(new MigLayout("fillx, wrap, insets 6", "[fill,grow]", "[]4[]"));
+
+        // Scrollpane with NO scrollbar (fixed 3 items max)
+        courseListScrollPane = new JScrollPane(courseCardsContainer);
+        courseListScrollPane.setOpaque(false);
+        courseListScrollPane.getViewport().setOpaque(false);
+        courseListScrollPane.setBorder(BorderFactory.createEmptyBorder(0, 8, 8, 8));
+        courseListScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        courseListScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        courseListScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        // Make the left panel a bit taller
+        courseListScrollPane.setPreferredSize(new java.awt.Dimension(0, 520));
+        courseListScrollPane.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 520));
+
+        // Place the scroll inside a rounded card for a polished look
+        CardPanel card = new CardPanel();
+        card.setLayout(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        card.add(courseListScrollPane, BorderLayout.CENTER);
+
+        courseWrapperPanel.add(card, BorderLayout.CENTER);
+
+        // Populate after adding to avoid first-render emptiness
+        SwingUtilities.invokeLater(this::fetchAndPopulateInstructorCourses);
+        return courseWrapperPanel;
+    }
+
+    /**
+     * Small summary card used in the top row for quick glance items.
+     */
+    private JPanel createSummaryCard(String title, String subtitle) {
+        CardPanel card = new CardPanel();
+        card.setLayout(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+
+        JLabel titleLabel = new JLabel(title) {
             @Override
             protected void paintComponent(Graphics g) {
                 setForeground(textColor());
                 super.paintComponent(g);
             }
         };
-        header.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 22));
-        JLabel headerSub = new JLabel("Select a section to open its course") {
+        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
+
+        JLabel subLabel = new JLabel(subtitle == null ? "" : subtitle) {
             @Override
             protected void paintComponent(Graphics g) {
                 setForeground(secondaryTextColor());
                 super.paintComponent(g);
             }
         };
-        headerSub.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 11));
-        headerBox.add(header, "wrap");
-        headerBox.add(headerSub, "");
+        subLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
 
-        // Create a wrapper so the header sits outside the CardPanel. The
-        // CardPanel will contain only the scrollable list so users can scroll
-        // through sections while the header remains fixed above the card.
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        content.add(titleLabel, BorderLayout.NORTH);
+        content.add(subLabel, BorderLayout.SOUTH);
+
+        card.add(content, BorderLayout.CENTER);
+        card.setPreferredSize(new java.awt.Dimension(0, 86));
+
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setOpaque(false);
-        wrapper.add(headerBox, BorderLayout.NORTH);
-        wrapper.add(mainPanel, BorderLayout.CENTER);
-        // give the wrapper a sensible minimum so it doesn't collapse completely
-        wrapper.setMinimumSize(new java.awt.Dimension(220, 160));
-        // Return wrapper instead of the card so callers get header+card combo
-        // no-op
-
-        // This is the container that will hold the stack of cards
-        courseCardsContainer = new JPanel();
-        courseCardsContainer.setOpaque(false);
-        // Use MigLayout to stack cards vertically and make them fill horizontal space
-        // Moderate gap between cards to save vertical space
-        courseCardsContainer.setLayout(new MigLayout("fillx, wrap, insets 0", "[fill,grow]", "[]12[]"));
-
-        // Wrap the card container in a JScrollPane
-        JScrollPane scrollPane = new JScrollPane(courseCardsContainer);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        // Speed up the vertical scroll
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        // Make sure the scrollpane fills the available vertical space but keeps the
-        // card list itself scrollable — no preferred height here so MigLayout can size it.
-
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
-
-        // Return the wrapper panel so header remains outside the scrolling card
+        wrapper.add(card, BorderLayout.CENTER);
         return wrapper;
     }
 
@@ -384,8 +423,10 @@ public class DashboardForm extends SimpleForm {
                     noneLabel.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 14));
                     courseCardsContainer.add(noneLabel, "align center");
                 } else {
-                    // Create a card for each section
-                    for (Section sec : sections) {
+                    // Show ONLY first 3 sections to keep layout compact
+                    int maxSections = Math.min(sections.size(), 3);
+                    for (int i = 0; i < maxSections; i++) {
+                        Section sec = sections.get(i);
                         CourseCardPanel card = new CourseCardPanel(sec);
                         // Add fade-in effect
                         FadePanel wrapper = new FadePanel(0f);
@@ -395,7 +436,7 @@ public class DashboardForm extends SimpleForm {
 
                         courseCardsContainer.add(wrapper, "growx");
                         // Stagger the fade-in
-                        final int delay = courseCardsContainer.getComponentCount() * 60;
+                        final int delay = i * 60;
                         SwingUtilities.invokeLater(() -> wrapper.startFadeIn(delay));
                     }
                 }
@@ -454,13 +495,15 @@ public class DashboardForm extends SimpleForm {
 
     // Install window-level listeners once to reliably handle maximize/restore
     private void installWindowListeners() {
-        if (windowListenersInstalled) {
-            return;
-        }
         Window w = SwingUtilities.getWindowAncestor(this);
         if (w == null) {
             return; // not yet attached
         }
+        // If we've already attached to the same window, nothing to do.
+        if (attachedWindow == w && windowListenersInstalled) {
+            return;
+        }
+        attachedWindow = w;
         windowListenersInstalled = true;
 
         // Listen to window size changes (covers manual resize and OS-driven toggles)
@@ -574,11 +617,9 @@ public class DashboardForm extends SimpleForm {
 
     // Performs the sync: update dynamic sections and force a validate/repaint
     private void performResizeSync() {
-        // REMOVED calendar update
-
         refreshNotificationList();
 
-        // This part is important to keep
+        // Simplified: just validate and repaint without dynamically resizing scroll panes
         java.awt.Window w = SwingUtilities.getWindowAncestor(this);
         if (w != null) {
             w.doLayout();
@@ -618,6 +659,9 @@ public class DashboardForm extends SimpleForm {
         item.setLayout(new BoxLayout(item, BoxLayout.Y_AXIS));
         // Add comfortable outer padding so each notice breathes
         item.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+        // Set fixed size for each notification item to prevent infinite growth
+        item.setPreferredSize(new java.awt.Dimension(0, 75));
+        item.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 75));
 
         // Title and time in one line
         JPanel titleRow = new JPanel();
@@ -694,53 +738,40 @@ public class DashboardForm extends SimpleForm {
         // Slightly reduce inner padding to pull content up and avoid overflow
         card.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
 
-        // Header row with title and "Show all" link
-        JPanel headerRow = new JPanel(new BorderLayout());
-        headerRow.setOpaque(false);
-        // Reduce bottom spacing under the header title
-        headerRow.setBorder(BorderFactory.createEmptyBorder(0, 4, 8, 4));
-
-        JLabel header = new JLabel("Notifications") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                setForeground(textColor());
-                super.paintComponent(g);
-            }
-        };
-        header.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
-
-        headerRow.add(header, BorderLayout.WEST);
-        // Note: 'Show all' link intentionally removed to keep header clean and professional
-
-        // Build a wrapper so the header sits outside the rounded card
-        JPanel wrapper = new JPanel(new BorderLayout());
+        // Build a wrapper with NO separate header (header is in the top summary row)
+        notifWrapperPanel = new JPanel(new BorderLayout());
         // Add subtle bottom padding for a professional look
-        wrapper.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
-        wrapper.setOpaque(false);
-        wrapper.add(headerRow, BorderLayout.NORTH);
-        wrapper.add(card, BorderLayout.CENTER);
+        notifWrapperPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+        notifWrapperPanel.setOpaque(false);
+        notifWrapperPanel.add(card, BorderLayout.CENTER);
 
         // notification list panel with comfortable padding
         notificationListPanel = new JPanel();
         notificationListPanel.setOpaque(false);
         notificationListPanel.setLayout(new BoxLayout(notificationListPanel, BoxLayout.Y_AXIS));
         notificationListPanel.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        // Fixed size for 5 notifications; add a little extra breathing room
+        notificationListPanel.setPreferredSize(new java.awt.Dimension(0, 420));
+        notificationListPanel.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 420));
 
-        // Wrap notifications in a scroll pane so long lists don't resize the dashboard.
-        JScrollPane notifScroll = new JScrollPane(notificationListPanel);
-        notifScroll.setOpaque(false);
-        notifScroll.getViewport().setOpaque(false);
-        notifScroll.setBorder(BorderFactory.createEmptyBorder());
-        notifScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        notifScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-        notifScroll.getVerticalScrollBar().setUnitIncrement(14);
+        // Wrap notifications in a scroll pane with NO scrollbar (fixed 5 items max)
+        notifScrollPane = new JScrollPane(notificationListPanel);
+        notifScrollPane.setOpaque(false);
+        notifScrollPane.getViewport().setOpaque(false);
+        notifScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        notifScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        notifScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        notifScrollPane.getVerticalScrollBar().setUnitIncrement(14);
+        // Make notifications card slightly taller as well
+        notifScrollPane.setPreferredSize(new java.awt.Dimension(0, 460));
+        notifScrollPane.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 460));
 
         // Place the scroll inside the card. The wrapper contains the header above it
-        card.add(notifScroll, BorderLayout.CENTER);
+        card.add(notifScrollPane, BorderLayout.CENTER);
 
         // Populate after adding to avoid first-render emptiness
         SwingUtilities.invokeLater(this::refreshNotificationList);
-        return wrapper;
+        return notifWrapperPanel;
     }
 
     private void refreshNotificationList() {
@@ -768,8 +799,8 @@ public class DashboardForm extends SimpleForm {
             }
             NotificationAPI api = new NotificationAPI();
             try {
-                // Limit server fetch to 50 notifications for a compact notifications panel
-                java.util.List<edu.univ.erp.domain.Notification> list = api.fetchNotificationsForUser(u.getUserId(), recipientType, 50);
+                // Limit server fetch to 5 notifications for a compact notifications panel
+                java.util.List<edu.univ.erp.domain.Notification> list = api.fetchNotificationsForUser(u.getUserId(), recipientType, 5);
                 return list == null ? new java.util.ArrayList<edu.univ.erp.domain.Notification>() : list; // allow empty list
             } catch (Exception ex) {
                 return new java.util.ArrayList<edu.univ.erp.domain.Notification>();
@@ -793,8 +824,9 @@ public class DashboardForm extends SimpleForm {
                     none.setHorizontalAlignment(SwingConstants.CENTER);
                     notificationListPanel.add(none);
                 } else {
-                    int count = result.size(); // Show all fetched notifications
-                    for (int i = 0; i < count; i++) {
+                    // Show ONLY first 5 notifications to keep layout compact
+                    int maxNotifs = Math.min(result.size(), 5);
+                    for (int i = 0; i < maxNotifs; i++) {
                         edu.univ.erp.domain.Notification n = result.get(i);
                         JPanel item = createNoticeItem(n, i + 1);
                         FadePanel wrapper = new FadePanel(0f);
@@ -804,7 +836,7 @@ public class DashboardForm extends SimpleForm {
                         notificationListPanel.add(wrapper);
                         final int delay = i * 60;
                         SwingUtilities.invokeLater(() -> wrapper.startFadeIn(delay));
-                        if (i < count - 1) {
+                        if (i < maxNotifs - 1) {
                             // subtle 1px separator line that adapts to theme via secondaryTextColor
                             JPanel divider = new JPanel() {
                                 @Override

@@ -22,9 +22,11 @@ edu\univ\erp\ui\admindashboard\menu\MyDrawerBuilder$1.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$InteractiveCalendarPanel$5.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$10.class
 edu\univ\erp\ui\admindashboard\forms\RegisterCoursesForm$9.class
+edu\univ\erp\ui\preview\StudentDashboardFrame$1.class
 edu\univ\erp\ui\instructordashboard\menu\Menu.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$AnimatedGaugeChart.class
 edu\univ\erp\tools\ClientDbBackupTool.class
+edu\univ\erp\ui\preview\StudentDashboardFrame.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$8.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$5.class
 edu\univ\erp\ui\studentdashboard\menu\ThemesChange.class
@@ -54,6 +56,7 @@ edu\univ\erp\ui\loginpage\swing\TextField$2.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$3.class
 edu\univ\erp\net\ClientSession.class
 edu\univ\erp\ui\admindashboard\menu\ThemesChange.class
+edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$8.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$4.class
 edu\univ\erp\ui\studentdashboard\forms\NotificationForm$1.class
 edu\univ\erp\ui\admindashboard\forms\MyGradesForm$CardPanel.class
@@ -116,6 +119,7 @@ edu\univ\erp\ui\admindashboard\forms\TimetableForm$CourseSection.class
 edu\univ\erp\ui\admindashboard\forms\MyCoursesForm$RoundButton.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$StatusRenderer.class
 edu\univ\erp\ui\admindashboard\forms\MyCoursesForm$SortHeaderRenderer.class
+edu\univ\erp\ui\preview\GradesPreviewFrame$1.class
 edu\univ\erp\ui\admindashboard\swing\slider\SimpleTransition$2.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$FadePanel.class
 edu\univ\erp\ui\admindashboard\forms\NotificationForm.class
@@ -139,6 +143,7 @@ edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$1.
 edu\univ\erp\ui\instructordashboard\swing\slider\SimpleTransition.class
 edu\univ\erp\ui\admindashboard\forms\MyGradesForm$4.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$8.class
+edu\univ\erp\ui\studentdashboard\forms\DashboardForm$13.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$9.class
 edu\univ\erp\ui\preview\DashboardMainPanel$1.class
 edu\univ\erp\ui\admindashboard\menu\MyDrawerBuilder$4.class
@@ -153,6 +158,7 @@ edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$2.class
 edu\univ\erp\ui\studentdashboard\forms\NotificationForm$CustomScrollBarUI.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$2.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$2.class
+edu\univ\erp\ui\admindashboard\forms\DashboardForm$14.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm.class
 edu\univ\erp\ui\loginpage\swing\TextField$1.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$7.class
@@ -162,6 +168,7 @@ edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$6.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$9.class
 edu\univ\erp\ui\admindashboard\forms\MyGradesForm$CustomScrollBarUI.class
 edu\univ\erp\ui\admindashboard\forms\RegisterCoursesForm$CardPanel.class
+edu\univ\erp\ui\studentdashboard\forms\DashboardForm$14.class
 edu\univ\erp\ui\admindashboard\utils\UndoRedo$MyIterator.class
 edu\univ\erp\ui\admindashboard\forms\RegisterCoursesForm$1.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$8.class
@@ -199,6 +206,7 @@ edu\univ\erp\ui\instructordashboard\menu\Menu$2.class
 edu\univ\erp\ui\preview\AdminDashboardFrame$1.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$InteractiveCalendarPanel$1.class
 edu\univ\erp\ui\admindashboard\forms\RegisterCoursesForm$CapacityHealthBarRenderer.class
+edu\univ\erp\ui\admindashboard\forms\DashboardForm$13.class
 edu\univ\erp\ui\admindashboard\forms\TimetableForm$1.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$5.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$CardPanel.class
@@ -263,6 +271,7 @@ edu\univ\erp\domain\Instructor.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$5.class
 edu\univ\erp\ui\handlers\StudentUiHandlers$1.class
 edu\univ\erp\ui\instructordashboard\menu\MyDrawerBuilder$3.class
+edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$8$1.class
 edu\univ\erp\ui\studentdashboard\forms\InboxForm.class
 edu\univ\erp\ui\instructordashboard\utils\UndoRedo.class
 edu\univ\erp\ui\admindashboard\forms\RegisterCoursesForm$3.class
@@ -343,6 +352,7 @@ edu\univ\erp\ui\handlers\InstructorUiHandlers.class
 edu\univ\erp\ui\admindashboard\forms\RegisterCoursesForm$RoundButton.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$3.class
 edu\univ\erp\ui\studentdashboard\menu\MyDrawerBuilder$2.class
+edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$9.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$CourseSection.class
 edu\univ\erp\ui\loginpage\fbr\FancyAnimation.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$1.class
@@ -418,6 +428,7 @@ edu\univ\erp\ui\admindashboard\forms\MyCoursesForm$9.class
 edu\univ\erp\ui\instructordashboard\application\Application.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$10.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$CardPanel.class
+edu\univ\erp\ui\preview\GradeTableModel.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$6.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$7.class
 edu\univ\erp\ui\admindashboard\forms\MyCoursesForm$3.class
@@ -447,6 +458,7 @@ edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$GradeEntry.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$12.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$FadePanel.class
 edu\univ\erp\ui\admindashboard\forms\MyGradesForm$GradeEntry.class
+edu\univ\erp\tools\StudentDashboardPreview.class
 edu\univ\erp\ui\admindashboard\forms\MyGradesForm.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$CourseCardPanel$2.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$CustomScrollBarUI.class
@@ -464,8 +476,10 @@ edu\univ\erp\ui\studentdashboard\application\Application$1.class
 edu\univ\erp\ui\studentdashboard\utils\DateCalculator.class
 edu\univ\erp\api\auth\AuthAPI.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$CourseCardPanel$1.class
+edu\univ\erp\ui\preview\GradesPreviewFrame.class
 edu\univ\erp\ui\studentdashboard\forms\TimetableForm$TimetableGridPanel.class
 edu\univ\erp\ui\instructordashboard\components\MainForm.class
+edu\univ\erp\ui\instructordashboard\forms\DashboardForm$19.class
 edu\univ\erp\ui\loginpage\swing\PasswordField.class
 edu\univ\erp\ui\handlers\InstructorUiHandlers$3.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$9.class

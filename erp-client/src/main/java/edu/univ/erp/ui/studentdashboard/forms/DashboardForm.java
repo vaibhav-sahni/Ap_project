@@ -39,6 +39,9 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 import java.awt.Window;
+import java.awt.event.HierarchyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import edu.univ.erp.api.NotificationAPI;
@@ -54,11 +57,12 @@ public class DashboardForm extends SimpleForm {
     private GlassCardPanel creditsCard;
     private GlassCardPanel coursesCard;
     private JPanel notificationListPanel;
-    
+
     private volatile long notificationsFetchSeq = 0L;
     private InteractiveCalendarPanel calendarPanel;
     private Timer resizeSyncTimer; // debounce timer for resize sync
     private boolean windowListenersInstalled = false; // ensure we install once
+    private Window attachedWindow = null; // the window we attached listeners to
     private boolean lafListenerInstalled = false; // ensure we add Look&Feel listener once
     private Timer stateTransitionTimer; // fade overlay timer during window state changes
     private float stateTransitionAlpha = 0f; // 0..1 overlay alpha for transition
@@ -95,7 +99,6 @@ public class DashboardForm extends SimpleForm {
     }
 
     // helper color methods were removed to keep the class focused; calendar-specific helpers remain
-
     private Color todayColor() {
         return Color.decode("#30CC72"); // Green in both modes
     }
@@ -105,14 +108,13 @@ public class DashboardForm extends SimpleForm {
     }
 
     // Dummy notifications removed; dashboard will show an explicit empty state when no notifications are available.
-
     public DashboardForm() {
         init();
     }
 
     /**
-     * DashboardForm initializer. SimpleForm defines a private init() which is not
-     * visible to subclasses, so provide a local init() to perform component
+     * DashboardForm initializer. SimpleForm defines a private init() which is
+     * not visible to subclasses, so provide a local init() to perform component
      * initialization and kick off the usual refresh.
      */
     private void init() {
@@ -120,6 +122,17 @@ public class DashboardForm extends SimpleForm {
         setOpaque(false);
         // Ensure any subclass-specific initialization runs via formRefresh
         formRefresh();
+
+        // Ensure we pick up showing changes (e.g., when panel slider brings this
+        // form back into view) and schedule a relayout to stabilize sizes.
+        addHierarchyListener(evt -> {
+            if ((evt.getChangeFlags() & HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                SwingUtilities.invokeLater(() -> {
+                    installWindowListeners();
+                    scheduleResizeSync();
+                });
+            }
+        });
     }
 
     @Override
@@ -150,8 +163,11 @@ public class DashboardForm extends SimpleForm {
         String username = "";
         try {
             edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
-            if (cu != null) username = cu.getUsername();
-        } catch (Throwable ignore) {}
+            if (cu != null) {
+                username = cu.getUsername();
+            }
+        } catch (Throwable ignore) {
+        }
 
         JLabel welcomeLabel = new JLabel("Welcome back" + (username.isEmpty() ? ", Student!" : ", " + username + "!")) {
             @Override
@@ -172,31 +188,28 @@ public class DashboardForm extends SimpleForm {
         // Start fade after layout
         SwingUtilities.invokeLater(() -> welcomeWrapper.startFadeIn(0));
 
-    // Create placeholder cards; actual values will be filled by an async fetch
-    cgpaCard = createGaugeCard("CGPA", 0.0, 10, new Color(48, 204, 114));
-    creditsCard = createGaugeCard("Credits", 0, 120, new Color(52, 152, 219));
-    coursesCard = createGaugeCard("My Courses", 0, 20, new Color(241, 196, 15));
+        cgpaCard = createGaugeCard("CGPA", 0.0, 10, new Color(48, 204, 114));
+        creditsCard = createGaugeCard("Credits", 0, 120, new Color(52, 152, 219));
+        coursesCard = createGaugeCard("My Courses", 0, 20, new Color(241, 196, 15));
 
-        // Create and store calendar reference
         calendarPanel = (InteractiveCalendarPanel) createCalendarPanel();
-
-        // Top row: 3 gauge cards on left, calendar on right (spans 2 rows)
         add(cgpaCard, "split 3,sg card,height 200!");
         add(creditsCard, "sg card,height 200!");
         add(coursesCard, "sg card,height 200!");
         add(calendarPanel, "spany 2,grow,wrap");
-
-        // Second row: notifications panel below the charts
         add(createNotificationsPanel(), "grow,height 280!");
 
-    // When formRefresh rebuilds the UI (e.g., via Refresh button or theme change),
-    // ensure the gauge cards start their animations and we fetch the latest
-    // student metrics so the values don't remain at the placeholder zeros.
-    if (cgpaCard != null) cgpaCard.startAnimation();
-    if (creditsCard != null) creditsCard.startAnimation();
-    if (coursesCard != null) coursesCard.startAnimation();
-    // async fetch will be a no-op if no current user is set
-    fetchAndPopulateStudentMetrics();
+        if (cgpaCard != null) {
+            cgpaCard.startAnimation();
+        }
+        if (creditsCard != null) {
+            creditsCard.startAnimation();
+        }
+        if (coursesCard != null) {
+            coursesCard.startAnimation();
+        }
+        // async fetch will be a no-op if no current user is set
+        fetchAndPopulateStudentMetrics();
 
         // Refresh the entire window when Look & Feel (mode) changes.
         // Register this listener only once to avoid accumulating handlers
@@ -260,7 +273,6 @@ public class DashboardForm extends SimpleForm {
 
         // Note: additional Look&Feel listeners were removed to avoid duplicate
         // invocations. The listener above handles both UI update and form refresh.
-
         // Debounced relayout when the dashboard is resized (e.g., maximize/restore)
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
@@ -270,10 +282,26 @@ public class DashboardForm extends SimpleForm {
         });
     }
 
+    @Override
+    public void formInitAndOpen() {
+        SwingUtilities.invokeLater(() -> {
+            installWindowListeners();
+            scheduleResizeSync();
+            Timer t = new Timer(220, ev -> {
+                scheduleResizeSync();
+                ((Timer) ev.getSource()).stop();
+            });
+            t.setRepeats(false);
+            t.start();
+        });
+    }
+
     // Fetch CGPA, credits and course count from the server and update UI
     private void fetchAndPopulateStudentMetrics() {
         edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
-        if (u == null) return;
+        if (u == null) {
+            return;
+        }
         edu.univ.erp.ui.utils.UIHelper.runAsync(() -> {
             edu.univ.erp.ui.actions.StudentActions actions = new edu.univ.erp.ui.actions.StudentActions();
             edu.univ.erp.api.student.StudentAPI.CgpaResponse resp = null;
@@ -286,7 +314,9 @@ public class DashboardForm extends SimpleForm {
             try {
                 // Use the student's timetable (ongoing registered courses) rather than full catalog
                 java.util.List<edu.univ.erp.domain.CourseCatalog> timetable = actions.getTimetable(u.getUserId());
-                if (timetable != null) courseCount = timetable.size();
+                if (timetable != null) {
+                    courseCount = timetable.size();
+                }
             } catch (Exception ex) {
                 // propagate the error so MessagePresenter can show it
                 throw ex;
@@ -306,9 +336,15 @@ public class DashboardForm extends SimpleForm {
                     double crVal = cr != null ? cr : 0.0;
                     int ccVal = cc != null ? cc.intValue() : 0;
                     try {
-                        if (cgpaCard != null) cgpaCard.updateGauge(cgVal, 10);
-                        if (creditsCard != null) creditsCard.updateGauge(crVal, 120);
-                        if (coursesCard != null) coursesCard.updateGauge(ccVal, 20);
+                        if (cgpaCard != null) {
+                            cgpaCard.updateGauge(cgVal, 10);
+                        }
+                        if (creditsCard != null) {
+                            creditsCard.updateGauge(crVal, 120);
+                        }
+                        if (coursesCard != null) {
+                            coursesCard.updateGauge(ccVal, 20);
+                        }
                     } catch (Throwable t) {
                         edu.univ.erp.ui.utils.MessagePresenter.showError(this, "Failed to update dashboard UI: " + t.getMessage());
                     }
@@ -342,13 +378,15 @@ public class DashboardForm extends SimpleForm {
 
     // Install window-level listeners once to reliably handle maximize/restore
     private void installWindowListeners() {
-        if (windowListenersInstalled) {
-            return;
-        }
         Window w = SwingUtilities.getWindowAncestor(this);
         if (w == null) {
             return; // not yet attached
         }
+        // If we've already attached to the same window, nothing to do.
+        if (attachedWindow == w && windowListenersInstalled) {
+            return;
+        }
+        attachedWindow = w;
         windowListenersInstalled = true;
 
         // Listen to window size changes (covers manual resize and OS-driven toggles)
@@ -367,6 +405,66 @@ public class DashboardForm extends SimpleForm {
                 // Kick a quick fade overlay to make the transition feel smoother
                 startWindowTransition();
             });
+        }
+
+        // Also listen for focus/activation events to handle switching away and back
+        try {
+            w.addWindowFocusListener(new WindowAdapter() {
+                @Override
+                public void windowGainedFocus(WindowEvent e) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            w.invalidate();
+                            w.validate();
+                            w.repaint();
+                        } catch (Throwable ignore) {
+                        }
+                    });
+                    scheduleResizeSync();
+                    Timer t1 = new Timer(120, ev -> {
+                        scheduleResizeSync();
+                        ((Timer) ev.getSource()).stop();
+                    });
+                    t1.setRepeats(false);
+                    t1.start();
+                    Timer t2 = new Timer(350, ev -> {
+                        scheduleResizeSync();
+                        ((Timer) ev.getSource()).stop();
+                    });
+                    t2.setRepeats(false);
+                    t2.start();
+                }
+            });
+
+            w.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowActivated(WindowEvent e) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            w.invalidate();
+                            w.validate();
+                            w.repaint();
+                        } catch (Throwable ignore) {
+                        }
+                    });
+                    scheduleResizeSync();
+                }
+
+                @Override
+                public void windowDeiconified(WindowEvent e) {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            w.invalidate();
+                            w.validate();
+                            w.repaint();
+                        } catch (Throwable ignore) {
+                        }
+                    });
+                    scheduleResizeSync();
+                }
+            });
+        } catch (Throwable ignore) {
+            // Ignore if some window impl doesn't support these listeners
         }
     }
 
@@ -571,7 +669,9 @@ public class DashboardForm extends SimpleForm {
     }
 
     private void refreshNotificationList() {
-        if (notificationListPanel == null) return;
+        if (notificationListPanel == null) {
+            return;
+        }
         notificationListPanel.removeAll();
         // bump sequence id so old async responses are ignored
         final long mySeq = ++notificationsFetchSeq;
@@ -579,12 +679,17 @@ public class DashboardForm extends SimpleForm {
         // Async fetch notifications for current user; fall back to dummy data on error
         UIHelper.runAsync(() -> {
             edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
-            if (u == null) return new java.util.ArrayList<edu.univ.erp.domain.Notification>();
+            if (u == null) {
+                return new java.util.ArrayList<edu.univ.erp.domain.Notification>();
+            }
             String recipientType = "STUDENT";
             try {
                 String role = u.getRole();
-                if (role != null && role.toUpperCase().contains("INSTRUCTOR")) recipientType = "INSTRUCTOR";
-            } catch (Throwable ignore) {}
+                if (role != null && role.toUpperCase().contains("INSTRUCTOR")) {
+                    recipientType = "INSTRUCTOR";
+                }
+            } catch (Throwable ignore) {
+            }
             NotificationAPI api = new NotificationAPI();
             try {
                 java.util.List<edu.univ.erp.domain.Notification> list = api.fetchNotificationsForUser(u.getUserId(), recipientType, 3);
@@ -594,10 +699,12 @@ public class DashboardForm extends SimpleForm {
             }
         }, (java.util.List<edu.univ.erp.domain.Notification> result) -> {
             try {
-                    // Ignore stale responses
-                    if (mySeq != notificationsFetchSeq) return;
+                // Ignore stale responses
+                if (mySeq != notificationsFetchSeq) {
+                    return;
+                }
 
-                    if (result == null || result.isEmpty()) {
+                if (result == null || result.isEmpty()) {
                     JLabel none = new JLabel("No notifications") {
                         @Override
                         protected void paintComponent(Graphics g) {
@@ -608,34 +715,34 @@ public class DashboardForm extends SimpleForm {
                     none.setFont(new Font(Font.SANS_SERIF, Font.ITALIC, 12));
                     none.setHorizontalAlignment(SwingConstants.CENTER);
                     notificationListPanel.add(none);
-                    } else {
-                        int count = Math.min(3, result.size());
-                        for (int i = 0; i < count; i++) {
-                            edu.univ.erp.domain.Notification n = result.get(i);
-                            JPanel item = createNoticeItem(n, i + 1);
-                            FadePanel wrapper = new FadePanel(0f);
-                            wrapper.setOpaque(false);
-                            wrapper.setLayout(new BorderLayout());
-                            wrapper.add(item, BorderLayout.CENTER);
-                            notificationListPanel.add(wrapper);
-                            final int delay = i * 60;
-                            SwingUtilities.invokeLater(() -> wrapper.startFadeIn(delay));
-                            if (i < count - 1) {
-                                // subtle 1px separator line that adapts to theme via secondaryTextColor
-                                JPanel divider = new JPanel() {
-                                    @Override
-                                    protected void paintComponent(Graphics g) {
-                                        super.paintComponent(g);
-                                        g.setColor(secondaryTextColor());
-                                        g.fillRect(0, 0, getWidth(), 1);
-                                    }
-                                };
-                                divider.setOpaque(false);
-                                divider.setPreferredSize(new java.awt.Dimension(0, 8));
-                                divider.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 8));
-                                notificationListPanel.add(divider);
-                            }
+                } else {
+                    int count = Math.min(3, result.size());
+                    for (int i = 0; i < count; i++) {
+                        edu.univ.erp.domain.Notification n = result.get(i);
+                        JPanel item = createNoticeItem(n, i + 1);
+                        FadePanel wrapper = new FadePanel(0f);
+                        wrapper.setOpaque(false);
+                        wrapper.setLayout(new BorderLayout());
+                        wrapper.add(item, BorderLayout.CENTER);
+                        notificationListPanel.add(wrapper);
+                        final int delay = i * 60;
+                        SwingUtilities.invokeLater(() -> wrapper.startFadeIn(delay));
+                        if (i < count - 1) {
+                            // subtle 1px separator line that adapts to theme via secondaryTextColor
+                            JPanel divider = new JPanel() {
+                                @Override
+                                protected void paintComponent(Graphics g) {
+                                    super.paintComponent(g);
+                                    g.setColor(secondaryTextColor());
+                                    g.fillRect(0, 0, getWidth(), 1);
+                                }
+                            };
+                            divider.setOpaque(false);
+                            divider.setPreferredSize(new java.awt.Dimension(0, 8));
+                            divider.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 8));
+                            notificationListPanel.add(divider);
                         }
+                    }
                 }
                 notificationListPanel.revalidate();
                 notificationListPanel.repaint();
@@ -646,7 +753,9 @@ public class DashboardForm extends SimpleForm {
             }
         }, (Exception ex) -> {
             // On error, show a concise empty/failure state instead of dummy data
-            if (mySeq != notificationsFetchSeq) return;
+            if (mySeq != notificationsFetchSeq) {
+                return;
+            }
             javax.swing.JLabel failed = new javax.swing.JLabel("Failed to load notifications") {
                 @Override
                 protected void paintComponent(Graphics g) {
@@ -664,27 +773,32 @@ public class DashboardForm extends SimpleForm {
 
     // Parse timestamp string into LocalDateTime. Accepts ISO with 'T', offsets, and SQL DATETIME formats.
     private LocalDateTime parseTimestamp(String ts) {
-        if (ts == null) return LocalDateTime.now();
+        if (ts == null) {
+            return LocalDateTime.now();
+        }
         // Try ISO-8601 LocalDateTime first
         try {
             return LocalDateTime.parse(ts);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         // Try OffsetDateTime (e.g., 2025-10-23T11:00:00Z or with offset)
         try {
             java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(ts);
             return odt.toLocalDateTime();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         // Try common SQL DATETIME formats: 'yyyy-MM-dd HH:mm:ss' and fractional seconds
-        java.time.format.DateTimeFormatter[] fmts = new java.time.format.DateTimeFormatter[] {
+        java.time.format.DateTimeFormatter[] fmts = new java.time.format.DateTimeFormatter[]{
             java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"),
             java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         };
         for (java.time.format.DateTimeFormatter fmt : fmts) {
             try {
                 return LocalDateTime.parse(ts, fmt);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         // Fallback to now
@@ -780,7 +894,7 @@ public class DashboardForm extends SimpleForm {
     private class GlassCardPanel extends JPanel {
 
         private final AnimatedGaugeChart gauge;
-    // hover state not stored separately; hoverProgress drives visuals
+        // hover state not stored separately; hoverProgress drives visuals
         private float hoverProgress = 0f; // 0..1
         private float hoverTarget = 0f;
         private Timer hoverTimer;
@@ -835,8 +949,9 @@ public class DashboardForm extends SimpleForm {
         }
 
         // stopAnimation removed (unused)
-
-        /** Update the gauge displayed in this card (double value). */
+        /**
+         * Update the gauge displayed in this card (double value).
+         */
         public void updateGauge(double value, double max) {
             try {
                 gauge.updateValue(value, max);
@@ -845,7 +960,9 @@ public class DashboardForm extends SimpleForm {
             }
         }
 
-        /** Update the gauge displayed in this card (int value). */
+        /**
+         * Update the gauge displayed in this card (int value).
+         */
         public void updateGauge(int value, int max) {
             updateGauge((double) value, (double) max);
         }
@@ -903,7 +1020,8 @@ public class DashboardForm extends SimpleForm {
         }
 
         /**
-         * Update the target value and optionally max value, then start animation towards it.
+         * Update the target value and optionally max value, then start
+         * animation towards it.
          */
         public synchronized void updateValue(double newValue, double newMax) {
             this.value = newValue;
@@ -934,7 +1052,6 @@ public class DashboardForm extends SimpleForm {
         }
 
         // stopAnimation removed (unused) - animation is controlled via startAnimation/updateValue
-
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -1323,7 +1440,6 @@ public class DashboardForm extends SimpleForm {
         }
 
         // createNavButton removed - calendar buttons use inline styling
-
         private JPanel createDayView() {
             JPanel panel = new JPanel(new GridLayout(0, 7, 5, 5));
             panel.setOpaque(false);
@@ -1513,7 +1629,9 @@ public class DashboardForm extends SimpleForm {
                         int h = getHeight();
                         int pad = 8;
                         int diameter = Math.min(w, h) - pad;
-                        if (diameter < 8) diameter = Math.min(w, h);
+                        if (diameter < 8) {
+                            diameter = Math.min(w, h);
+                        }
                         int x = (w - diameter) / 2;
                         int y = (h - diameter) / 2;
                         g2.setColor(highlight);

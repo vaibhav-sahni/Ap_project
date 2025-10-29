@@ -13,16 +13,29 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import javax.swing.JDialog;
+import javax.swing.Timer;
 import java.awt.geom.Arc2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -175,18 +188,18 @@ public class MyCourseForm extends SimpleForm {
         sorter = new TableRowSorter<>(tableModel);
         gradeTable.setRowSorter(sorter);
 
-    tableScrollPane = new JScrollPane(gradeTable);
-    tableScrollPane.setOpaque(false);
-    tableScrollPane.getViewport().setOpaque(false);
-    tableScrollPane.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
-    tableScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
-    tableScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
+        tableScrollPane = new JScrollPane(gradeTable);
+        tableScrollPane.setOpaque(false);
+        tableScrollPane.getViewport().setOpaque(false);
+        tableScrollPane.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
+        tableScrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+        tableScrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI());
 
-    tableCard = new CardPanel();
-    tableCard.setLayout(new BorderLayout());
-    tableCard.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-    tableCard.add(tableScrollPane, BorderLayout.CENTER);
-    add(tableCard, "grow, push");
+        tableCard = new CardPanel();
+        tableCard.setLayout(new BorderLayout());
+        tableCard.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        tableCard.add(tableScrollPane, BorderLayout.CENTER);
+        add(tableCard, "grow, push");
 
         // Load roster from server (falls back to demo data on error)
         loadRosterFromServer();
@@ -413,15 +426,16 @@ public class MyCourseForm extends SimpleForm {
             return;
         }
         // Persist changes via InstructorActions.recordScore
+        edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
+        if (u == null) {
+            JOptionPane.showMessageDialog(this, "Not logged in.", "Save Failed", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        boolean hadError = false;
         try {
-            edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
-            if (u == null) {
-                throw new Exception("Not logged in");
-            }
             edu.univ.erp.ui.actions.InstructorActions a = new edu.univ.erp.ui.actions.InstructorActions();
             int instructorId = u.getUserId();
             for (GradeEntry ge : gradeEntries) {
-                // each GradeEntry now contains enrollmentId
                 if (ge.enrollmentId <= 0) {
                     continue;
                 }
@@ -429,7 +443,6 @@ public class MyCourseForm extends SimpleForm {
                     Double v = ge.scores.get(comp);
                     if (v != null) {
                         try {
-                            // Map UI assessment names to server component identifiers
                             String compId = switch (comp.toLowerCase()) {
                                 case "quiz" ->
                                     "quiz";
@@ -444,15 +457,38 @@ public class MyCourseForm extends SimpleForm {
                             };
                             a.recordScore(instructorId, ge.enrollmentId, compId, v);
                         } catch (Exception ex) {
-                            // log and continue
+                            hadError = true;
                             System.err.println("Failed to save " + ge.studentName + " comp=" + comp + ": " + ex.getMessage());
                         }
                     }
                 }
             }
-            JOptionPane.showMessageDialog(this, "Grades saved.", "Save", JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Failed to save grades: " + ex.getMessage(), "Save Failed", JOptionPane.ERROR_MESSAGE);
+        } catch (Throwable ex) {
+            hadError = true;
+            System.err.println("Save failed (handler missing or error): " + ex.getMessage());
+        }
+
+        if (!hadError) {
+            JOptionPane.showMessageDialog(this, "Grades saved to server.", "Save", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Fallback: offer to save locally as CSV
+        int choice = JOptionPane.showConfirmDialog(this, "Some or all grades failed to save to server. Save a local CSV copy instead?", "Save Locally", JOptionPane.YES_NO_OPTION);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Save grades as CSV");
+        int rv = fc.showSaveDialog(this);
+        if (rv == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            try {
+                exportToCsv(f);
+                JOptionPane.showMessageDialog(this, "Saved local copy to " + f.getAbsolutePath(), "Saved", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException io) {
+                JOptionPane.showMessageDialog(this, "Failed to save local CSV: " + io.getMessage(), "Save Failed", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -464,12 +500,27 @@ public class MyCourseForm extends SimpleForm {
             }
             edu.univ.erp.ui.handlers.InstructorUiHandlers handlers = new edu.univ.erp.ui.handlers.InstructorUiHandlers(u);
             boolean ok = handlers.exportGradesToFile(u.getUserId(), section.getSectionId());
-            if (!ok) {
-                // user probably cancelled
+            if (ok) {
+                return;
             }
+            // if handler returned false -> fallthrough to local export
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Export failed: " + ex.getMessage(), "Export Failed", JOptionPane.ERROR_MESSAGE);
+            // fallback to local CSV export
         }
+
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Export grades to CSV");
+        int rv = fc.showSaveDialog(this);
+        if (rv == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            try {
+                exportToCsv(f);
+                JOptionPane.showMessageDialog(this, "Exported grades to " + f.getAbsolutePath(), "Export", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException io) {
+                JOptionPane.showMessageDialog(this, "Export failed: " + io.getMessage(), "Export Failed", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
     }
 
     private void doImport() {
@@ -491,7 +542,23 @@ public class MyCourseForm extends SimpleForm {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Import failed: " + ex.getMessage(), "Import Failed", JOptionPane.ERROR_MESSAGE);
+            // fallback to local CSV import below
         }
+
+        // Local import via file chooser
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Import grades from CSV");
+        int rv = fc.showOpenDialog(this);
+        if (rv == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            try {
+                importFromCsv(f);
+                JOptionPane.showMessageDialog(this, "Imported grades from " + f.getAbsolutePath(), "Import", JOptionPane.INFORMATION_MESSAGE);
+            } catch (IOException io) {
+                JOptionPane.showMessageDialog(this, "Import failed: " + io.getMessage(), "Import Failed", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+
     }
 
     private void doFinalize() {
@@ -520,14 +587,29 @@ public class MyCourseForm extends SimpleForm {
             isFinalized = true;
             tableModel.setEditable(false);
             finalizeBtn.setText("Finalized");
-            finalizeBtn.setBackground(Color.decode("#6B7280"));
+            // keep theme/default color; do not change background
             saveBtn.setEnabled(false);
             importBtn.setEnabled(false);
+            return;
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Finalize failed: " + ex.getMessage(), "Finalize Failed", JOptionPane.ERROR_MESSAGE);
+            // fallback to local finalize
+            System.err.println("Finalize failed server-side: " + ex.getMessage());
         }
-    }
 
+        // Local finalize: compute simple letter grades from averages
+        for (GradeEntry ge : gradeEntries) {
+            String letter = computeFinalLetterGrade(ge);
+            ge.finalGrade = letter;
+        }
+        isFinalized = true;
+        tableModel.setEditable(false);
+        finalizeBtn.setText("Finalized");
+        // keep theme/default color; do not change background
+        saveBtn.setEnabled(false);
+        importBtn.setEnabled(false);
+        tableModel.fireTableDataChanged();
+        JOptionPane.showMessageDialog(this, "Grades finalized locally. Consider exporting a CSV copy or saving to server.", "Finalized", JOptionPane.INFORMATION_MESSAGE);
+    }
 
     /**
      * Show an empty-state message inside the table card.
@@ -622,7 +704,7 @@ public class MyCourseForm extends SimpleForm {
                     tableModel.setEditable(!isFinalized);
                     if (isFinalized) {
                         finalizeBtn.setText("Finalized");
-                        finalizeBtn.setBackground(Color.decode("#6B7280"));
+                        // keep theme/default color; do not change background
                         saveBtn.setEnabled(false);
                         importBtn.setEnabled(false);
                     } else {
@@ -642,7 +724,7 @@ public class MyCourseForm extends SimpleForm {
                 finalizeBtn.setBackground(new Color(220, 38, 38));
                 saveBtn.setEnabled(true);
                 importBtn.setEnabled(true);
-                    showEmptyMessage("No students enrolled.");
+                showEmptyMessage("No students enrolled.");
                 System.err.println("Client WARN: Failed to parse roster response: " + ex.getMessage());
             }
         }, (Exception ex) -> {
@@ -655,14 +737,210 @@ public class MyCourseForm extends SimpleForm {
             finalizeBtn.setBackground(new Color(220, 38, 38));
             saveBtn.setEnabled(true);
             importBtn.setEnabled(true);
-                showEmptyMessage("No students enrolled.");
+            showEmptyMessage("No students enrolled.");
             System.err.println("Client WARN: Failed to load roster from server: " + ex.getMessage());
         });
     }
 
     private void showStats() {
-        // TODO: Show stats in a dialog or separate form
-        JOptionPane.showMessageDialog(this, "Stats feature coming soon!", "Stats", JOptionPane.INFORMATION_MESSAGE);
+        // Build a live stats panel and show in a non-modal dialog.
+        // Computes per-student averages from current `gradeEntries` and updates the gauge + numbers every second.
+        JDialog dlg = new JDialog(SwingUtilities.getWindowAncestor(this), "Statistics", java.awt.Dialog.ModalityType.MODELESS);
+        dlg.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+
+        JPanel content = new JPanel(new MigLayout("fill, insets 12", "[pref!]8[grow]", "[grow]"));
+        content.setOpaque(false);
+
+        StatsGaugePanel gauge = new StatsGaugePanel();
+        gauge.setPreferredSize(new Dimension(260, 260));
+
+        // numbers panel on the right
+        statsNumbersPanel = new JPanel(new MigLayout("wrap 1, insets 6", "[grow]", "[]8[]8[]8[]8[]"));
+        statsNumbersPanel.setOpaque(false);
+        JLabel avgLabel = new JLabel("Average: --");
+        JLabel minLabel = new JLabel("Min: --");
+        JLabel maxLabel = new JLabel("Max: --");
+        JLabel medLabel = new JLabel("Median: --");
+        Font nf = new Font(Font.SANS_SERIF, Font.BOLD, 14);
+        avgLabel.setFont(nf);
+        minLabel.setFont(nf);
+        maxLabel.setFont(nf);
+        medLabel.setFont(nf);
+        statsNumbersPanel.add(avgLabel);
+        statsNumbersPanel.add(minLabel);
+        statsNumbersPanel.add(maxLabel);
+        statsNumbersPanel.add(medLabel);
+
+        // small distribution preview under numbers
+        GradeDistributionPanel dist = new GradeDistributionPanel();
+        dist.setPreferredSize(new Dimension(200, 120));
+        statsNumbersPanel.add(dist, "growx");
+
+        content.add(gauge);
+        content.add(statsNumbersPanel, "growx");
+
+        dlg.getContentPane().add(content);
+        dlg.pack();
+        dlg.setLocationRelativeTo(this);
+
+        // Timer to recalc stats every 1s
+        Timer t = new Timer(1000, ev -> {
+            java.util.List<Double> averages = new ArrayList<>();
+            for (GradeEntry ge : gradeEntries) {
+                double sum = 0;
+                int cnt = 0;
+                for (String a : assessments) {
+                    Double v = ge.scores.get(a);
+                    if (v != null) {
+                        sum += v;
+                        cnt++;
+                    }
+                }
+                if (cnt > 0) {
+                    averages.add(sum / cnt);
+                }
+            }
+            double avg = 0, min = 0, max = 0, median = 0;
+            if (!averages.isEmpty()) {
+                java.util.Collections.sort(averages);
+                double sum = 0;
+                for (double d : averages) {
+                    sum += d;
+                }
+                avg = sum / averages.size();
+                min = averages.get(0);
+                max = averages.get(averages.size() - 1);
+                int m = averages.size() / 2;
+                if (averages.size() % 2 == 1) {
+                    median = averages.get(m);
+                } else {
+                    median = (averages.get(m - 1) + averages.get(m)) / 2.0;
+                }
+            }
+
+            // update gauge normalized to 100
+            gauge.setValues(avg / 100.0, min / 100.0, max / 100.0, median / 100.0);
+            avgLabel.setText(String.format("Average: %.2f", avg));
+            minLabel.setText(String.format("Min: %.2f", min));
+            maxLabel.setText(String.format("Max: %.2f", max));
+            medLabel.setText(String.format("Median: %.2f", median));
+
+            // distribution by final grade (use existing finalGrade if present, else compute local letter)
+            Map<String, Long> counts = new HashMap<>();
+            String[] grades = new String[]{"A", "B", "C", "D", "F"};
+            for (String g : grades) {
+                counts.put(g, 0L);
+            }
+            for (GradeEntry ge : gradeEntries) {
+                String fg = ge.finalGrade;
+                if (fg == null || fg.isBlank()) {
+                    fg = computeFinalLetterGrade(ge);
+                }
+                if (fg == null || fg.isBlank()) {
+                    continue;
+                }
+                counts.put(fg, counts.getOrDefault(fg, 0L) + 1);
+            }
+            dist.setData(counts);
+        });
+
+        // clicking the gauge opens a larger popup
+        gauge.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Create a larger dialog with full-size gauge and distribution
+                JDialog big = new JDialog(SwingUtilities.getWindowAncestor(MyCourseForm.this), "Stats — Detailed", java.awt.Dialog.ModalityType.MODELESS);
+                JPanel p = new JPanel(new MigLayout("fill, insets 12", "[grow]", "[grow][]"));
+                StatsGaugePanel bigGauge = new StatsGaugePanel();
+                bigGauge.setPreferredSize(new Dimension(420, 420));
+                GradeDistributionPanel bigDist = new GradeDistributionPanel();
+                bigDist.setPreferredSize(new Dimension(420, 140));
+                p.add(bigGauge, "growx, wrap");
+                p.add(bigDist, "growx");
+                big.getContentPane().add(p);
+                big.pack();
+                big.setLocationRelativeTo(MyCourseForm.this);
+
+                // sync values immediately and while shown
+                Timer tt = new Timer(500, ev2 -> {
+                    // reuse same calculation code quickly
+                    java.util.List<Double> avgs = new ArrayList<>();
+                    for (GradeEntry ge : gradeEntries) {
+                        double s = 0;
+                        int c = 0;
+                        for (String a : assessments) {
+                            Double v = ge.scores.get(a);
+                            if (v != null) {
+                                s += v;
+                                c++;
+                            }
+                        }
+                        if (c > 0) {
+                            avgs.add(s / c);
+                        }
+                    }
+                    double A = 0, mN = 0, mX = 0, md = 0;
+                    if (!avgs.isEmpty()) {
+                        java.util.Collections.sort(avgs);
+                        double s = 0;
+                        for (double vv : avgs) {
+                            s += vv;
+                        }
+                        A = s / avgs.size();
+                        mN = avgs.get(0);
+                        mX = avgs.get(avgs.size() - 1);
+                        int mm = avgs.size() / 2;
+                        md = (avgs.size() % 2 == 1) ? avgs.get(mm) : (avgs.get(mm - 1) + avgs.get(mm)) / 2.0;
+                    }
+                    bigGauge.setValues(A / 100.0, mN / 100.0, mX / 100.0, md / 100.0);
+                    Map<String, Long> cnts = new HashMap<>();
+                    for (String g : new String[]{"A", "B", "C", "D", "F"}) {
+                        cnts.put(g, 0L);
+                    }
+                    for (GradeEntry ge : gradeEntries) {
+                        String fg = ge.finalGrade;
+                        if (fg == null || fg.isBlank()) {
+                            fg = computeFinalLetterGrade(ge);
+                        
+                        }if (fg == null || fg.isBlank()) {
+                            continue;
+                        }
+                        cnts.put(fg, cnts.getOrDefault(fg, 0L) + 1);
+                    }
+                    bigDist.setData(cnts);
+                });
+
+                big.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosed(WindowEvent e) {
+                        tt.stop();
+                    }
+
+                    @Override
+                    public void windowClosing(WindowEvent e) {
+                        tt.stop();
+                    }
+                });
+                tt.start();
+                big.setVisible(true);
+            }
+        });
+
+        dlg.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                t.stop();
+            }
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                t.stop();
+            }
+        });
+
+        t.setInitialDelay(0);
+        t.start();
+        dlg.setVisible(true);
     }
 
     @Override
@@ -692,7 +970,6 @@ public class MyCourseForm extends SimpleForm {
 
         private final String[] BASE = {"Student Name", "Roll No"};
         private boolean editable = true;
-        private List<GradeEntry> rows = new ArrayList<>();
 
         void setEditable(boolean e) {
             this.editable = e;
@@ -700,13 +977,20 @@ public class MyCourseForm extends SimpleForm {
         }
 
         void updateData(List<GradeEntry> list) {
-            this.rows = new ArrayList<>(list);
+            // Keep the master list in the outer form so edits in the table
+            // reflect directly on `gradeEntries` used by save/export/import.
+            // copy incoming list to avoid aliasing issues when caller passes the
+            // same list reference as our backing list.
+            gradeEntries.clear();
+            if (list != null) {
+                gradeEntries.addAll(new ArrayList<>(list));
+            }
             fireTableDataChanged();
         }
 
         @Override
         public int getRowCount() {
-            return rows.size();
+            return gradeEntries.size();
         }
 
         @Override
@@ -743,7 +1027,7 @@ public class MyCourseForm extends SimpleForm {
 
         @Override
         public Object getValueAt(int row, int col) {
-            GradeEntry e = rows.get(row);
+            GradeEntry e = gradeEntries.get(row);
             if (col == 0) {
                 return e.studentName;
             }
@@ -762,7 +1046,7 @@ public class MyCourseForm extends SimpleForm {
             if (!isCellEditable(row, col)) {
                 return;
             }
-            GradeEntry e = rows.get(row);
+            GradeEntry e = gradeEntries.get(row);
             String key = assessments.get(col - BASE.length);
             try {
                 Double v = null;
@@ -778,6 +1062,164 @@ public class MyCourseForm extends SimpleForm {
                 JOptionPane.showMessageDialog(MyCourseForm.this, "Enter a valid non-negative number.", "Input", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    // --- CSV Import/Export helpers (local fallback) ---
+    private void exportToCsv(File file) throws IOException {
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(file))) {
+            // Header
+            String header = "Student Name,Roll No";
+            for (String a : assessments) {
+                header += "," + a;
+            }
+            header += ",Final Grade";
+            w.write(header);
+            w.newLine();
+            for (GradeEntry ge : gradeEntries) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(escapeCsv(ge.studentName)).append(',').append(escapeCsv(ge.rollNo));
+                for (String a : assessments) {
+                    Double v = ge.scores.get(a);
+                    sb.append(',');
+                    if (v != null) {
+                        sb.append(v);
+                    }
+                }
+                sb.append(',').append(escapeCsv(ge.finalGrade == null ? "" : ge.finalGrade));
+                w.write(sb.toString());
+                w.newLine();
+            }
+        }
+    }
+
+    private void importFromCsv(File file) throws IOException {
+        List<GradeEntry> imported = new ArrayList<>();
+        try (BufferedReader r = new BufferedReader(new FileReader(file))) {
+            String line = r.readLine();
+            if (line == null) {
+                return;
+            }
+            String[] headers = splitCsv(line);
+            // Map column indices for known headers
+            int nameIdx = -1, rollIdx = -1;
+            int[] compIdx = new int[assessments.size()];
+            for (int i = 0; i < compIdx.length; i++) {
+                compIdx[i] = -1;
+            }
+            int finalIdx = -1;
+            for (int i = 0; i < headers.length; i++) {
+                String h = headers[i].trim();
+                if (h.equalsIgnoreCase("Student Name")) {
+                    nameIdx = i;
+                } else if (h.equalsIgnoreCase("Roll No")) {
+                    rollIdx = i;
+                } else if (h.equalsIgnoreCase("Final Grade")) {
+                    finalIdx = i;
+                } else {
+                    for (int j = 0; j < assessments.size(); j++) {
+                        if (h.equalsIgnoreCase(assessments.get(j))) {
+                            compIdx[j] = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            while ((line = r.readLine()) != null) {
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+                String[] cols = splitCsv(line);
+                String name = nameIdx >= 0 && nameIdx < cols.length ? cols[nameIdx] : "";
+                String roll = rollIdx >= 0 && rollIdx < cols.length ? cols[rollIdx] : "";
+                Map<String, Double> map = new HashMap<>();
+                for (int j = 0; j < assessments.size(); j++) {
+                    int idx = compIdx[j];
+                    Double v = null;
+                    if (idx >= 0 && idx < cols.length) {
+                        String s = cols[idx].trim();
+                        if (!s.isEmpty()) {
+                            try {
+                                v = Double.parseDouble(s);
+                            } catch (Exception ignore) {
+                                v = null;
+                            }
+                        }
+                    }
+                    map.put(assessments.get(j), v);
+                }
+                String finalG = finalIdx >= 0 && finalIdx < cols.length ? cols[finalIdx] : null;
+                GradeEntry ge = new GradeEntry(name, roll, map, finalG);
+                imported.add(ge);
+            }
+        }
+        gradeEntries.clear();
+        gradeEntries.addAll(imported);
+        tableModel.updateData(gradeEntries);
+        showTableView();
+    }
+
+    private static String escapeCsv(String s) {
+        if (s == null) {
+            return "";
+        }
+        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+            return "\"" + s.replace("\"", "\"\"") + "\"";
+        }
+        return s;
+    }
+
+    private static String[] splitCsv(String line) {
+        List<String> out = new ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    cur.append('"');
+                    i++; // skip escaped quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                out.add(cur.toString());
+                cur.setLength(0);
+            } else {
+                cur.append(c);
+            }
+        }
+        out.add(cur.toString());
+        return out.toArray(new String[0]);
+    }
+
+    // Local finalize: average available assessment scores and map to letter grade
+    private String computeFinalLetterGrade(GradeEntry ge) {
+        double sum = 0;
+        int count = 0;
+        for (String a : assessments) {
+            Double v = ge.scores.get(a);
+            if (v != null) {
+                sum += v;
+                count++;
+            }
+        }
+        if (count == 0) {
+            return "";
+        }
+        double avg = sum / count;
+        if (avg >= 90) {
+            return "A";
+        }
+        if (avg >= 80) {
+            return "B";
+        }
+        if (avg >= 70) {
+            return "C";
+        }
+        if (avg >= 60) {
+            return "D";
+        }
+        return "F";
     }
 
     // --- Styled components ---
