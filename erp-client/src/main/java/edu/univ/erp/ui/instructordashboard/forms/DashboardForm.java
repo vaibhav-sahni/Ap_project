@@ -185,7 +185,7 @@ public class DashboardForm extends SimpleForm {
         };
         sectionsLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
 
-        JLabel notifsLabel = new JLabel("Notifications") {
+        JLabel notifsLabel = new JLabel("Notifications 🔔") {
             @Override
             protected void paintComponent(Graphics g) {
                 setForeground(textColor());

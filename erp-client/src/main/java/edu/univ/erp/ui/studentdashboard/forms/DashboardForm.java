@@ -614,7 +614,7 @@ public class DashboardForm extends SimpleForm {
         JPanel headerRow = new JPanel(new BorderLayout());
         headerRow.setOpaque(false);
 
-        JLabel header = new JLabel("Notifications") {
+        JLabel header = new JLabel("Notifications 🔔") {
             @Override
             protected void paintComponent(Graphics g) {
                 setForeground(textColor());
