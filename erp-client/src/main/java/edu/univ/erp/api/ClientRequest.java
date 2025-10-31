@@ -86,10 +86,13 @@ public class ClientRequest {
             // Handle SUCCESS or ERROR protocol here
             if (response.startsWith("ERROR:")) {
                 String errorMessage = response.substring("ERROR:".length());
-                // If server indicates maintenance or unauthenticated, clear persistent session and redirect to login
+                // If server indicates unauthenticated, clear persistent session and redirect to login
                 if (errorMessage.startsWith("NOT_AUTHENTICATED") || errorMessage.startsWith("NOT_AUTH")) {
                     try { ClientSession.clear(); } catch (Exception ignore) {}
-                    try { SessionLostNotifier.notifyAndRedirect(); } catch (Exception ignore) {}
+                    // Only show the session-lost notifier if not suppressed by an intentional action (e.g., logout)
+                    try {
+                        if (!ClientSession.isSuppressSessionLost()) SessionLostNotifier.notifyAndRedirect();
+                    } catch (Exception ignore) {}
                     throw new Exception(errorMessage);
                 }
                 throw new Exception(errorMessage);

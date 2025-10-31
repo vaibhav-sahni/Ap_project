@@ -62,16 +62,14 @@ public class FormManager {
     public static void logout() {
         FlatAnimatedLafChange.showSnapshot();
         try {
-            // UI-only development: just dispose and exit instead of opening Login
+            // Dispose the current dashboard window and open a new standalone Login JFrame.
             java.awt.EventQueue.invokeLater(() -> {
                 try {
                     instance.frame.dispose();
-                } catch (Throwable ignore) {
-                }
+                } catch (Throwable ignore) {}
                 try {
-                    System.exit(0);
-                } catch (Throwable ignore) {
-                }
+                    new edu.univ.erp.ui.loginpage.main.Login().setVisible(true);
+                } catch (Throwable ignore) {}
             });
         } finally {
             FlatAnimatedLafChange.hideSnapshotWithAnimation();
