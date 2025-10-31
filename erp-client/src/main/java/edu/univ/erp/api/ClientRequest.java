@@ -8,6 +8,7 @@ import java.net.Socket;
 
 import edu.univ.erp.net.ClientConnection;
 import edu.univ.erp.net.ClientSession;
+import edu.univ.erp.ui.util.SessionLostNotifier;
 
 public class ClientRequest {
     private static final String SERVER_HOST = "localhost"; 
@@ -44,7 +45,23 @@ public class ClientRequest {
                 if (isNetworkFailure) {
                     try { ClientSession.clear(); } catch (Exception ignore) {}
                     System.err.println("CLIENT WARN: persistent connection failed, session cleared: " + e.getMessage());
+                    // Only show the session-lost notifier if not suppressed by an intentional action
+                    try {
+                        if (!ClientSession.isSuppressSessionLost()) SessionLostNotifier.notifyAndRedirect();
+                    } catch (Exception ignore) {}
                     throw new Exception("Persistent session lost. Please login again before retrying this operation.", e);
+                }
+
+                // If the server signaled maintenance or authentication loss, treat this as session loss.
+                String serverMsg = e.getMessage() == null ? "" : e.getMessage();
+                if (serverMsg.contains("MAINTENANCE_ON") || serverMsg.contains("NOT_AUTHENTICATED") || serverMsg.contains("NOT_AUTH")) {
+                    try { ClientSession.clear(); } catch (Exception ignore) {}
+                    System.err.println("CLIENT WARN: server requested session clear due to maintenance/auth: " + serverMsg);
+                    // Only show the session-lost notifier if not suppressed by an intentional action
+                    try {
+                        if (!ClientSession.isSuppressSessionLost()) SessionLostNotifier.notifyAndRedirect();
+                    } catch (Exception ignore) {}
+                    throw new Exception("Session invalidated: " + serverMsg, e);
                 }
 
                 // Server-side application error; do not clear the persistent session. Surface the server message to caller.
@@ -69,6 +86,12 @@ public class ClientRequest {
             // Handle SUCCESS or ERROR protocol here
             if (response.startsWith("ERROR:")) {
                 String errorMessage = response.substring("ERROR:".length());
+                // If server indicates maintenance or unauthenticated, clear persistent session and redirect to login
+                if (errorMessage.startsWith("NOT_AUTHENTICATED") || errorMessage.startsWith("NOT_AUTH")) {
+                    try { ClientSession.clear(); } catch (Exception ignore) {}
+                    try { SessionLostNotifier.notifyAndRedirect(); } catch (Exception ignore) {}
+                    throw new Exception(errorMessage);
+                }
                 throw new Exception(errorMessage);
             }
             // Returns raw SUCCESS:{json} or SUCCESS:OK

@@ -36,6 +36,7 @@ edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$CardPanel.class
 edu\univ\erp\ui\admindashboard\forms\RegisterCoursesForm$SortHeaderRenderer.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect$Effect$1.class
 edu\univ\erp\ui\preview\CatalogPreviewFrame.class
+edu\univ\erp\ui\util\SessionLostNotifier.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$6.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$FadePanel.class
 edu\univ\erp\ui\admindashboard\forms\TimetableForm$CourseBlockPanel.class

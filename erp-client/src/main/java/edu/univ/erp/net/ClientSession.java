@@ -5,6 +5,11 @@ package edu.univ.erp.net;
  */
 public class ClientSession {
     private static ClientConnection conn = null;
+    // When true, suppress the session-lost modal/redirect that other network
+    // error handlers may fire. This is used for intentional client actions
+    // such as explicit logout so the user doesn't see a confusing "connection
+    // lost" message during normal logout flows.
+    private static volatile boolean suppressSessionLost = false;
 
     public static synchronized void setConnection(ClientConnection c) {
         conn = c;
@@ -19,5 +24,13 @@ public class ClientSession {
             try { conn.close(); } catch (Exception e) { /* ignore */ }
             conn = null;
         }
+    }
+
+    public static void setSuppressSessionLost(boolean s) {
+        suppressSessionLost = s;
+    }
+
+    public static boolean isSuppressSessionLost() {
+        return suppressSessionLost;
     }
 }

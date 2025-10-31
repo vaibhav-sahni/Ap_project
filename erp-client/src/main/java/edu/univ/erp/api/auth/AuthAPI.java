@@ -93,10 +93,18 @@ public class AuthAPI {
         // Send LOGOUT over persistent connection if present
         edu.univ.erp.net.ClientConnection conn = edu.univ.erp.net.ClientSession.getConnection();
         if (conn != null) {
-            String resp = conn.send("LOGOUT");
-            // clear local session
-            edu.univ.erp.net.ClientSession.clear();
-            return resp.startsWith("SUCCESS:") ? resp.substring("SUCCESS:".length()) : resp;
+            // Suppress the session-lost notifier while we perform an intentional
+            // logout so the user does not see the "Connection lost" modal.
+            edu.univ.erp.net.ClientSession.setSuppressSessionLost(true);
+            try {
+                String resp = conn.send("LOGOUT");
+                // clear local session
+                edu.univ.erp.net.ClientSession.clear();
+                return resp.startsWith("SUCCESS:") ? resp.substring("SUCCESS:".length()) : resp;
+            } finally {
+                // Re-enable notifier for subsequent unexpected disconnects
+                edu.univ.erp.net.ClientSession.setSuppressSessionLost(false);
+            }
         }
         return "SUCCESS:No active session";
     }

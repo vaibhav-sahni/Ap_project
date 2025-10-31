@@ -41,6 +41,7 @@ import javax.swing.table.TableRowSorter;
 import com.formdev.flatlaf.FlatLaf;
 
 import edu.univ.erp.domain.Section;
+import edu.univ.erp.ui.actions.AdminActions;
 import edu.univ.erp.ui.instructordashboard.components.SimpleForm;
 import edu.univ.erp.ui.instructordashboard.menu.FormManager;
 import edu.univ.erp.ui.utils.UIHelper;
@@ -190,6 +191,9 @@ public class MyCourseForm extends SimpleForm {
 
         // Load roster from server (falls back to demo data on error)
         loadRosterFromServer();
+
+    // Check maintenance state and apply UI restrictions (async)
+    checkMaintenanceAsync();
 
         // Theme change listener: repaint
         UIManager.addPropertyChangeListener(evt -> {
@@ -412,6 +416,16 @@ public class MyCourseForm extends SimpleForm {
             JOptionPane.showMessageDialog(this, "Grading is finalized. Cannot save changes.", "Save", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        // Prevent saves during maintenance
+        try {
+            AdminActions admin = new AdminActions();
+            if (admin.checkMaintenanceMode()) {
+                JOptionPane.showMessageDialog(this, "The system is currently under maintenance. Grading operations are disabled.", "Maintenance", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        } catch (Exception ex) {
+            // Best-effort: if we can't check maintenance, proceed (server will enforce)
+        }
         // Persist changes via InstructorActions.recordScore
         try {
             edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
@@ -477,6 +491,16 @@ public class MyCourseForm extends SimpleForm {
             JOptionPane.showMessageDialog(this, "Grading is finalized. Cannot import.", "Import", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        // Prevent import during maintenance
+        try {
+            AdminActions admin = new AdminActions();
+            if (admin.checkMaintenanceMode()) {
+                JOptionPane.showMessageDialog(this, "The system is currently under maintenance. Import is disabled.", "Maintenance", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        } catch (Exception ex) {
+            // ignore and proceed
+        }
         try {
             edu.univ.erp.domain.UserAuth u = edu.univ.erp.ClientContext.getCurrentUser();
             if (u == null) {
@@ -497,6 +521,16 @@ public class MyCourseForm extends SimpleForm {
     private void doFinalize() {
         if (isFinalized) {
             return;
+        }
+        // Prevent finalize during maintenance
+        try {
+            AdminActions admin = new AdminActions();
+            if (admin.checkMaintenanceMode()) {
+                JOptionPane.showMessageDialog(this, "The system is currently under maintenance. Finalize is disabled.", "Maintenance", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        } catch (Exception ex) {
+            // ignore
         }
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Finalize grades? This will lock editing.",
@@ -554,6 +588,85 @@ public class MyCourseForm extends SimpleForm {
             tableCard.revalidate();
             tableCard.repaint();
         });
+    }
+
+    /**
+     * Run an asynchronous check against the server for maintenance mode and apply UI restrictions.
+     */
+    private void checkMaintenanceAsync() {
+        UIHelper.runAsync(() -> {
+            try {
+                AdminActions admin = new AdminActions();
+                return admin.checkMaintenanceMode();
+            } catch (Exception ex) {
+                return Boolean.FALSE;
+            }
+        }, (Object result) -> {
+            try {
+                boolean on = result instanceof Boolean && (Boolean) result;
+                applyMaintenanceState(on);
+            } catch (Throwable ignore) {
+            }
+        }, (Exception ex) -> {
+            // ignore failures; server-side enforcement remains
+        });
+    }
+
+    private void applyMaintenanceState(boolean on) {
+        // If maintenance is on, disallow editing regardless of finalized state.
+        boolean editable = !on && !isFinalized;
+        try {
+            if (tableModel != null) tableModel.setEditable(editable);
+            // Buttons: not all button implementations change appearance when disabled,
+            // so explicitly set background colors to a disabled grey when necessary.
+            if (saveBtn != null) {
+                saveBtn.setEnabled(editable);
+                if (editable) {
+                    saveBtn.setBackground(new Color(59, 130, 246));
+                    saveBtn.setToolTipText(null);
+                } else {
+                    saveBtn.setBackground(Color.decode("#6B7280"));
+                    saveBtn.setToolTipText("Disabled during maintenance");
+                }
+            }
+            if (importBtn != null) {
+                importBtn.setEnabled(editable);
+                if (editable) {
+                    importBtn.setBackground(new Color(234, 179, 8));
+                    importBtn.setToolTipText(null);
+                } else {
+                    importBtn.setBackground(Color.decode("#6B7280"));
+                    importBtn.setToolTipText("Disabled during maintenance");
+                }
+            }
+            if (finalizeBtn != null) {
+                boolean finEnabled = !on && !isFinalized;
+                finalizeBtn.setEnabled(finEnabled);
+                if (finEnabled) {
+                    finalizeBtn.setBackground(new Color(220, 38, 38));
+                    finalizeBtn.setToolTipText(null);
+                } else {
+                    finalizeBtn.setBackground(Color.decode("#6B7280"));
+                    finalizeBtn.setToolTipText(on ? "Disabled during maintenance" : "Finalized");
+                }
+            }
+
+            // Additionally, prevent table cell editing by ensuring the model is non-editable.
+            // Keep selection allowed so users can still view rows but not modify them.
+            if (gradeTable != null) {
+                gradeTable.setRowSelectionAllowed(true);
+                // Make sure editors do not activate for non-editable model
+                if (!editable) {
+                    gradeTable.setDefaultEditor(Double.class, null);
+                    gradeTable.setDefaultEditor(String.class, null);
+                } else {
+                    // restore generic editors (let JTable pick defaults)
+                    gradeTable.setDefaultEditor(Double.class, gradeTable.getDefaultEditor(Double.class));
+                    gradeTable.setDefaultEditor(String.class, gradeTable.getDefaultEditor(String.class));
+                }
+            }
+        } catch (Exception ignore) {
+        }
     }
 
     // Load roster using InstructorUiHandlers; fall back to dummy data if any error occurs
