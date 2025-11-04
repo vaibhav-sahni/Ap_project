@@ -22,17 +22,17 @@ public class FormManager {
 
     private final UndoRedo<SimpleForm> forms = new UndoRedo<>();
 
-    private boolean menuShowing = true;
-    private final PanelSlider panelSlider;
-    private final MainForm mainForm;
-    private final Menu menu;
-    private final boolean undecorated;
+    private boolean menuShowing = true; // tracks if menu is currently shown
+    private final PanelSlider panelSlider; // handles sliding transitions
+    private final MainForm mainForm; // main form area to show forms
+    private final Menu menu; // side menu
+    private final boolean undecorated; // whether the frame is undecorated
 
-    public static void install(JFrame frame, boolean undecorated) {
+    public static void install(JFrame frame, boolean undecorated) { // singleton installer
         instance = new FormManager(frame, undecorated);
     }
 
-    private FormManager(JFrame frame, boolean undecorated) {
+    private FormManager(JFrame frame, boolean undecorated) { // private constructor
         this.frame = frame;
         panelSlider = new PanelSlider();
         mainForm = new MainForm(undecorated);
@@ -40,12 +40,12 @@ public class FormManager {
         this.undecorated = undecorated;
     }
 
-    public static void showMenu() {
+    public static void showMenu() { // show side menu with transition
         instance.menuShowing = true;
         instance.panelSlider.addSlide(instance.menu, SimpleTransition.getShowMenuTransition(instance.menu.getDrawerBuilder().getDrawerWidth(), instance.undecorated));
     }
 
-    public static void showForm(SimpleForm component) {
+    public static void showForm(SimpleForm component) { // show new form if allowed
         if (isNewFormAble()) {
             instance.forms.add(component);
             if (instance.menuShowing == true) {
@@ -60,7 +60,7 @@ public class FormManager {
         }
     }
 
-    public static void logout() {
+    public static void logout() { // logout and return to login screen
         FlatAnimatedLafChange.showSnapshot();
         try {
             // Dispose the current dashboard window and open a new standalone Login JFrame.
@@ -76,12 +76,12 @@ public class FormManager {
         }
     }
 
-    public static void login(ModelUser user) {
+    public static void login(ModelUser user) { // login as new user and rebuild menu
         FlatAnimatedLafChange.showSnapshot();
         instance.frame.getContentPane().removeAll();
         instance.frame.getContentPane().add(instance.panelSlider);
         // set new user and rebuild menu for user role
-        ((MyDrawerBuilder) instance.menu.getDrawerBuilder()).setUser(user);
+        ((MyDrawerBuilder) instance.menu.getDrawerBuilder()).setUser(user); 
         instance.frame.repaint();
         instance.frame.revalidate();
         FlatAnimatedLafChange.hideSnapshotWithAnimation();
