@@ -78,17 +78,17 @@ public class Application extends JFrame {
             edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
             if (cu != null) {
                 boolean isAdmin = "Admin".equals(cu.getRole());
-                System.out.println("Client LOG: Application.init using ClientContext user=" + cu.getUsername());
+                System.out.println("Client LOG: Admin Application.init using ClientContext user=" + cu.getUsername());
                 FormManager.login(new ModelUser(cu.getUsername(), isAdmin));
             } else {
-                // fallback to guest/development user
-                System.out.println("Client LOG: Application.init no ClientContext user; using dev user");
-                FormManager.login(new ModelUser("Student User", false));
+                // fallback to admin/development user
+                System.out.println("Client LOG: Admin Application.init no ClientContext user; using dev admin user");
+                FormManager.login(new ModelUser("Admin User", true));
             }
         } catch (Throwable t) {
-            System.err.println("Client WARN: Application.init failed to read ClientContext: " + t.getMessage());
+            System.err.println("Client WARN: Admin Application.init failed to read ClientContext: " + t.getMessage());
             t.printStackTrace(System.err);
-            FormManager.login(new ModelUser("Student User", false));
+            FormManager.login(new ModelUser("Admin User", true));
         }
         FormManager.showForm(new DashboardForm());
         // FormManager.logout(); // Disabled for development so dashboard stays open

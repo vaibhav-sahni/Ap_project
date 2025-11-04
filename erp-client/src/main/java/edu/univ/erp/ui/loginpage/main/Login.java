@@ -8,8 +8,6 @@ import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.ui.controller.DashboardController;
 import edu.univ.erp.ui.preview.AdminDashboardFrame;
 
-
-
 public class Login extends javax.swing.JFrame {
 
     edu.univ.erp.api.auth.AuthAPI authApi = new edu.univ.erp.api.auth.AuthAPI();
@@ -133,7 +131,8 @@ public class Login extends javax.swing.JFrame {
             try {
                 edu.univ.erp.ClientContext.setCurrentUser(user);
                 System.out.println("Client LOG: ClientContext set to user=" + user.getUsername());
-            } catch (Throwable ignore) {}
+            } catch (Throwable ignore) {
+            }
 
             this.dispose();
 
@@ -179,7 +178,9 @@ public class Login extends javax.swing.JFrame {
                                         } catch (Throwable ignored) {
                                         }
                                     }
-                                    if (muObj != null) break;
+                                    if (muObj != null) {
+                                        break;
+                                    }
                                 } catch (ClassNotFoundException ignored) {
                                 }
                             }
@@ -281,10 +282,85 @@ public class Login extends javax.swing.JFrame {
                     });
                 }
                 case "Admin" -> {
-                    AdminDashboardFrame f = new AdminDashboardFrame(user);
-                    DashboardController controller = new DashboardController(user, f);
-                    f.setController(controller);
-                    f.setVisible(true);
+                    // Prefer launching the new admin dashboard Application reflectively
+                    // to avoid introducing a compile-time dependency on that package.
+                    java.awt.EventQueue.invokeLater(() -> {
+                        try {
+                            // 1) Try to instantiate Application and call setVisible(true)
+                            try {
+                                Class<?> appClass = Class.forName("edu.univ.erp.ui.admindashboard.application.Application");
+                                Object app = appClass.getDeclaredConstructor().newInstance();
+                                try {
+                                    java.lang.reflect.Method setVisible = appClass.getMethod("setVisible", boolean.class);
+                                    setVisible.invoke(app, true);
+                                } catch (NoSuchMethodException ignored) {
+                                }
+                            } catch (ClassNotFoundException ignored) {
+                                // Application class not present; fallback to old AdminDashboardFrame
+                                AdminDashboardFrame f = new AdminDashboardFrame(user);
+                                DashboardController controller = new DashboardController(user, f);
+                                f.setController(controller);
+                                f.setVisible(true);
+                                return;
+                            }
+
+                            // 2) Build a ModelUser instance reflectively (try common package names)
+                            Object muObj = null;
+                            String[] muCandidates = new String[]{"edu.univ.erp.ui.admindashboard.model.ModelUser", "model.ModelUser"};
+                            for (String muName : muCandidates) {
+                                try {
+                                    Class<?> muClass = Class.forName(muName);
+                                    try {
+                                        java.lang.reflect.Constructor<?> ctor = muClass.getConstructor(String.class, boolean.class);
+                                        muObj = ctor.newInstance(user.getUsername(), true); // Admin = true
+                                    } catch (NoSuchMethodException ns) {
+                                        try {
+                                            muObj = muClass.getDeclaredConstructor().newInstance();
+                                            try {
+                                                java.lang.reflect.Method setName = muClass.getMethod("setUserName", String.class);
+                                                java.lang.reflect.Method setAdmin = muClass.getMethod("setAdmin", boolean.class);
+                                                setName.invoke(muObj, user.getUsername());
+                                                setAdmin.invoke(muObj, true); // Admin = true
+                                            } catch (NoSuchMethodException ignored) {
+                                            }
+                                        } catch (Throwable ignored) {
+                                        }
+                                    }
+                                    if (muObj != null) {
+                                        break;
+                                    }
+                                } catch (ClassNotFoundException ignored) {
+                                }
+                            }
+
+                            // 3) If we have a ModelUser, try to call menu.FormManager.login(mu) reflectively
+                            if (muObj != null) {
+                                try {
+                                    Class<?> fmClass = Class.forName("edu.univ.erp.ui.admindashboard.menu.FormManager");
+                                    // try to find a login method accepting the ModelUser type or Object
+                                    java.lang.reflect.Method m = null;
+                                    for (java.lang.reflect.Method mm : fmClass.getMethods()) {
+                                        if (mm.getName().equals("login") && mm.getParameterCount() == 1) {
+                                            m = mm;
+                                            break;
+                                        }
+                                    }
+                                    if (m != null) {
+                                        m.invoke(null, muObj);
+                                    }
+                                } catch (ClassNotFoundException ignored) {
+                                }
+                            }
+                        } catch (Throwable t) {
+                            System.err.println("Client WARN: Failed to launch admin dashboard reflectively: " + t);
+                            t.printStackTrace(System.err);
+                            // Fallback to old AdminDashboardFrame
+                            AdminDashboardFrame f = new AdminDashboardFrame(user);
+                            DashboardController controller = new DashboardController(user, f);
+                            f.setController(controller);
+                            f.setVisible(true);
+                        }
+                    });
                 }
                 default -> {
                     // Fallback to the original DashboardMainPanel embedded frame for unknown roles

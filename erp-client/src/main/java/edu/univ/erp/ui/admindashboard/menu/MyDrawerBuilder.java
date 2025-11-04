@@ -283,21 +283,21 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                     return;
                 }
 
-                // Open full timetable in main area when My Timetable is selected
+                // Open Admin Dashboard when My Timetable is selected (redirect to admin functions)
                 if (detectedLabel != null && detectedLabel.equalsIgnoreCase("My Timetable")) {
-                    FormManager.showForm(new TimetableForm());
+                    FormManager.showForm(new DashboardForm());
                     return;
                 }
 
-                // Open My Grades when selected
+                // Open Admin Dashboard when My Grades is selected (redirect to admin functions)
                 if (detectedLabel != null && detectedLabel.equalsIgnoreCase("My Grades")) {
-                    FormManager.showForm(new MyGradesForm());
+                    FormManager.showForm(new DashboardForm());
                     return;
                 }
 
-                // Open Notifications when selected
+                // Open Admin Dashboard when Notification is selected (redirect to admin functions)
                 if (detectedLabel != null && detectedLabel.equalsIgnoreCase("Notification")) {
-                    FormManager.showForm(new NotificationForm());
+                    FormManager.showForm(new DashboardForm());
                     return;
                 }
 
@@ -316,14 +316,14 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                     }
 
                     if (topLabel != null && topLabel.equalsIgnoreCase("Course Catalog")) {
-                        // "All Courses" selected
+                        // "All Courses" selected - redirect to admin dashboard
                         if (index[1] == 0) {
-                            FormManager.showForm(new RegisterCoursesForm());
+                            FormManager.showForm(new DashboardForm());
                             return;
                         }
-                        // "My Registered Courses" selected - open MyCoursesForm
+                        // "My Registered Courses" selected - redirect to admin dashboard
                         if (index[1] == 1) {
-                            FormManager.showForm(new MyCoursesForm());
+                            FormManager.showForm(new DashboardForm());
                             return;
                         }
                     }
