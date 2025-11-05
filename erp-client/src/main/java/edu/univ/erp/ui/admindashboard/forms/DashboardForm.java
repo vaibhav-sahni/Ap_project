@@ -369,7 +369,12 @@ public class DashboardForm extends SimpleForm {
         content.add(new JLabel("Year:"));
         JTextField txtYear = new JTextField();
         txtYear.setPreferredSize(new java.awt.Dimension(200, 30));
-        content.add(txtYear, "gapbottom 15");
+    content.add(txtYear, "gapbottom 15");
+
+    content.add(new JLabel("Initial Password:"));
+    javax.swing.JPasswordField txtPassword = new javax.swing.JPasswordField();
+    txtPassword.setPreferredSize(new java.awt.Dimension(200, 30));
+    content.add(txtPassword, "gapbottom 15");
 
         JPanel buttons = new JPanel(new MigLayout("align center", "[120!][120!]"));
         JButton btnCancel = new JButton("Cancel");
@@ -403,11 +408,12 @@ public class DashboardForm extends SimpleForm {
                         y // year
                 );
 
-                // Default password for new students
-                String defaultPassword = "student123";
+                // Read password from the dialog (allow empty to use default)
+                String pwd = new String(txtPassword.getPassword());
+                if (pwd == null || pwd.trim().isEmpty()) pwd = "student123";
 
                 edu.univ.erp.ui.actions.AdminActions adminActions = new edu.univ.erp.ui.actions.AdminActions();
-                String result = adminActions.createStudent(student, defaultPassword);
+                String result = adminActions.createStudent(student, pwd);
 
                 dialog.dispose();
                 JOptionPane.showMessageDialog(this, "Student created successfully: " + result, "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -438,7 +444,12 @@ public class DashboardForm extends SimpleForm {
         content.add(new JLabel("Department:"));
         JTextField txtDept = new JTextField();
         txtDept.setPreferredSize(new java.awt.Dimension(200, 30));
-        content.add(txtDept, "gapbottom 15");
+    content.add(txtDept, "gapbottom 15");
+
+    content.add(new JLabel("Initial Password:"));
+    javax.swing.JPasswordField txtInstrPassword = new javax.swing.JPasswordField();
+    txtInstrPassword.setPreferredSize(new java.awt.Dimension(200, 30));
+    content.add(txtInstrPassword, "gapbottom 15");
 
         JPanel buttons = new JPanel(new MigLayout("align center", "[120!][120!]"));
         JButton btnCancel = new JButton("Cancel");
@@ -468,11 +479,12 @@ public class DashboardForm extends SimpleForm {
                 );
                 instructor.setName(name);
 
-                // Default password for new instructors
-                String defaultPassword = "instructor123";
+                // Read password from the dialog (allow empty to use default)
+                String pwd = new String(txtInstrPassword.getPassword());
+                if (pwd == null || pwd.trim().isEmpty()) pwd = "instr123";
 
                 edu.univ.erp.ui.actions.AdminActions adminActions = new edu.univ.erp.ui.actions.AdminActions();
-                String result = adminActions.createInstructor(instructor, defaultPassword);
+                String result = adminActions.createInstructor(instructor, pwd);
 
                 dialog.dispose();
                 JOptionPane.showMessageDialog(this, "Instructor created successfully: " + result, "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -1090,11 +1102,14 @@ public class DashboardForm extends SimpleForm {
 
         btnCancel.addActionListener(a -> dialog.dispose());
         btnCreateBackup.addActionListener(a -> {
-            // For now, show a placeholder message
+            // Delegate to AdminUiHandlers which implement download behaviour (file chooser + server request)
             dialog.dispose();
-            JOptionPane.showMessageDialog(this,
-                    "Backup functionality would be implemented here.\nThis requires server-side backup API.",
-                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+                new edu.univ.erp.ui.handlers.AdminUiHandlers(cu).handleDownloadBackupClick();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Failed to start backup: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         dialog.setContentPane(content);
@@ -1121,11 +1136,14 @@ public class DashboardForm extends SimpleForm {
 
         btnCancel.addActionListener(a -> dialog.dispose());
         btnSelectFile.addActionListener(a -> {
-            // For now, show a placeholder message
+            // Delegate to AdminUiHandlers which implement restore behaviour (file chooser + server upload)
             dialog.dispose();
-            JOptionPane.showMessageDialog(this,
-                    "Restore functionality would be implemented here.\nThis requires server-side restore API.",
-                    "Info", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+                new edu.univ.erp.ui.handlers.AdminUiHandlers(cu).handleRestoreBackupClick();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Failed to start restore: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         dialog.setContentPane(content);
@@ -1191,10 +1209,22 @@ public class DashboardForm extends SimpleForm {
             java.util.List<java.util.Map<String, Object>> instructorList = adminActions.fetchAllInstructors();
 
             instructors.clear();
-            for (java.util.Map<String, Object> inst : instructorList) {
-                String name = (String) inst.get("name");
-                String dept = (String) inst.get("department");
-                instructors.add(name + " (" + dept + ")");
+            if (instructorList != null) {
+                for (java.util.Map<String, Object> inst : instructorList) {
+                    String username = inst.get("username") == null ? "" : inst.get("username").toString();
+                    String name = inst.get("name") == null ? username : inst.get("name").toString();
+                    if (name == null) name = "";
+                    String dept = inst.get("department") == null ? "" : inst.get("department").toString();
+
+                    // Build a clean display string. Avoid showing literal "null".
+                    String display;
+                    if (!dept.isEmpty()) {
+                        display = name.isEmpty() ? (username.isEmpty() ? "Unnamed" : username) : name + " (" + dept + ")";
+                    } else {
+                        display = name.isEmpty() ? (username.isEmpty() ? "Unnamed" : username) : name;
+                    }
+                    instructors.add(display);
+                }
             }
         } catch (Exception e) {
             System.err.println("Failed to load instructor data: " + e.getMessage());
@@ -1209,6 +1239,16 @@ public class DashboardForm extends SimpleForm {
 
         // Initialize maintenance mode state from server
         initializeMaintenanceMode();
+
+        // Start asynchronous load of instructor data so that dialogs which depend on
+        // the in-memory `instructors` list won't encounter a race if opened immediately.
+        new Thread(() -> {
+            try {
+                loadInstructorData();
+            } catch (Throwable t) {
+                System.err.println("Failed async loadInstructorData: " + t.getMessage());
+            }
+        }).start();
 
         // "Toggle Maintenance" Button - toggle behavior
         btnToggleMaintenance.addActionListener((ActionEvent e) -> {

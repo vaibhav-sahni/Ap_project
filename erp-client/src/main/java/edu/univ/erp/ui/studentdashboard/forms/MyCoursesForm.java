@@ -333,7 +333,7 @@ public class MyCoursesForm extends SimpleForm {
                         // We'll merge timetable (registered) and completed (grades) while avoiding duplicates by sectionId.
                         courses.clear();
 
-                        edu.univ.erp.ui.utils.UIHelper.runAsync(() -> {
+                        edu.univ.erp.util.UIHelper.runAsync(() -> {
                             // Parallel-friendly fetch sequence executed synchronously inside the task
                             java.util.List<edu.univ.erp.domain.CourseCatalog> timetable = null;
                             java.util.List<edu.univ.erp.domain.CourseCatalog> catalog = null;
@@ -1437,7 +1437,7 @@ public class MyCoursesForm extends SimpleForm {
                     edu.univ.erp.api.student.StudentAPI studentAPI = new edu.univ.erp.api.student.StudentAPI();
                     actionButton.setEnabled(false);
                     actionButton.setText("Dropping...");
-                    edu.univ.erp.ui.utils.UIHelper.runAsync(() -> studentAPI.dropCourse(uid, sectionId), (String msg) -> {
+                    edu.univ.erp.util.UIHelper.runAsync(() -> studentAPI.dropCourse(uid, sectionId), (String msg) -> {
                         // On success, update UI (remove from taken list)
                         cs.isRegistered = false;
                         if (cs.enrolledCount > 0) cs.enrolledCount -= 1;

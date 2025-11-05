@@ -33,7 +33,7 @@ import edu.univ.erp.api.student.StudentAPI;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
-import edu.univ.erp.ui.utils.UIHelper;
+import edu.univ.erp.util.UIHelper;
 import net.miginfocom.swing.MigLayout;
 
 /**

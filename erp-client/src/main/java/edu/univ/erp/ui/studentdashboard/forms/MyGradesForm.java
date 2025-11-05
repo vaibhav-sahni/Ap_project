@@ -183,7 +183,7 @@ public class MyGradesForm extends SimpleForm {
         if (cu == null) return;
         final int uid = cu.getUserId();
         edu.univ.erp.api.student.StudentAPI api = new edu.univ.erp.api.student.StudentAPI();
-        edu.univ.erp.ui.utils.UIHelper.runAsync(() -> api.getMyGrades(uid), (java.util.List<edu.univ.erp.domain.Grade> grades) -> {
+    edu.univ.erp.util.UIHelper.runAsync(() -> api.getMyGrades(uid), (java.util.List<edu.univ.erp.domain.Grade> grades) -> {
             if (grades == null) return;
             java.util.List<GradeEntry> converted = new java.util.ArrayList<>();
             for (edu.univ.erp.domain.Grade g : grades) {

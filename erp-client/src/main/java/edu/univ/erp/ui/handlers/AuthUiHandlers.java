@@ -30,23 +30,62 @@ public class AuthUiHandlers {
     }
 
     public void changePasswordWithUi() {
+        // Show a styled modal dialog with three password fields (Old, New, Confirm)
         try {
-            String oldPass = javax.swing.JOptionPane.showInputDialog(null, "Enter Current Password:");
-            if (oldPass == null) return;
+            javax.swing.JDialog dialog = new javax.swing.JDialog((java.awt.Frame) null, "Change Password", true);
+            javax.swing.JPanel content = new javax.swing.JPanel(new net.miginfocom.swing.MigLayout("wrap, fillx, insets 25", "[grow,fill]"));
 
-            String newPass = javax.swing.JOptionPane.showInputDialog(null, "Enter New Password:");
-            if (newPass == null) return;
+            content.add(new javax.swing.JLabel("Current Password:"), "gaptop 5");
+            javax.swing.JPasswordField txtOld = new javax.swing.JPasswordField();
+            txtOld.setPreferredSize(new java.awt.Dimension(200, 30));
+            content.add(txtOld, "gapbottom 10");
 
-            String confirmPass = javax.swing.JOptionPane.showInputDialog(null, "Confirm New Password:");
-            if (confirmPass == null) return;
+            content.add(new javax.swing.JLabel("New Password:"));
+            javax.swing.JPasswordField txtNew = new javax.swing.JPasswordField();
+            txtNew.setPreferredSize(new java.awt.Dimension(200, 30));
+            content.add(txtNew, "gapbottom 10");
 
-            if (!newPass.equals(confirmPass)) {
-                javax.swing.JOptionPane.showMessageDialog(null, "New password and confirmation do not match.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+            content.add(new javax.swing.JLabel("Confirm New Password:"));
+            javax.swing.JPasswordField txtConfirm = new javax.swing.JPasswordField();
+            txtConfirm.setPreferredSize(new java.awt.Dimension(200, 30));
+            content.add(txtConfirm, "gapbottom 15");
 
-            new AuthAPI().changePassword(user.getUserId(), oldPass, newPass);
-            javax.swing.JOptionPane.showMessageDialog(null, "Password changed successfully.", "Success", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            javax.swing.JPanel buttons = new javax.swing.JPanel(new net.miginfocom.swing.MigLayout("align center", "[120!][120!]") );
+            javax.swing.JButton btnCancel = new javax.swing.JButton("Cancel");
+            javax.swing.JButton btnChange = new javax.swing.JButton("Change");
+            btnCancel.setPreferredSize(new java.awt.Dimension(120, 35));
+            btnChange.setPreferredSize(new java.awt.Dimension(120, 35));
+            buttons.add(btnCancel, "gap 10");
+            buttons.add(btnChange);
+            content.add(buttons, "span, growx, gaptop 10");
+
+            btnCancel.addActionListener(a -> dialog.dispose());
+            btnChange.addActionListener(a -> {
+                try {
+                    String oldPass = new String(txtOld.getPassword());
+                    String newPass = new String(txtNew.getPassword());
+                    String confirm = new String(txtConfirm.getPassword());
+                    if (oldPass.trim().isEmpty() || newPass.trim().isEmpty() || confirm.trim().isEmpty()) {
+                        javax.swing.JOptionPane.showMessageDialog(dialog, "All fields are required.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    if (!newPass.equals(confirm)) {
+                        javax.swing.JOptionPane.showMessageDialog(dialog, "New password and confirmation do not match.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+
+                    new AuthAPI().changePassword(user.getUserId(), oldPass, newPass);
+                    dialog.dispose();
+                    javax.swing.JOptionPane.showMessageDialog(null, "Password changed successfully.", "Success", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) {
+                    javax.swing.JOptionPane.showMessageDialog(dialog, e.getMessage(), "Password Change Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
+                }
+            });
+
+            dialog.setContentPane(content);
+            dialog.pack();
+            dialog.setLocationRelativeTo(null);
+            dialog.setVisible(true);
         } catch (Exception e) {
             javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Password Change Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
         }

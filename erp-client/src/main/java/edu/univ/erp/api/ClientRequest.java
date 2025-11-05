@@ -8,7 +8,7 @@ import java.net.Socket;
 
 import edu.univ.erp.net.ClientConnection;
 import edu.univ.erp.net.ClientSession;
-import edu.univ.erp.ui.util.SessionLostNotifier;
+import edu.univ.erp.util.SessionLostNotifier;
 
 public class ClientRequest {
     private static final String SERVER_HOST = "localhost"; 

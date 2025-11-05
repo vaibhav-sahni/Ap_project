@@ -123,8 +123,9 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
             itemList.add(new Item("My Courses", "book.svg"));
         }
 
-        itemList.add(new Item.Label("ACCOUNT"));
-        itemList.add(new Item("Logout", "logout.svg"));
+    itemList.add(new Item.Label("ACCOUNT"));
+    itemList.add(new Item("Change Password", "lock.svg"));
+    itemList.add(new Item("Logout", "logout.svg"));
 
         MenuItem items[] = itemList.toArray(new MenuItem[0]);
 
@@ -299,6 +300,21 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                         System.err.println("CLIENT WARN: logout via drawer failed: " + t.getMessage());
                         t.printStackTrace(System.err);
                         FormManager.logout();
+                    }
+                    return;
+                }
+
+                // Handle Change Password via AuthUiHandlers
+                if (detectedLabel != null && detectedLabel.equalsIgnoreCase("Change Password")) {
+                    try {
+                        edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+                        if (cu != null) {
+                            new edu.univ.erp.ui.handlers.AuthUiHandlers(cu).changePasswordWithUi();
+                        } else {
+                            javax.swing.JOptionPane.showMessageDialog(null, "Not authenticated.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (Throwable t) {
+                        javax.swing.JOptionPane.showMessageDialog(null, "Failed to change password: " + t.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
                     }
                     return;
                 }

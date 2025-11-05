@@ -59,7 +59,7 @@ public class AdminDAO {
         "SELECT COUNT(*) FROM erp_db.courses WHERE code = ?";
    
 
-    public boolean createStudent(Student student, String password) {
+    public boolean createStudent(Student student, String password) throws SQLException {
         try (Connection conn = DBConnector.getErpConnection()) {
             conn.setAutoCommit(false); // Transaction for both DBs
 
@@ -98,9 +98,6 @@ public class AdminDAO {
 
             conn.commit();
             return true;
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "AdminDAO createStudent error: " + e.getMessage(), e);
-            return false;
         }
     }
 
@@ -291,56 +288,47 @@ public class AdminDAO {
         return 1001; // reasonable default
     }
 
-    public boolean createInstructor(Instructor instructor, String password) {
+    public boolean createInstructor(Instructor instructor, String password) throws SQLException {
     try (Connection conn = DBConnector.getErpConnection()) {
         conn.setAutoCommit(false);
 
         int allocatedUserId = instructor.getUserId();
-        try {
-            if (allocatedUserId == 0) {
-                try (PreparedStatement stmtAuth = conn.prepareStatement(INSERT_AUTH_SQL_NO_ID, PreparedStatement.RETURN_GENERATED_KEYS);
-                     PreparedStatement stmtInstr = conn.prepareStatement(INSERT_INSTRUCTOR_SQL)) {
-                    stmtAuth.setString(1, instructor.getUsername());
-                    stmtAuth.setString(2, instructor.getRole());
-                    stmtAuth.setString(3, PasswordHasher.hashPassword(password));
-                    int updated = stmtAuth.executeUpdate();
-                    if (updated == 0) throw new SQLException("Creating auth entry failed, no rows affected.");
-                    try (ResultSet gen = stmtAuth.getGeneratedKeys()) {
-                        if (gen.next()) allocatedUserId = gen.getInt(1);
-                        else throw new SQLException("Creating auth entry failed, no generated key obtained.");
-                    }
-
-                    stmtInstr.setInt(1, allocatedUserId);
-                    stmtInstr.setString(2, instructor.getName());
-                    stmtInstr.setString(3, instructor.getDepartmentName());
-                    stmtInstr.executeUpdate();
+        if (allocatedUserId == 0) {
+            try (PreparedStatement stmtAuth = conn.prepareStatement(INSERT_AUTH_SQL_NO_ID, PreparedStatement.RETURN_GENERATED_KEYS);
+                 PreparedStatement stmtInstr = conn.prepareStatement(INSERT_INSTRUCTOR_SQL)) {
+                stmtAuth.setString(1, instructor.getUsername());
+                stmtAuth.setString(2, instructor.getRole());
+                stmtAuth.setString(3, PasswordHasher.hashPassword(password));
+                int updated = stmtAuth.executeUpdate();
+                if (updated == 0) throw new SQLException("Creating auth entry failed, no rows affected.");
+                try (ResultSet gen = stmtAuth.getGeneratedKeys()) {
+                    if (gen.next()) allocatedUserId = gen.getInt(1);
+                    else throw new SQLException("Creating auth entry failed, no generated key obtained.");
                 }
-            } else {
-                try (PreparedStatement stmtAuth = conn.prepareStatement(INSERT_AUTH_SQL);
-                     PreparedStatement stmtInstr = conn.prepareStatement(INSERT_INSTRUCTOR_SQL)) {
-                    stmtAuth.setInt(1, allocatedUserId);
-                    stmtAuth.setString(2, instructor.getUsername());
-                    stmtAuth.setString(3, instructor.getRole());
-                    stmtAuth.setString(4, PasswordHasher.hashPassword(password));
-                    stmtAuth.executeUpdate();
 
-                    stmtInstr.setInt(1, allocatedUserId);
-                    stmtInstr.setString(2, instructor.getName());
-                    stmtInstr.setString(3, instructor.getDepartmentName());
-                    stmtInstr.executeUpdate();
-                }
+                stmtInstr.setInt(1, allocatedUserId);
+                stmtInstr.setString(2, instructor.getName());
+                stmtInstr.setString(3, instructor.getDepartmentName());
+                stmtInstr.executeUpdate();
             }
+        } else {
+            try (PreparedStatement stmtAuth = conn.prepareStatement(INSERT_AUTH_SQL);
+                 PreparedStatement stmtInstr = conn.prepareStatement(INSERT_INSTRUCTOR_SQL)) {
+                stmtAuth.setInt(1, allocatedUserId);
+                stmtAuth.setString(2, instructor.getUsername());
+                stmtAuth.setString(3, instructor.getRole());
+                stmtAuth.setString(4, PasswordHasher.hashPassword(password));
+                stmtAuth.executeUpdate();
 
-            conn.commit();
-            return true;
-        } catch (SQLException e) {
-            try { conn.rollback(); } catch (SQLException ex) { LOGGER.log(Level.WARNING, "Rollback failed", ex); }
-            LOGGER.log(Level.SEVERE, "AdminDAO createInstructor error: " + e.getMessage(), e);
-            return false;
+                stmtInstr.setInt(1, allocatedUserId);
+                stmtInstr.setString(2, instructor.getName());
+                stmtInstr.setString(3, instructor.getDepartmentName());
+                stmtInstr.executeUpdate();
+            }
         }
-    } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "AdminDAO createInstructor outer SQL error: " + e.getMessage(), e);
-        return false;
+
+        conn.commit();
+        return true;
     }
 }
 

@@ -44,7 +44,7 @@ import edu.univ.erp.domain.Section;
 import edu.univ.erp.ui.actions.AdminActions;
 import edu.univ.erp.ui.instructordashboard.components.SimpleForm;
 import edu.univ.erp.ui.instructordashboard.menu.FormManager;
-import edu.univ.erp.ui.utils.UIHelper;
+import edu.univ.erp.util.UIHelper;
 import net.miginfocom.swing.MigLayout;
 
 /**

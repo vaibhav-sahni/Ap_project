@@ -38,6 +38,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
+
 import java.awt.Window;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.WindowAdapter;
@@ -45,10 +46,10 @@ import java.awt.event.WindowEvent;
 
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import edu.univ.erp.api.NotificationAPI;
-import edu.univ.erp.ui.utils.UIHelper;
+import edu.univ.erp.util.UIHelper;
 import edu.univ.erp.ui.studentdashboard.menu.FormManager;
-import com.formdev.flatlaf.FlatLaf;
 
+import com.formdev.flatlaf.FlatLaf;
 import net.miginfocom.swing.MigLayout;
 
 public class DashboardForm extends SimpleForm {
@@ -302,7 +303,7 @@ public class DashboardForm extends SimpleForm {
         if (u == null) {
             return;
         }
-        edu.univ.erp.ui.utils.UIHelper.runAsync(() -> {
+        edu.univ.erp.util.UIHelper.runAsync(() -> {
             edu.univ.erp.ui.actions.StudentActions actions = new edu.univ.erp.ui.actions.StudentActions();
             edu.univ.erp.api.student.StudentAPI.CgpaResponse resp = null;
             int courseCount = 0;
@@ -346,14 +347,14 @@ public class DashboardForm extends SimpleForm {
                             coursesCard.updateGauge(ccVal, 20);
                         }
                     } catch (Throwable t) {
-                        edu.univ.erp.ui.utils.MessagePresenter.showError(this, "Failed to update dashboard UI: " + t.getMessage());
+                        edu.univ.erp.util.MessagePresenter.showError(this, "Failed to update dashboard UI: " + t.getMessage());
                     }
                 }
             } catch (Throwable t) {
-                edu.univ.erp.ui.utils.MessagePresenter.showError(this, t.getMessage());
+                edu.univ.erp.util.MessagePresenter.showError(this, t.getMessage());
             }
         }, (Exception ex) -> {
-            edu.univ.erp.ui.utils.MessagePresenter.showError(this, ex.getMessage());
+            edu.univ.erp.util.MessagePresenter.showError(this, ex.getMessage());
         });
     }
 

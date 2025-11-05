@@ -162,8 +162,32 @@ public class AdminUiHandlers {
             if (password == null) return;
 
             Student newStudent = new Student(userId, username, role, rollNo, program, year);
-            String successMsg = adminActions.createStudent(newStudent, password);
-            JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                String successMsg = adminActions.createStudent(newStudent, password);
+                JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                String raw = e.getMessage() == null ? "" : e.getMessage();
+                String msg = raw.toLowerCase();
+                // Prefer explicit server error prefixes if present
+                if (raw.startsWith("USERNAME_EXISTS:") || raw.startsWith("USERNAME_EXISTS")) {
+                    JOptionPane.showMessageDialog(null, "Username '" + username + "' already exists.", "Duplicate Username", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                if (raw.startsWith("ROLL_EXISTS:") || raw.startsWith("ROLL_EXISTS")) {
+                    JOptionPane.showMessageDialog(null, "Roll number '" + rollNo + "' already exists.", "Duplicate Roll", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                // Fallback: look for generic duplicate messages
+                if (msg.contains("already exists") || msg.contains("duplicate") || msg.contains("username") || msg.contains("roll")) {
+                    if (msg.contains("roll") || msg.contains("roll_no")) {
+                        JOptionPane.showMessageDialog(null, "Roll number '" + rollNo + "' already exists.", "Duplicate Roll", JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Username '" + username + "' already exists.", "Duplicate Username", JOptionPane.ERROR_MESSAGE);
+                    }
+                    return;
+                }
+                throw e; // rethrow to be handled by outer catch
+            }
         } catch (NumberFormatException nfe) {
             JOptionPane.showMessageDialog(null, "Invalid number entered.", "Input Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
@@ -193,8 +217,27 @@ public class AdminUiHandlers {
 
             Instructor instructor = new Instructor(userId, username, role, department);
             instructor.setName(name);
-            String successMsg = adminActions.createInstructor(instructor, password);
-            JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                String successMsg = adminActions.createInstructor(instructor, password);
+                JOptionPane.showMessageDialog(null, successMsg, "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                String raw = e.getMessage() == null ? "" : e.getMessage();
+                if (raw.startsWith("USERNAME_EXISTS:") || raw.startsWith("USERNAME_EXISTS")) {
+                    JOptionPane.showMessageDialog(null, "Username '" + username + "' already exists.", "Duplicate Username", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                if (raw.startsWith("ROLL_EXISTS:") || raw.startsWith("ROLL_EXISTS")) {
+                    // Shouldn't apply to instructors, but keep for safety
+                    JOptionPane.showMessageDialog(null, "Identifier already exists.", "Duplicate", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                String msg = raw.toLowerCase();
+                if (msg.contains("already exists") || msg.contains("duplicate") || msg.contains("username")) {
+                    JOptionPane.showMessageDialog(null, "Username '" + username + "' already exists.", "Duplicate Username", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                throw e;
+            }
         } catch (Exception e) {
             if (e instanceof NumberFormatException) {
                 JOptionPane.showMessageDialog(null, "Invalid User ID entered.", "Input Error", JOptionPane.ERROR_MESSAGE);

@@ -5,8 +5,7 @@ import java.awt.Color;
 import javax.swing.JOptionPane;
 
 import edu.univ.erp.domain.UserAuth;
-import edu.univ.erp.ui.controller.DashboardController;
-import edu.univ.erp.ui.preview.AdminDashboardFrame;
+import edu.univ.erp.ui.admindashboard.application.Application;
 
 public class Login extends javax.swing.JFrame {
 
@@ -282,29 +281,48 @@ public class Login extends javax.swing.JFrame {
                     });
                 }
                 case "Admin" -> {
-                    // Prefer launching the new admin dashboard Application reflectively
-                    // to avoid introducing a compile-time dependency on that package.
+                    // Prefer launching the new admin dashboard Application directly
+                    // so it can read ClientContext and initialize with real data.
                     java.awt.EventQueue.invokeLater(() -> {
                         try {
-                            // 1) Try to instantiate Application and call setVisible(true)
-                            try {
-                                Class<?> appClass = Class.forName("edu.univ.erp.ui.admindashboard.application.Application");
-                                Object app = appClass.getDeclaredConstructor().newInstance();
-                                try {
-                                    java.lang.reflect.Method setVisible = appClass.getMethod("setVisible", boolean.class);
-                                    setVisible.invoke(app, true);
-                                } catch (NoSuchMethodException ignored) {
-                                }
-                            } catch (ClassNotFoundException ignored) {
-                                // Application class not present; fallback to old AdminDashboardFrame
-                                AdminDashboardFrame f = new AdminDashboardFrame(user);
-                                DashboardController controller = new DashboardController(user, f);
-                                f.setController(controller);
-                                f.setVisible(true);
-                                return;
-                            }
+                            // Directly instantiate the admin Application (compile-time link).
+                            Application app = new Application();
+                            app.setVisible(true);
+                            return;
+                        } catch (Throwable t) {
+                            // If direct instantiation fails for any reason, fall back to
+                            // the previous reflective/fallback behavior to keep compatibility.
+                            System.err.println("Client WARN: Direct admin Application launch failed: " + t);
+                            t.printStackTrace(System.err);
+                        }
 
-                            // 2) Build a ModelUser instance reflectively (try common package names)
+                        // FALLBACK: previous reflective/fallback path
+                        try {
+                            // Attempt reflective instantiation as before
+                            Class<?> appClass = Class.forName("edu.univ.erp.ui.admindashboard.application.Application");
+                            Object app = appClass.getDeclaredConstructor().newInstance();
+                            try {
+                                java.lang.reflect.Method setVisible = appClass.getMethod("setVisible", boolean.class);
+                                setVisible.invoke(app, true);
+                            } catch (NoSuchMethodException ignored) {
+                            }
+                        } catch (ClassNotFoundException ignored) {
+                            // Application class not present; do not show preview placeholder frames.
+                            // Inform the user that the admin dashboard is not available in this build.
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(null,
+                                        "Admin dashboard is not available in this build.",
+                                        "Dashboard Unavailable",
+                                        JOptionPane.WARNING_MESSAGE);
+                            });
+                            return;
+                        } catch (Throwable t) {
+                            System.err.println("Client WARN: Failed to launch admin dashboard reflectively: " + t);
+                            t.printStackTrace(System.err);
+                        }
+
+                        // Ensure ModelUser login is attempted reflectively as a last step
+                        try {
                             Object muObj = null;
                             String[] muCandidates = new String[]{"edu.univ.erp.ui.admindashboard.model.ModelUser", "model.ModelUser"};
                             for (String muName : muCandidates) {
@@ -333,11 +351,9 @@ public class Login extends javax.swing.JFrame {
                                 }
                             }
 
-                            // 3) If we have a ModelUser, try to call menu.FormManager.login(mu) reflectively
                             if (muObj != null) {
                                 try {
                                     Class<?> fmClass = Class.forName("edu.univ.erp.ui.admindashboard.menu.FormManager");
-                                    // try to find a login method accepting the ModelUser type or Object
                                     java.lang.reflect.Method m = null;
                                     for (java.lang.reflect.Method mm : fmClass.getMethods()) {
                                         if (mm.getName().equals("login") && mm.getParameterCount() == 1) {
@@ -351,27 +367,18 @@ public class Login extends javax.swing.JFrame {
                                 } catch (ClassNotFoundException ignored) {
                                 }
                             }
-                        } catch (Throwable t) {
-                            System.err.println("Client WARN: Failed to launch admin dashboard reflectively: " + t);
-                            t.printStackTrace(System.err);
-                            // Fallback to old AdminDashboardFrame
-                            AdminDashboardFrame f = new AdminDashboardFrame(user);
-                            DashboardController controller = new DashboardController(user, f);
-                            f.setController(controller);
-                            f.setVisible(true);
+                        } catch (Throwable ignore) {
                         }
                     });
                 }
                 default -> {
-                    // Fallback to the original DashboardMainPanel embedded frame for unknown roles
-                    javax.swing.JFrame dashboardFrame = new javax.swing.JFrame("ERP Dashboard");
-                    dashboardFrame.setSize(1000, 700);
-                    dashboardFrame.setLocationRelativeTo(null);
-                    dashboardFrame.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-                    DashboardController controller = new DashboardController(user, dashboardFrame);
-                    edu.univ.erp.ui.preview.DashboardMainPanel mainPanel = new edu.univ.erp.ui.preview.DashboardMainPanel(user, controller);
-                    dashboardFrame.getContentPane().add(mainPanel);
-                    dashboardFrame.setVisible(true);
+                    // No dedicated dashboard available for this role. Do not open preview placeholders.
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(null,
+                                "No dashboard is available for role: " + role,
+                                "Not Implemented",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    });
                 }
             }
 

@@ -31,13 +31,33 @@ public class AdminService {
     // --------------------------
     public String createStudent(Student student, String passwordHash) throws Exception {
         if (student == null) throw new Exception("Student object cannot be null.");
-        if (student.getUserId() == 0 || student.getRollNo() == null) {
-            throw new Exception("Student must have userId and roll number.");
+        // Allow client to pass userId=0 to let DB allocate a new id. Require roll number.
+        if (student.getRollNo() == null || student.getRollNo().trim().isEmpty()) {
+            throw new Exception("Student must have a roll number.");
         }
 
-        boolean created = adminDAO.createStudent(student, passwordHash);
-        if (!created) throw new Exception("Failed to create student. Check DB constraints.");
-        return "Student created successfully: " + student.getRollNo();
+        try {
+            boolean created = adminDAO.createStudent(student, passwordHash);
+            if (!created) throw new Exception("Failed to create student. Check DB constraints.");
+            return "Student created successfully: " + student.getRollNo();
+        } catch (java.sql.SQLException e) {
+            // Map common SQL constraint violations to user-friendly messages
+            String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
+            int errorCode = e.getErrorCode();
+            // MySQL duplicate entry error code = 1062
+            if (errorCode == 1062 || msg.contains("duplicate entry")) {
+                // Try to guess whether the duplicate was on username or roll_no by inspecting the message
+                if (msg.contains("username") || msg.contains("users_auth") ) {
+                    throw new Exception("USERNAME_EXISTS:Username '" + student.getUsername() + "' already exists.");
+                } else if (msg.contains("roll_no") || msg.contains("students") ) {
+                    throw new Exception("ROLL_EXISTS:Roll number '" + student.getRollNo() + "' already exists.");
+                } else {
+                    throw new Exception("DUPLICATE_ENTRY:A unique constraint was violated.");
+                }
+            }
+            // For other SQL exceptions, preserve details but mark as server-side DB error
+            throw new Exception("SERVER_DB_ERROR:" + e.getMessage(), e);
+        }
     }
 
     // --------------------------
@@ -254,10 +274,24 @@ public class AdminService {
 
     public String createInstructor(Instructor instructor, String passwordHash) throws Exception {
     if (instructor == null) throw new Exception("Instructor object cannot be null.");
-    if (instructor.getUserId() == 0) throw new Exception("Instructor must have a valid user ID.");
+    // Allow userId=0 so server may allocate; require username present
+    if (instructor.getUsername() == null || instructor.getUsername().trim().isEmpty()) throw new Exception("Instructor must have a username.");
 
-    boolean created = adminDAO.createInstructor(instructor, passwordHash);
-    if (!created) throw new Exception("Failed to create instructor. Check DB constraints.");
-    return "Instructor created successfully: " + instructor.getName();
+    try {
+        boolean created = adminDAO.createInstructor(instructor, passwordHash);
+        if (!created) throw new Exception("Failed to create instructor. Check DB constraints.");
+        return "Instructor created successfully: " + instructor.getName();
+    } catch (java.sql.SQLException e) {
+        String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
+        int errorCode = e.getErrorCode();
+        if (errorCode == 1062 || msg.contains("duplicate entry")) {
+            if (msg.contains("username") || msg.contains("users_auth")) {
+                throw new Exception("USERNAME_EXISTS:Username '" + instructor.getUsername() + "' already exists.");
+            } else {
+                throw new Exception("DUPLICATE_ENTRY:Unique constraint violated while creating instructor.");
+            }
+        }
+        throw new Exception("SERVER_DB_ERROR:" + e.getMessage(), e);
+    }
 }
 }

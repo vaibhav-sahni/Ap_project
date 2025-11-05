@@ -62,7 +62,7 @@ import com.formdev.flatlaf.FlatLaf;
 import edu.univ.erp.api.student.StudentAPI;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
-import edu.univ.erp.ui.utils.UIHelper;
+import edu.univ.erp.util.UIHelper;
 import net.miginfocom.swing.MigLayout;
 
 public class RegisterCoursesForm extends SimpleForm {
