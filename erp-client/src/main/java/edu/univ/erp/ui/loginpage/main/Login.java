@@ -12,6 +12,9 @@ public class Login extends javax.swing.JFrame {
     edu.univ.erp.api.auth.AuthAPI authApi = new edu.univ.erp.api.auth.AuthAPI();
     private final boolean UNDECORATED = !true; // Same as student dashboard
 
+    // Panel state management
+    private boolean isPasswordResetMode;
+
     public Login() {
         initComponents();
     }
@@ -20,10 +23,20 @@ public class Login extends javax.swing.JFrame {
 
         background = new edu.univ.erp.ui.loginpage.login.Background();
         panel = new javax.swing.JPanel();
+
+        // Login form components
         txtUser = new edu.univ.erp.ui.loginpage.swing.TextField();
         txtPassword = new edu.univ.erp.ui.loginpage.swing.PasswordField();
         jLabel1 = new javax.swing.JLabel();
         cmdLogin = new edu.univ.erp.ui.loginpage.swing.Button();
+        lblForgotPassword = new javax.swing.JLabel();
+
+        // Password reset form components
+        txtResetUser = new edu.univ.erp.ui.loginpage.swing.TextField();
+        txtNewPassword = new edu.univ.erp.ui.loginpage.swing.PasswordField();
+        txtConfirmPassword = new edu.univ.erp.ui.loginpage.swing.PasswordField();
+        cmdChangePassword = new edu.univ.erp.ui.loginpage.swing.Button();
+        lblSignIn = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -43,6 +56,45 @@ public class Login extends javax.swing.JFrame {
 
         txtPassword.setHint("Password");
 
+        // Configure password reset components
+        txtResetUser.setHint("User Name");
+        txtNewPassword.setHint("New Password");
+        txtConfirmPassword.setHint("Re-enter New Password");
+
+        cmdChangePassword.setForeground(new java.awt.Color(231, 231, 231));
+        cmdChangePassword.setText("CHANGE PASSWORD");
+        cmdChangePassword.addActionListener(evt -> cmdChangePasswordActionPerformed());
+
+        // Configure sign in link
+        lblSignIn.setFont(new java.awt.Font("sansserif", 0, 12));
+        lblSignIn.setForeground(new java.awt.Color(200, 200, 200));
+        lblSignIn.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblSignIn.setText("<html><u>Sign In</u></html>");
+        lblSignIn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        lblSignIn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                lblSignInMouseClicked();
+            }
+
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                lblSignIn.setForeground(new java.awt.Color(255, 255, 255));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                lblSignIn.setForeground(new java.awt.Color(200, 200, 200));
+            }
+        });
+
+        // Initially hide password reset components
+        txtResetUser.setVisible(false);
+        txtNewPassword.setVisible(false);
+        txtConfirmPassword.setVisible(false);
+        cmdChangePassword.setVisible(false);
+        lblSignIn.setVisible(false);
+
         jLabel1.setFont(new java.awt.Font("sansserif", 1, 24)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -53,6 +105,29 @@ public class Login extends javax.swing.JFrame {
         // use lambda to avoid anonymous inner class lint warnings
         cmdLogin.addActionListener(evt -> cmdLoginActionPerformed());
 
+        // Configure forgot password link
+        lblForgotPassword.setFont(new java.awt.Font("sansserif", 0, 12));
+        lblForgotPassword.setForeground(new java.awt.Color(200, 200, 200));
+        lblForgotPassword.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        lblForgotPassword.setText("<html><u>Forgot Password?</u></html>");
+        lblForgotPassword.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        lblForgotPassword.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                lblForgotPasswordMouseClicked();
+            }
+
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                lblForgotPassword.setForeground(new java.awt.Color(255, 255, 255));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                lblForgotPassword.setForeground(new java.awt.Color(200, 200, 200));
+            }
+        });
+
         javax.swing.GroupLayout panelLayout = new javax.swing.GroupLayout(panel);
         panel.setLayout(panelLayout);
         panelLayout.setHorizontalGroup(
@@ -60,14 +135,23 @@ public class Login extends javax.swing.JFrame {
                         .addGroup(panelLayout.createSequentialGroup()
                                 .addGap(60, 60, 60)
                                 .addGroup(panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        // Login form components
                                         .addComponent(txtUser, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addComponent(txtPassword, javax.swing.GroupLayout.DEFAULT_SIZE, 200, Short.MAX_VALUE)
                                         .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 162, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(cmdLogin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addComponent(cmdLogin, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(lblForgotPassword, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        // Password reset form components (same alignment)
+                                        .addComponent(txtResetUser, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(txtNewPassword, javax.swing.GroupLayout.DEFAULT_SIZE, 200, Short.MAX_VALUE)
+                                        .addComponent(txtConfirmPassword, javax.swing.GroupLayout.DEFAULT_SIZE, 200, Short.MAX_VALUE)
+                                        .addComponent(cmdChangePassword, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(lblSignIn, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addContainerGap(70, Short.MAX_VALUE))
         );
         panelLayout.setVerticalGroup(
                 panelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        // Login form group
                         .addGroup(panelLayout.createSequentialGroup()
                                 .addGap(70, 70, 70)
                                 .addComponent(jLabel1)
@@ -77,7 +161,23 @@ public class Login extends javax.swing.JFrame {
                                 .addComponent(txtPassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(30, 30, 30)
                                 .addComponent(cmdLogin, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(70, Short.MAX_VALUE))
+                                .addGap(15, 15, 15)
+                                .addComponent(lblForgotPassword)
+                                .addContainerGap(55, Short.MAX_VALUE))
+                        // Password reset form group (same vertical positioning)
+                        .addGroup(panelLayout.createSequentialGroup()
+                                .addGap(70, 70, 70)
+                                .addGap(54, 54, 54) // Space where title would be (24px font + 30px gap)
+                                .addComponent(txtResetUser, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(txtNewPassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(txtConfirmPassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(30, 30, 30)
+                                .addComponent(cmdChangePassword, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(15, 15, 15)
+                                .addComponent(lblSignIn)
+                                .addContainerGap(37, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout backgroundLayout = new javax.swing.GroupLayout(background);
@@ -397,6 +497,134 @@ public class Login extends javax.swing.JFrame {
         }
     }
 
+    private void lblForgotPasswordMouseClicked() {
+        showPasswordResetForm();
+    }
+
+    private void showPasswordResetForm() {
+        isPasswordResetMode = true;
+
+        // Hide login form components instantly
+        txtUser.setVisible(false);
+        txtPassword.setVisible(false);
+        jLabel1.setVisible(false);
+        cmdLogin.setVisible(false);
+        lblForgotPassword.setVisible(false);
+
+        // Clear any existing text
+        txtResetUser.setText("");
+        txtNewPassword.setText("");
+        txtConfirmPassword.setText("");
+
+        // Show password reset form components instantly
+        txtResetUser.setVisible(true);
+        txtNewPassword.setVisible(true);
+        txtConfirmPassword.setVisible(true);
+        cmdChangePassword.setVisible(true);
+        lblSignIn.setVisible(true);
+
+        // Focus on the first field
+        txtResetUser.requestFocus();
+
+        // Repaint the panel
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    private void lblSignInMouseClicked() {
+        showLoginForm();
+    }
+
+    private void showLoginForm() {
+        isPasswordResetMode = false;
+
+        // Hide password reset form components instantly
+        txtResetUser.setVisible(false);
+        txtNewPassword.setVisible(false);
+        txtConfirmPassword.setVisible(false);
+        cmdChangePassword.setVisible(false);
+        lblSignIn.setVisible(false);
+
+        // Clear any existing text
+        txtUser.setText("");
+        txtPassword.setText("");
+
+        // Show login form components instantly
+        txtUser.setVisible(true);
+        txtPassword.setVisible(true);
+        jLabel1.setVisible(true);
+        cmdLogin.setVisible(true);
+        lblForgotPassword.setVisible(true);
+
+        // Focus on the first field
+        txtUser.requestFocus();
+
+        // Repaint the panel
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    private void cmdChangePasswordActionPerformed() {
+        String username = txtResetUser.getText().trim();
+        String newPassword = String.valueOf(txtNewPassword.getPassword());
+        String confirmPassword = String.valueOf(txtConfirmPassword.getPassword());
+
+        // Validate inputs
+        if (username.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Please enter your username.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+            txtResetUser.requestFocus();
+            return;
+        }
+
+        if (newPassword.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Please enter a new password.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+            txtNewPassword.requestFocus();
+            return;
+        }
+
+        if (newPassword.length() < 6) {
+            JOptionPane.showMessageDialog(this,
+                    "Password must be at least 6 characters long.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+            txtNewPassword.requestFocus();
+            return;
+        }
+
+        if (!newPassword.equals(confirmPassword)) {
+            JOptionPane.showMessageDialog(this,
+                    "Passwords do not match. Please try again.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+            txtConfirmPassword.requestFocus();
+            return;
+        }
+
+        try {
+            // Here you would typically call an API to change the password
+            // For now, show a success message and return to login form
+            JOptionPane.showMessageDialog(this,
+                    "Password changed successfully!\nPlease log in with your new password.",
+                    "Password Changed",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            // Return to login form
+            showLoginForm();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Failed to change password: " + ex.getMessage(),
+                    "Password Change Failed",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     public static void main(String args[]) {
         // Copy EXACTLY from student dashboard Application.java for consistent theme and animations
         com.formdev.flatlaf.fonts.roboto.FlatRobotoFont.install();
@@ -418,7 +646,15 @@ public class Login extends javax.swing.JFrame {
     private edu.univ.erp.ui.loginpage.login.Background background;
     private edu.univ.erp.ui.loginpage.swing.Button cmdLogin;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel lblForgotPassword;
     private javax.swing.JPanel panel;
     private edu.univ.erp.ui.loginpage.swing.PasswordField txtPassword;
     private edu.univ.erp.ui.loginpage.swing.TextField txtUser;
+
+    // Password reset form components
+    private edu.univ.erp.ui.loginpage.swing.TextField txtResetUser;
+    private edu.univ.erp.ui.loginpage.swing.PasswordField txtNewPassword;
+    private edu.univ.erp.ui.loginpage.swing.PasswordField txtConfirmPassword;
+    private edu.univ.erp.ui.loginpage.swing.Button cmdChangePassword;
+    private javax.swing.JLabel lblSignIn;
 }

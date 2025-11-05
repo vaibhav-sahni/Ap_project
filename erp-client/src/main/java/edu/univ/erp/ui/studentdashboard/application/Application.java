@@ -18,6 +18,7 @@ import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import com.formdev.flatlaf.util.UIScale;
 
 import edu.univ.erp.api.auth.AuthAPI;
+import edu.univ.erp.ui.components.MaintenanceModeManager;
 import edu.univ.erp.ui.studentdashboard.components.Background;
 import edu.univ.erp.ui.studentdashboard.forms.DashboardForm;
 import edu.univ.erp.ui.studentdashboard.menu.FormManager;
@@ -52,14 +53,17 @@ public class Application extends JFrame {
                     } catch (Throwable ex) {
                         // ignore - we'll still exit
                     }
-                    try { dispose(); } catch (Throwable ignore) {}
+                    try {
+                        dispose();
+                    } catch (Throwable ignore) {
+                    }
                     System.exit(0);
                 }
                 // If NO_OPTION, just return and keep the app open
             }
         });
-    setSize(UIScale.scale(new Dimension(1366, 768)));
-    setLocationRelativeTo(null);
+        setSize(UIScale.scale(new Dimension(1366, 768)));
+        setLocationRelativeTo(null);
         if (UNDECORATED) {
             setUndecorated(UNDECORATED);
             setBackground(new Color(0, 0, 0, 0));
@@ -69,6 +73,9 @@ public class Application extends JFrame {
         setContentPane(new Background(UNDECORATED));
         GlassPanePopup.install(this);
         FormManager.install(this, UNDECORATED);
+
+        // Register this window with the maintenance mode manager
+        MaintenanceModeManager.getInstance().registerWindow(this);
         // Use current authenticated user (set by Login) when available so the dashboard
         // shows the real user rather than hardcoded values used during development.
         try {

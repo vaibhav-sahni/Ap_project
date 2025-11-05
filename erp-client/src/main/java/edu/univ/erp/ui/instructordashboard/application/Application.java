@@ -18,6 +18,7 @@ import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import com.formdev.flatlaf.util.UIScale;
 
 import edu.univ.erp.api.auth.AuthAPI;
+import edu.univ.erp.ui.components.MaintenanceModeManager;
 import edu.univ.erp.ui.instructordashboard.components.Background;
 import edu.univ.erp.ui.instructordashboard.forms.DashboardForm;
 import edu.univ.erp.ui.instructordashboard.menu.FormManager;
@@ -72,6 +73,9 @@ public class Application extends JFrame {
         setContentPane(new Background(UNDECORATED));
         GlassPanePopup.install(this);
         FormManager.install(this, UNDECORATED);
+
+        // Register this window with the maintenance mode manager
+        MaintenanceModeManager.getInstance().registerWindow(this);
         // Use current authenticated user (set by Login) when available so the dashboard
         // shows the real user rather than hardcoded values used during development.
         try {

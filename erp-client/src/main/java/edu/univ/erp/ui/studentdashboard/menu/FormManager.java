@@ -7,6 +7,7 @@ import javax.swing.SwingUtilities;
 
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 
+import edu.univ.erp.ui.components.MaintenanceModeManager;
 import edu.univ.erp.ui.loginpage.main.Login;
 import edu.univ.erp.ui.studentdashboard.components.MainForm;
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
@@ -57,6 +58,9 @@ public class FormManager {
                 instance.mainForm.showForm(component);
             }
             instance.forms.getCurrent().formInitAndOpen();
+
+            // Trigger maintenance mode notification check on form switch
+            MaintenanceModeManager.getInstance().onFormSwitch();
         }
     }
 
@@ -67,7 +71,8 @@ public class FormManager {
             java.awt.EventQueue.invokeLater(() -> {
                 try {
                     instance.frame.dispose();
-                } catch (Throwable ignore) {}
+                } catch (Throwable ignore) {
+                }
                 new Login().setVisible(true);
             });
         } finally {
@@ -96,6 +101,9 @@ public class FormManager {
             if (!instance.menuShowing && instance.forms.isUndoAble()) {
                 instance.mainForm.showForm(instance.forms.undo(), SimpleTransition.getDefaultTransition(true));
                 instance.forms.getCurrent().formOpen();
+
+                // Trigger maintenance mode notification check on form switch
+                MaintenanceModeManager.getInstance().onFormSwitch();
             }
         }
     }
@@ -105,6 +113,9 @@ public class FormManager {
             if (!instance.menuShowing && instance.forms.isRedoAble()) {
                 instance.mainForm.showForm(instance.forms.redo());
                 instance.forms.getCurrent().formOpen();
+
+                // Trigger maintenance mode notification check on form switch
+                MaintenanceModeManager.getInstance().onFormSwitch();
             }
         }
     }
@@ -122,7 +133,9 @@ public class FormManager {
      */
     public static void refreshStudentViews() {
         for (SimpleForm f : instance.forms) {
-            if (f == null) continue;
+            if (f == null) {
+                continue;
+            }
             // Compare by class name to avoid import cycles
             String cname = f.getClass().getName();
             if (cname.equals("edu.univ.erp.ui.studentdashboard.forms.DashboardForm") || cname.equals("edu.univ.erp.ui.studentdashboard.forms.MyCoursesForm")) {

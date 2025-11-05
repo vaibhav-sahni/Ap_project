@@ -6,6 +6,7 @@ edu\univ\erp\ui\instructordashboard\swing\slider\SliderTransition.class
 edu\univ\erp\ui\handlers\AdminUiHandlers.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$ActionsCellEditor.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$GradeRenderer.class
+edu\univ\erp\ui\components\ToastNotification.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$GradeTableModel.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$2.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$FadePanel.class
@@ -16,14 +17,18 @@ edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$6.class
 edu\univ\erp\ui\admindashboard\menu\MyDrawerBuilder$1.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$10.class
 edu\univ\erp\util\MessagePresenter.class
+edu\univ\erp\ui\components\ToastNotification$3.class
 edu\univ\erp\ui\instructordashboard\menu\Menu.class
+edu\univ\erp\ui\components\MaintenanceModeManager$2.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$AnimatedGaugeChart.class
 edu\univ\erp\tools\ClientDbBackupTool.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$8.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$5.class
 edu\univ\erp\ui\studentdashboard\menu\ThemesChange.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$ModernTable.class
+edu\univ\erp\ui\components\MaintenanceModeManager.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$CardPanel.class
+edu\univ\erp\ui\components\MaintenanceModeDemo.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect$Effect$1.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$6.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$FadePanel.class
@@ -46,6 +51,7 @@ edu\univ\erp\ui\admindashboard\swing\slider\PanelSlider.class
 edu\univ\erp\ui\loginpage\swing\RippleEffect$Effect.class
 edu\univ\erp\ui\actions\AdminActions.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$2.class
+edu\univ\erp\ui\loginpage\main\Login$2.class
 edu\univ\erp\ui\studentdashboard\menu\MyDrawerBuilder$4.class
 edu\univ\erp\ui\instructordashboard\menu\MyDrawerBuilder$2.class
 edu\univ\erp\util\AnsiConsole.class
@@ -79,12 +85,15 @@ edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel.cl
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$11.class
 edu\univ\erp\ui\loginpage\fbr\FancyBorderRadius.class
 edu\univ\erp\ui\studentdashboard\menu\Menu$1.class
+edu\univ\erp\ui\components\ToastNotification$1.class
 edu\univ\erp\ui\handlers\AdminUiHandlers$2.class
 edu\univ\erp\ui\studentdashboard\forms\TimetableForm.class
 edu\univ\erp\ui\admindashboard\menu\Menu$1.class
 edu\univ\erp\ui\admindashboard\swing\slider\SimpleTransition.class
 edu\univ\erp\ui\studentdashboard\forms\TimetableForm$TimetableGridPanel$1.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$StatusRenderer.class
+edu\univ\erp\ui\components\MaintenanceModeService$1$1.class
+edu\univ\erp\ui\components\ToastNotification$MessageType.class
 edu\univ\erp\ui\admindashboard\swing\slider\SimpleTransition$2.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$FadePanel.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$ThemeableButton.class
@@ -150,6 +159,7 @@ edu\univ\erp\ui\instructordashboard\menu\Menu$2.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$5.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$CardPanel.class
 edu\univ\erp\ui\instructordashboard\swing\slider\SimpleTransition$2.class
+edu\univ\erp\ui\components\MaintenanceModeService.class
 edu\univ\erp\ui\instructordashboard\menu\Menu$1.class
 edu\univ\erp\ui\loginpage\swing\Button.class
 edu\univ\erp\ui\studentdashboard\forms\NotificationForm$FadePanel.class
@@ -207,6 +217,7 @@ edu\univ\erp\ClientContext.class
 edu\univ\erp\ui\studentdashboard\menu\MyDrawerBuilder.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$15.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$CourseTableModel.class
+edu\univ\erp\ui\components\ToastNotification$4.class
 edu\univ\erp\ui\studentdashboard\swing\slider\SimpleTransition.class
 edu\univ\erp\ui\loginpage\login\Background.class
 edu\univ\erp\ui\loginpage\login\CrossButton.class
@@ -227,6 +238,7 @@ edu\univ\erp\ui\admindashboard\utils\DateCalculator$ModelDate.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$12.class
 edu\univ\erp\ui\admindashboard\utils\UndoRedo.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$10.class
+edu\univ\erp\ui\components\ToastNotification$2.class
 edu\univ\erp\api\admin\AdminAPI$2.class
 edu\univ\erp\ui\admindashboard\menu\Menu.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$CustomScrollBarUI.class
@@ -259,12 +271,14 @@ edu\univ\erp\ui\loginpage\fbr\FancyAnimation.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$1.class
 edu\univ\erp\api\instructor\InstructorAPI$1.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$GradesTableModel.class
+edu\univ\erp\ui\loginpage\main\Login$1.class
 edu\univ\erp\ui\studentdashboard\application\Application.class
 edu\univ\erp\ui\loginpage\swing\TextField.class
 edu\univ\erp\ui\studentdashboard\utils\UndoRedo$MyIterator.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$3.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$3.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$CardPanel.class
+edu\univ\erp\ui\components\MaintenanceModeManager$1.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$FadePanel.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$13.class
 edu\univ\erp\ui\studentdashboard\menu\MyDrawerBuilder$3.class
@@ -289,6 +303,7 @@ edu\univ\erp\ui\instructordashboard\forms\DashboardForm$17.class
 edu\univ\erp\ui\studentdashboard\menu\Menu.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$CustomScrollBarUI.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$8.class
+edu\univ\erp\api\common\CommonAPI.class
 edu\univ\erp\ui\studentdashboard\forms\NotificationForm$2.class
 edu\univ\erp\ui\admindashboard\menu\FormManager.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$CustomScrollBarUI.class
@@ -333,6 +348,7 @@ edu\univ\erp\ui\studentdashboard\forms\DashboardForm$9.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$GradeEntry.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$12.class
 edu\univ\erp\ui\studentdashboard\forms\MyGradesForm$FadePanel.class
+edu\univ\erp\ui\components\MaintenanceModeService$2.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$CourseCardPanel$2.class
 edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$CustomScrollBarUI.class
 edu\univ\erp\ui\instructordashboard\swing\slider\PanelSlider$PanelSnapshot$1.class
@@ -346,6 +362,7 @@ edu\univ\erp\ui\studentdashboard\utils\DateCalculator.class
 edu\univ\erp\api\auth\AuthAPI.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$CourseCardPanel$1.class
 edu\univ\erp\ui\studentdashboard\forms\TimetableForm$TimetableGridPanel.class
+edu\univ\erp\ui\components\MaintenanceModeService$1.class
 edu\univ\erp\ui\instructordashboard\components\MainForm.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$19.class
 edu\univ\erp\ui\loginpage\swing\PasswordField.class

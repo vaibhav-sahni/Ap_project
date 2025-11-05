@@ -123,9 +123,9 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
             itemList.add(new Item("My Courses", "book.svg"));
         }
 
-    itemList.add(new Item.Label("ACCOUNT"));
-    itemList.add(new Item("Change Password", "lock.svg"));
-    itemList.add(new Item("Logout", "logout.svg"));
+        itemList.add(new Item.Label("ACCOUNT"));
+        itemList.add(new Item("Change Password", "lock.svg"));
+        itemList.add(new Item("Logout", "logout.svg"));
 
         MenuItem items[] = itemList.toArray(new MenuItem[0]);
 
@@ -202,21 +202,8 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                 if (user == null) {
                     return false;
                 }
-                if (!user.isAdmin()) {
-
-                    boolean act
-                            // `Email`->`Gropu Read`->`Read 3`
-                            = checkMenu(index, new int[]{1, 2, 3})
-                            // `Email`->`Gropu Read`->`Read 5`
-                            && checkMenu(index, new int[]{1, 2, 5})
-                            // `Email`->`Group Read`->`Group Item->`Item 4`
-                            && checkMenu(index, new int[]{1, 2, 2, 3})
-                            // `Advanced UI`->`Owl Carousel`
-                            && checkMenu(index, new int[]{4, 1})
-                            // `Special Pages`
-                            && checkMenu(index, new int[]{8});
-                    return act;
-                }
+                // Allow all menu items for instructors - no restrictions
+                // Instructors should have access to all their menu items including logout
                 return true;
             }
         });

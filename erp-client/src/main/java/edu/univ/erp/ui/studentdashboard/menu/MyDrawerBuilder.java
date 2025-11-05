@@ -11,7 +11,6 @@ import javax.swing.JLabel;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
-
 import edu.univ.erp.ui.studentdashboard.forms.*;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
 import raven.drawer.component.DrawerPanel;
@@ -27,6 +26,7 @@ import raven.drawer.component.menu.SimpleMenuStyle;
 import raven.drawer.component.menu.data.Item;
 import raven.drawer.component.menu.data.MenuItem;
 import raven.swing.AvatarIcon;
+
 public class MyDrawerBuilder extends SimpleDrawerBuilder {
 
     private ModelUser user;
@@ -144,7 +144,9 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                 }
             } catch (Throwable ignore) {
             }
-            if (label == null) label = mi.toString();
+            if (label == null) {
+                label = mi.toString();
+            }
             itemLabels[i] = label == null ? "" : label;
 
             // If this item is not a section label (Item.Label) then include it in actionable list
@@ -161,7 +163,6 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
         final String[] actionableLabels = actionable.toArray(new String[0]);
 
         // (debug mapping removed)
-
         simpleMenuOption.setMenuValidation(new MenuValidation() {
 
             private boolean checkMenu(int[] index, int[] indexHide) {
@@ -182,7 +183,7 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                     return false;
                 }
                 if (!user.isAdmin()) {
-                    
+
                     boolean act
                             // `Email`->`Gropu Read`->`Read 3`
                             = checkMenu(index, new int[]{1, 2, 3})
@@ -244,13 +245,15 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                     try {
                         if (action != null && action.toString() != null) {
                             String s = action.toString();
-                            if (s.toLowerCase().contains("logout")) detectedLabel = "Logout";
+                            if (s.toLowerCase().contains("logout")) {
+                                detectedLabel = "Logout";
+                            }
                         }
-                    } catch (Throwable ignore) {}
+                    } catch (Throwable ignore) {
+                    }
                 }
 
                 // detection debug removed
-
                 // Handle Logout explicitly
                 if (detectedLabel != null && detectedLabel.equalsIgnoreCase("Logout")) {
                     try {

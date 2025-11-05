@@ -7,6 +7,7 @@ import javax.swing.SwingUtilities;
 
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 
+import edu.univ.erp.ui.components.MaintenanceModeManager;
 import edu.univ.erp.ui.instructordashboard.components.MainForm;
 import edu.univ.erp.ui.instructordashboard.components.SimpleForm;
 import edu.univ.erp.ui.instructordashboard.model.ModelUser;
@@ -56,6 +57,9 @@ public class FormManager {
                 instance.mainForm.showForm(component);
             }
             instance.forms.getCurrent().formInitAndOpen();
+
+            // Trigger maintenance mode notification check on form switch
+            MaintenanceModeManager.getInstance().onFormSwitch();
         }
     }
 
@@ -66,10 +70,12 @@ public class FormManager {
             java.awt.EventQueue.invokeLater(() -> {
                 try {
                     instance.frame.dispose();
-                } catch (Throwable ignore) {}
+                } catch (Throwable ignore) {
+                }
                 try {
                     new edu.univ.erp.ui.loginpage.main.Login().setVisible(true);
-                } catch (Throwable ignore) {}
+                } catch (Throwable ignore) {
+                }
             });
         } finally {
             FlatAnimatedLafChange.hideSnapshotWithAnimation();
@@ -97,6 +103,9 @@ public class FormManager {
             if (!instance.menuShowing && instance.forms.isUndoAble()) {
                 instance.mainForm.showForm(instance.forms.undo(), SimpleTransition.getDefaultTransition(true));
                 instance.forms.getCurrent().formOpen();
+
+                // Trigger maintenance mode notification check on form switch
+                MaintenanceModeManager.getInstance().onFormSwitch();
             }
         }
     }
@@ -106,6 +115,9 @@ public class FormManager {
             if (!instance.menuShowing && instance.forms.isRedoAble()) {
                 instance.mainForm.showForm(instance.forms.redo());
                 instance.forms.getCurrent().formOpen();
+
+                // Trigger maintenance mode notification check on form switch
+                MaintenanceModeManager.getInstance().onFormSwitch();
             }
         }
     }
