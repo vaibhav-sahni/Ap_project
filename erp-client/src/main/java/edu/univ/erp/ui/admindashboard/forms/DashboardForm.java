@@ -4,6 +4,7 @@ import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -30,6 +31,7 @@ import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import com.formdev.flatlaf.FlatClientProperties;
@@ -699,6 +701,28 @@ public class DashboardForm extends SimpleForm {
 
         sectionTable = new ModernTable(model);
         styleTable(sectionTable);
+
+        // Custom renderer for the Instructor column: show red "NOT ASSIGNED" when no instructor
+        try {
+            int instrCol = 3; // Instructor column index
+            sectionTable.getColumnModel().getColumn(instrCol).setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    String s = value == null ? "" : String.valueOf(value).trim();
+                    if (s.isEmpty() || "TBA".equalsIgnoreCase(s) || "null".equalsIgnoreCase(s)) {
+                        setText("NOT ASSIGNED");
+                        setForeground(new Color(220, 38, 38)); // red
+                    } else {
+                        setText(s);
+                        setForeground(textColor());
+                    }
+                    return c;
+                }
+            });
+        } catch (Exception ignore) {
+            // If column model not ready, ignore silently (table will show plain text)
+        }
 
         // Load data asynchronously
         loadSectionDataAsync(model);

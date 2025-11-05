@@ -95,16 +95,9 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
     public SimpleMenuOption getSimpleMenuOption() {
 
         MenuItem items[] = new MenuItem[]{
-            new Item.Label("MAIN"),
             new Item("Dashboard", "dashboard.svg"),
-            new Item.Label("STUDENT PORTAL"),
-            new Item("Course Catalog", "book.svg")
-            .subMenu("  All Courses")
-            .subMenu("  My Registered Courses"),
-            new Item("My Timetable", "schedule.svg"),
-            new Item("My Grades", "school.svg"),
-            new Item("Notification", "notification.svg"),
             new Item.Label("ACCOUNT"),
+            new Item("Change Password", "lock.svg"),
             new Item("Logout", "logout.svg")
         };
 
@@ -282,6 +275,21 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                     }
                     return;
                 }
+
+                    // Handle Change Password via AuthUiHandlers
+                    if (detectedLabel != null && detectedLabel.equalsIgnoreCase("Change Password")) {
+                        try {
+                            edu.univ.erp.domain.UserAuth cu = edu.univ.erp.ClientContext.getCurrentUser();
+                            if (cu != null) {
+                                new edu.univ.erp.ui.handlers.AuthUiHandlers(cu).changePasswordWithUi();
+                            } else {
+                                javax.swing.JOptionPane.showMessageDialog(null, "Not authenticated.", "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                            }
+                        } catch (Throwable t) {
+                            javax.swing.JOptionPane.showMessageDialog(null, "Failed to change password: " + t.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                        }
+                        return;
+                    }
 
                 // Open Admin Dashboard when My Timetable is selected (redirect to admin functions)
                 if (detectedLabel != null && detectedLabel.equalsIgnoreCase("My Timetable")) {
