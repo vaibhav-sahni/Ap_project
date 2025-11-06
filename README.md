@@ -1,20 +1,45 @@
 # Ap_project — Product brief & quick demo
 
-Short summary
-Ap_project is a compact university ERP demo that showcases end-to-end student, instructor and admin workflows via a Java Swing client and a lightweight TCP server.
+This project is a desktop application written using Java Swing that helps universities manage courses, class sections, enrollments and grades.
 
-Why this repo exists
-- Students: browse catalog, register/drop sections, view grades and download transcripts.
-- Instructors: manage assigned sections, enter component scores, compute and export final grades.
-- Administrators: create/manage users, courses and sections; perform DB backups and restores.
+It uses a MySQL DB to store data, and features a client and server application connected via websockets to support multiple instances of users using the app at once.
 
-Top-level features (at a glance)
+There are 3 kinds of users in the app
+
+# User types and supported actions
+- Students: 
+          1. Browse Course Catalog and register for a course
+          2. View Registered Courses
+          3. View Timetable
+          4. View Course Grades
+          5. Get Notifications
+          6. Change Password
+
+- Instructors: 
+          1. View Assigned Sections
+          2. View Student roster and component-wise grades for an assigned section
+          3. View Section Stats
+          4. Save Section Data to DB
+          5. Export/Import grades using .csv format
+          6. Perform final letter grading for students in a section
+          7.Get Notifications
+          8. Change Password
+          
+- Administrator:
+          1. Toggle Maintenance Mode
+          2. Set Course Drop Deadline
+          3. Download/Restore DB Backup (uses gzip format.)
+          4. Send Notifications to users
+          5. Create Courses/Sections/Students/Instructors
+          6. Reassign Instructors to Sections
+
+Top-level features:
 - Login / session management with account lockout and last-login tracking.
 - Student flow: view course catalog → register for a section (capacity checks) → view timetable and grades → download transcript.
 - Instructor flow: view assigned sections → open roster → record component scores → compute final grade → export/import grades (CSV).
 - Admin flow: create students/instructors/courses/sections → toggle maintenance mode → DB backup/restore (gzipped SQL via safe BASE64 transfer).
 
-Protocol (simple)
+Protocol:
 - The client sends single-line commands over TCP, e.g. `LOGIN:username:password`.
 - The server responds with `SUCCESS:<payload>` or `ERROR:<message>`; files are transferred as `FILE_DOWNLOAD:<mime>:<name>:BASE64:<payload>`.
 
