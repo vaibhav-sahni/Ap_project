@@ -8,30 +8,30 @@ There are 3 kinds of users in the app
 
 # User types and supported actions
 Students: 
-          1. Browse Course Catalog and register for a course
-          2. View Registered Courses
-          3. View Timetable
-          4. View Course Grades
-          5. Get Notifications
-          6. Change Password
+- Browse Course Catalog and register for a course
+- View Registered Courses
+- View Timetable
+- View Course Grades
+- Get Notifications
+- Change Password
 
 Instructors: 
-          1. View Assigned Sections
-          2. View Student roster and component-wise grades for an assigned section
-          3. View Section Stats
-          4. Save Section Data to DB
-          5. Export/Import grades using .csv format
-          6. Perform final letter grading for students in a section
-          7.Get Notifications
-          8. Change Password
+- View Assigned Sections
+- View Student roster and component-wise grades for an assigned section
+- View Section Stats
+- Save Section Data to DB
+- Export/Import grades using .csv format
+- Perform final letter grading for students in a section
+- Get Notifications
+- Change Password
 
 Administrator:
-          1. Toggle Maintenance Mode
-          2. Set Course Drop Deadline
-          3. Download/Restore DB Backup (uses gzip format.)
-          4. Send Notifications to users
-          5. Create Courses/Sections/Students/Instructors
-          6. Reassign Instructors to Sections
+- Toggle Maintenance Mode
+- Set Course Drop Deadline
+- Download/Restore DB Backup (uses gzip format.)
+- Send Notifications to users
+- Create Courses/Sections/Students/Instructors
+- Reassign Instructors to Sections
 
 Top-level features:
 - Login / session management with account lockout and last-login tracking.
