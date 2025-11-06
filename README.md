@@ -7,7 +7,7 @@ It uses a MySQL DB to store data, and features a client and server application c
 There are 3 kinds of users in the app
 
 # User types and supported actions
-- Students: 
+Students: 
           1. Browse Course Catalog and register for a course
           2. View Registered Courses
           3. View Timetable
@@ -15,7 +15,7 @@ There are 3 kinds of users in the app
           5. Get Notifications
           6. Change Password
 
-- Instructors: 
+Instructors: 
           1. View Assigned Sections
           2. View Student roster and component-wise grades for an assigned section
           3. View Section Stats
@@ -24,8 +24,8 @@ There are 3 kinds of users in the app
           6. Perform final letter grading for students in a section
           7.Get Notifications
           8. Change Password
-          
-- Administrator:
+
+Administrator:
           1. Toggle Maintenance Mode
           2. Set Course Drop Deadline
           3. Download/Restore DB Backup (uses gzip format.)
