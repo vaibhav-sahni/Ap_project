@@ -15,6 +15,7 @@ edu\univ\erp\dao\auth\AuthDAO.class
 edu\univ\erp\security\PasswordHasher.class
 edu\univ\erp\util\DBConnectionTest.class
 edu\univ\erp\domain\UserAuth.class
+edu\univ\erp\util\MailUtil.class
 edu\univ\erp\util\PasswordSeeder.class
 edu\univ\erp\dao\student\StudentDAO.class
 edu\univ\erp\dao\grade\GradeDAO$RawGradeResult.class
@@ -29,6 +30,7 @@ edu\univ\erp\domain\Section.class
 org\mindrot\jbcrypt\BCrypt.class
 edu\univ\erp\domain\Grade.class
 edu\univ\erp\domain\Student.class
+edu\univ\erp\util\MailUtil$1.class
 edu\univ\erp\service\admin\MysqldumpBackupService.class
 edu\univ\erp\util\ThrowingRunnable.class
 edu\univ\erp\dao\db\DBConnector.class

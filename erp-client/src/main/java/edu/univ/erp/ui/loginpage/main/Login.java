@@ -224,12 +224,12 @@ public class Login extends javax.swing.JFrame {
                 return;
             }
 
-            System.out.println("Client LOG: Login SUCCESS. User Role: " + user.getRole());
+            
 
             // Persist current user for in-process components (dashboard) BEFORE disposing
             try {
                 edu.univ.erp.ClientContext.setCurrentUser(user);
-                System.out.println("Client LOG: ClientContext set to user=" + user.getUsername());
+                
             } catch (Throwable ignore) {
             }
 
@@ -607,15 +607,17 @@ public class Login extends javax.swing.JFrame {
         }
 
         try {
-            // Here you would typically call an API to change the password
-            // For now, show a success message and return to login form
-            JOptionPane.showMessageDialog(this,
-                    "Password changed successfully!\nPlease log in with your new password.",
-                    "Password Changed",
-                    JOptionPane.INFORMATION_MESSAGE);
+        // Call server to request password reset (notify admin)
+        String resp = authApi.requestPasswordReset(username, newPassword);
+        String message = "Password reset request submitted.";
+        if (resp != null && !resp.isEmpty()) message = resp;
+        JOptionPane.showMessageDialog(this,
+            message,
+            "Password Reset Requested",
+            JOptionPane.INFORMATION_MESSAGE);
 
-            // Return to login form
-            showLoginForm();
+        // Return to login form
+        showLoginForm();
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,

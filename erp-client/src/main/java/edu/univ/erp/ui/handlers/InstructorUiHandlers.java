@@ -10,6 +10,7 @@ public class InstructorUiHandlers {
 
     private final InstructorActions instructorActions;
     private final UserAuth user;
+    
 
     public InstructorUiHandlers(UserAuth user) {
         this.instructorActions = new InstructorActions();
@@ -34,25 +35,10 @@ public class InstructorUiHandlers {
         try {
             java.util.List<edu.univ.erp.domain.EnrollmentRecord> roster = instructorActions.getRoster(instructorId, sectionId);
             if (roster == null || roster.isEmpty()) {
-                System.out.println("Roster is empty for this section.");
                 return;
             }
-
-            System.out.println("\n--- ROSTER FOR SECTION ID: " + sectionId + " ---");
-            System.out.printf("%-10s %-30s %-10s %-10s\n", "ENROLL ID", "STUDENT USERNAME", "ROLL NO", "FINAL GRADE");
-            System.out.println("-------------------------------------------------------------------------------------------------");
-
-            roster.forEach(r -> {
-                System.out.printf("%-10d %-30s %-10s %-10s\n",
-                        r.getEnrollmentId(),
-                        r.getStudentName(),
-                        r.getRollNo(),
-                        r.getFinalGrade());
-            });
-            System.out.println("-------------------------------------------------------------------------------------------------");
         } catch (Exception e) {
             javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Roster Fetch Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
-            System.err.println("CLIENT ERROR: Roster Fetch Failed: " + e.getMessage());
         }
     }
 
@@ -127,7 +113,6 @@ public class InstructorUiHandlers {
 
             int previewChoice = javax.swing.JOptionPane.showConfirmDialog(null, scroll, "Preview Final Grades for Section " + sectionId, javax.swing.JOptionPane.OK_CANCEL_OPTION, javax.swing.JOptionPane.PLAIN_MESSAGE);
             if (previewChoice != javax.swing.JOptionPane.OK_OPTION) {
-                System.out.println("CLIENT LOG: Final grading preview cancelled by user.");
                 return;
             }
 
@@ -137,34 +122,19 @@ public class InstructorUiHandlers {
                     javax.swing.JOptionPane.YES_NO_OPTION);
 
             if (confirm != javax.swing.JOptionPane.YES_OPTION) {
-                System.out.println("CLIENT LOG: Final grading cancelled by user.");
                 return;
             }
 
-            System.out.println("\n--- COMPUTING FINAL GRADES FOR SECTION ID: " + sectionId + " ---");
             for (edu.univ.erp.domain.EnrollmentRecord student : roster) {
                 try {
                     int enrollmentId = student.getEnrollmentId();
-                    String finalGradeMsg = instructorActions.computeFinalGrade(instructorId, enrollmentId);
-                    System.out.println("CLIENT LOG: Final Grade Computed for " + student.getStudentName() +
-                            " (EID " + enrollmentId + "): " + finalGradeMsg);
+                    instructorActions.computeFinalGrade(instructorId, enrollmentId);
                 } catch (Exception e) {
-                    System.err.println("CLIENT ERROR: Failed to compute grade for " + student.getStudentName() + ": " + e.getMessage());
+                    // errors are surfaced via dialog below; no CLI logging
                 }
             }
 
             roster = instructorActions.getRoster(instructorId, sectionId);
-            System.out.println("\n--- UPDATED ROSTER AFTER FINAL GRADING ---");
-            System.out.printf("%-10s %-30s %-10s %-10s\n", "ENROLL ID", "STUDENT USERNAME", "ROLL NO", "FINAL GRADE");
-            System.out.println("-------------------------------------------------------------------------------------------------");
-            roster.forEach(r -> {
-                System.out.printf("%-10d %-30s %-10s %-10s\n",
-                        r.getEnrollmentId(),
-                        r.getStudentName(),
-                        r.getRollNo(),
-                        r.getFinalGrade());
-            });
-            System.out.println("-------------------------------------------------------------------------------------------------");
 
             javax.swing.JOptionPane.showMessageDialog(null,
                     "Final grades computed for all " + roster.size() + " students in section " + sectionId + ".",
@@ -172,7 +142,7 @@ public class InstructorUiHandlers {
                     javax.swing.JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception e) {
             javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Final Grading Failed", javax.swing.JOptionPane.ERROR_MESSAGE);
-            System.err.println("CLIENT ERROR: Final Grading Failed: " + e.getMessage());
+            
         }
     }
 
@@ -180,19 +150,7 @@ public class InstructorUiHandlers {
         if (!"Instructor".equals(user.getRole())) return java.util.Collections.emptyList();
         try {
             java.util.List<edu.univ.erp.domain.Section> assignedSections = instructorActions.getAssignedSections(instructorId);
-            if (assignedSections.isEmpty()) {
-                System.out.println("You are not currently assigned to teach any sections.");
-            } else {
-                System.out.println("\n--- ASSIGNED SECTIONS FOR INSTRUCTOR ---");
-                System.out.printf("%-10s %-40s %-15s %s\n", "SECTION ID", "COURSE NAME", "COURSE CODE", "ENROLLED/CAPACITY");
-                System.out.println("-------------------------------------------------------------------------------------------------");
-                for (edu.univ.erp.domain.Section s : assignedSections) {
-                    int enrolledCount = instructorActions.getRoster(instructorId, s.getSectionId()).size();
-                    String enrolledCapacity = enrolledCount + "/" + s.getCapacity();
-                    System.out.printf("%-10s %-40s %-15s %s\n", s.getSectionId(), s.getCourseName(), s.getCourseCode(), enrolledCapacity);
-                }
-                System.out.println("--------------------------------\n");
-            }
+            // assignedSections returned to caller; UI will render as needed. No CLI output.
             return assignedSections;
         } catch (Exception e) {
             javax.swing.JOptionPane.showMessageDialog(null, e.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);

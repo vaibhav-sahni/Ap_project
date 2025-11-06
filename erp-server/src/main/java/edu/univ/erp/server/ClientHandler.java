@@ -15,19 +15,21 @@ import java.util.logging.Logger;
 
 import com.google.gson.Gson;
 
-import edu.univ.erp.dao.settings.SettingDAO; 
+import edu.univ.erp.dao.auth.AuthDAO; 
+import edu.univ.erp.dao.settings.SettingDAO;
 import edu.univ.erp.domain.CourseCatalog;
 import edu.univ.erp.domain.EnrollmentRecord;
 import edu.univ.erp.domain.Grade;
 import edu.univ.erp.domain.Instructor;
-import edu.univ.erp.domain.Section;
-import edu.univ.erp.domain.Student; // NEW: Instructor's list of sections
+import edu.univ.erp.domain.Section; // NEW: Instructor's list of sections
+import edu.univ.erp.domain.Student;
 import edu.univ.erp.domain.UserAuth;
 import edu.univ.erp.service.admin.AdminService;
 import edu.univ.erp.service.admin.MysqldumpBackupService;
 import edu.univ.erp.service.auth.AuthService;
 import edu.univ.erp.service.instructor.InstructorService;
 import edu.univ.erp.service.student.StudentService;
+import edu.univ.erp.util.MailUtil;
 
 public class ClientHandler implements Runnable {
 private static final Logger LOGGER = Logger.getLogger(ClientHandler.class.getName());
@@ -149,6 +151,10 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
           return handleDownloadTranscript(parts);
         case "GET_INSTRUCTOR_SECTIONS":
           return handleGetInstructorSections(parts);
+              case "RESET_PASSWORD":
+                return handleResetPassword(parts);
+              case "SET_ADMIN_EMAIL":
+                return handleSetAdminEmail(parts);
         case "GET_ROSTER":
           return handleGetRoster(parts);
         case "RECORD_SCORE":
@@ -219,6 +225,8 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     } catch (NumberFormatException e) {
       throw new Exception("Invalid instructor ID format provided.");
     }
+    
+
     edu.univ.erp.access.AccessChecker checker = new edu.univ.erp.access.AccessChecker();
     if (current.getUserId() != instructorId && !checker.isAdmin(current.getUserId())) {
       throw new Exception("NOT_AUTHORIZED:Only the instructor or admins may view assigned sections.");
@@ -246,6 +254,58 @@ private String handleCreateCourse(String[] parts) throws Exception {
   String message = adminService.createCourse(course);
   return "SUCCESS:" + message;
 }
+
+  /**
+   * Handles RESET_PASSWORD:username:newPassword
+   * This is an unauthenticated request that notifies the configured admin
+   * by email containing the username and the requested new password. It does NOT change the DB.
+   */
+  private String handleResetPassword(String[] parts) throws Exception {
+    if (parts.length < 3) throw new Exception("Missing parameters. Expected RESET_PASSWORD:username:newPassword");
+    String username = parts[1];
+    String newPassword = parts[2];
+
+    if (username == null || username.trim().isEmpty()) throw new Exception("Username is required.");
+    if (newPassword == null || newPassword.length() < 6) throw new Exception("New password must be at least 6 characters long.");
+
+    // Verify user exists in auth DB
+    AuthDAO authDao = new AuthDAO();
+    var details = authDao.findUserByUsername(username);
+    if (details == null) {
+      throw new Exception("User not found.");
+    }
+
+    // Build email content
+    String subject = "Password Reset Request for user: " + username;
+    StringBuilder body = new StringBuilder();
+    body.append("A password reset request was submitted from the client application.\n\n");
+    body.append("Username: ").append(username).append("\n");
+    body.append("Requested New Password: ").append(newPassword).append("\n\n");
+    body.append("Please review and take any necessary action (do not forward the password).\n");
+
+    try {
+      MailUtil.sendEmailToAdmin(subject, body.toString());
+    } catch (Exception e) {
+      // Wrap email errors so the client sees a readable message
+      throw new Exception("Failed to notify admin: " + e.getMessage());
+    }
+
+    return "SUCCESS:Admin notified";
+  }
+
+  /**
+   * Admin-only handler to set the global admin email address used for password reset notifications.
+   * Command: SET_ADMIN_EMAIL:email
+   */
+  private String handleSetAdminEmail(String[] parts) throws Exception {
+    if (parts.length < 2) throw new Exception("Missing email parameter. Expected SET_ADMIN_EMAIL:email");
+    edu.univ.erp.domain.UserAuth current = requireAuthenticated();
+    requireAdmin(current);
+    String email = parts[1];
+    if (email == null || !email.contains("@")) throw new Exception("Invalid email format.");
+    settingDAO.setSetting("ADMIN_EMAIL", email);
+    return "SUCCESS:Admin email configured";
+  }
 
 /**
  * Handles CREATE_SECTION:courseCode:instructorId:dayTime:room:capacity:semester:year
@@ -423,7 +483,8 @@ private String handleCreateSection(String[] parts) throws Exception {
 
   String summary = instructorService.importGradesCsv(instructorId, sectionId, csv);
   LOGGER.info(() -> "IMPORT_GRADES completed for instructorId=" + instructorId + " sectionId=" + sectionId + " summary=" + summary);
-    return "SUCCESS:" + summary;
+    // The summary may contain newlines; encode as JSON string so the single-line protocol is preserved
+    return "SUCCESS:" + gson.toJson(summary);
   }
 
     

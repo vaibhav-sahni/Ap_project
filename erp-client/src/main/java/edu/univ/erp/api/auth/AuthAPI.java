@@ -87,6 +87,21 @@ public class AuthAPI {
     }
 
     /**
+     * Request an unauthenticated password reset: sends the username and desired new password
+     * to the server which will notify the configured admin.
+     */
+    public String requestPasswordReset(String username, String newPassword) throws Exception {
+        if (username == null || username.trim().isEmpty()) throw new Exception("Username required.");
+        if (newPassword == null || newPassword.length() < 6) throw new Exception("New password must be at least 6 characters.");
+        String request = String.format("RESET_PASSWORD:%s:%s", username, newPassword);
+        String response = ClientRequest.send(request);
+        if (response.startsWith("SUCCESS:")) {
+            return response.substring("SUCCESS:".length());
+        }
+        throw new Exception("Unexpected response from server.");
+    }
+
+    /**
      * Logout: closes persistent connection and clears client-side session.
      */
     public String logout() throws Exception {

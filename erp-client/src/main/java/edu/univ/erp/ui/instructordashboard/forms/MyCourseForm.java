@@ -78,6 +78,7 @@ public class MyCourseForm extends SimpleForm {
     private JScrollPane tableScrollPane;
 
     private boolean isFinalized = false;
+    
 
     public MyCourseForm(Section section) {
         if (section == null) {
@@ -749,9 +750,7 @@ public class MyCourseForm extends SimpleForm {
                     importBtn.setEnabled(true);
                     showEmptyMessage("No students enrolled.");
                 } else {
-                    // Diagnostic logging to help debug why rows are not visible
-                    System.out.println("Client LOG: Roster fetch callback received list size=" + list.size());
-                    System.out.println("Client LOG: Table model rows before update=" + tableModel.getRowCount());
+                    // Diagnostic logging removed to keep UI silent
 
                     gradeEntries.clear();
                     gradeEntries.addAll(list);
@@ -764,7 +763,7 @@ public class MyCourseForm extends SimpleForm {
                         gradeTable.repaint();
                         tableCard.revalidate();
                         tableCard.repaint();
-                        System.out.println("Client LOG: Table model rows after update=" + tableModel.getRowCount());
+                        // Table model updated; no CLI output
                         try {
                             if (tableModel.getRowCount() > 0) {
                                 // select the first row to make it visually apparent

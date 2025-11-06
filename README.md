@@ -160,6 +160,82 @@ Expect `SUCCESS:` or `ERROR:` responses. File responses return `FILE_DOWNLOAD:..
 - Socket read timeouts are configured via system property `erp.socketReadTimeoutMs` (default 300000 ms). The server sets socket read timeouts for connections.
 
 
+## SMTP / Admin email setup (password-reset notifications)
+
+The server sends password-reset notifications to a configured administrator email address. These values are read from the `settings` table in the ERP database. You can configure them directly in the DB or via the admin-only server command `SET_ADMIN_EMAIL:email` (requires an authenticated admin).
+
+Required settings (keys stored in `settings.setting_key`):
+
+- `ADMIN_EMAIL` — the address that receives password-reset notifications.
+- `SMTP_HOST` — SMTP server hostname (required for sending email).
+- `SMTP_PORT` — SMTP server port (common: `587`).
+- `SMTP_USER` / `SMTP_PASS` — credentials if your SMTP server requires authentication.
+- `SMTP_FROM` — optional From address used for outbound mail.
+- `SMTP_STARTTLS` — set to `true` to enable STARTTLS (common when using port 587).
+
+Quick SQL (MySQL) — upsert the settings (replace with your values):
+
+```sql
+INSERT INTO settings (setting_key, setting_value) VALUES ('ADMIN_EMAIL','admin@example.com')
+  ON DUPLICATE KEY UPDATE setting_value='admin@example.com';
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_HOST','smtp.example.com')
+  ON DUPLICATE KEY UPDATE setting_value='smtp.example.com';
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_PORT','587')
+  ON DUPLICATE KEY UPDATE setting_value='587';
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_USER','smtp_user')
+  ON DUPLICATE KEY UPDATE setting_value='smtp_user';
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_PASS','smtp_pass')
+  ON DUPLICATE KEY UPDATE setting_value='smtp_pass';
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_FROM','noreply@example.com')
+  ON DUPLICATE KEY UPDATE setting_value='noreply@example.com';
+
+INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_STARTTLS','true')
+  ON DUPLICATE KEY UPDATE setting_value='true';
+```
+
+Run from Windows `cmd.exe` with the MySQL CLI (example using defaults from `DBConnector`):
+
+```cmd
+mysql -u erp_user -p -h localhost erp_db -e "INSERT INTO settings (setting_key,setting_value) VALUES ('ADMIN_EMAIL','admin@example.com') ON DUPLICATE KEY UPDATE setting_value='admin@example.com';"
+```
+
+Or combine multiple inserts in one `-e` string (be careful with quoting). After inserting, verify:
+
+```sql
+SELECT setting_value FROM settings WHERE setting_key='ADMIN_EMAIL';
+```
+
+Provider-specific notes
+- Mailtrap (development/testing): use Mailtrap SMTP credentials. Mailtrap captures emails in a web UI so you don't send real mail.
+  - SMTP_HOST: `smtp.mailtrap.io`, SMTP_PORT: `587`, SMTP_USER/PASS: from Mailtrap inbox, SMTP_STARTTLS: `true`.
+
+- Gmail (production/testing with App Passwords): use an App Password (recommended) if your account has 2FA.
+  - SMTP_HOST: `smtp.gmail.com`, SMTP_PORT: `587`, SMTP_USER: your Gmail address, SMTP_PASS: App password, SMTP_STARTTLS: `true`.
+  - Do not enable "less secure apps" in production; prefer App Passwords.
+
+- Office365 / Outlook:
+  - SMTP_HOST: `smtp.office365.com`, SMTP_PORT: `587`, SMTP_STARTTLS: `true`.
+
+Testing the flow
+- Start the server with Maven so dependencies are on the classpath (this includes the Jakarta Mail library we added):
+
+```cmd
+mvn -f "c:\Users\sahni\Documents\GitHub\Ap_project\erp-server" exec:java
+```
+
+- Use the client UI: open Login → "Forgot Password?" → enter username + desired new password → click CHANGE PASSWORD. If configured correctly the server will email `ADMIN_EMAIL` and the client will show a success message.
+
+- Quick command-line test (advanced): you can send a `RESET_PASSWORD:username:newpass` command to the server using a simple TCP client or by creating a small Java test that uses `ClientRequest.send("RESET_PASSWORD:...")`.
+
+Notes & security
+- The current implementation (by design) sends the requested new password in the notification email to the admin — it does NOT automatically update the user's password in the DB. This is intentionally implemented the way you specified, but it is insecure for production. Consider a token-based reset flow or sending a secure one-time token instead.
+- If SMTP is not configured or the mail library is not on the runtime classpath, the server will log an error and return a readable `ERROR:` response to the client. When running for development, Mailtrap or a local SMTP test tool (smtp4dev) is recommended.
+
 ## Where to look in the codebase (entry points)
 
 - Server router & handlers: `erp-server/src/main/java/edu/univ/erp/server/ClientHandler.java`
