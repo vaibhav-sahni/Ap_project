@@ -228,21 +228,33 @@ public class DashboardForm extends SimpleForm {
         btnCreateSection = new JButton("Create Section");
         btnReassignInstructor = new JButton("Reassign Instructor");
 
-        // Apply rounded-corner styling to match the social-media-ui look
-        String roundedStyle = "arc: 10";
-        btnSetDeadline.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
-        btnBackup.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
-        btnRestore.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    // Apply rounded-corner styling to match the social-media-ui look
+    String roundedStyle = "arc: 10";
+    btnSetDeadline.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    btnBackup.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    btnRestore.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
 
-        // Special style for the "Send Notification" button
-        btnSendNotification.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    // Special style for the "Send Notification" button
+    btnSendNotification.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
 
-        // Apply the same rounded style to create/reassign buttons for visual consistency
-        btnCreateCourse.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
-        btnCreateStudent.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
-        btnCreateInstructor.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
-        btnCreateSection.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
-        btnReassignInstructor.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    // Apply the same rounded style to create/reassign buttons for visual consistency
+    btnCreateCourse.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    btnCreateStudent.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    btnCreateInstructor.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    btnCreateSection.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+    btnReassignInstructor.putClientProperty(FlatClientProperties.STYLE, roundedStyle);
+
+    // Primary black/white style used for important admin actions
+    String primaryBlackStyle = "arc: 10; background: #000000; borderColor: #000000; focusedBackground: #000000; hoverBackground: #111111; pressedBackground: #222222;";
+    JButton[] primaryButtons = new JButton[] { btnSetDeadline, btnBackup, btnRestore, btnSendNotification,
+        btnCreateCourse, btnCreateStudent, btnCreateInstructor, btnCreateSection, btnReassignInstructor };
+    for (JButton b : primaryButtons) {
+        if (b == null) continue;
+        b.setBackground(Color.BLACK);
+        b.setForeground(Color.WHITE);
+        b.setOpaque(true);
+        b.putClientProperty(FlatClientProperties.STYLE, primaryBlackStyle);
+    }
 
         // Style for the Toggle Button - Remove glass effects and ensure solid colors
         btnToggleMaintenance.putClientProperty(FlatClientProperties.STYLE,
@@ -266,6 +278,17 @@ public class DashboardForm extends SimpleForm {
         buttonBar.add(btnCreateInstructor);
         buttonBar.add(btnCreateSection);
         buttonBar.add(btnReassignInstructor);
+
+        // Ensure buttons reflect current maintenance state
+        updateMaintenanceButtons();
+
+        // When this form becomes showing, refresh the maintenance-guarded button states
+        this.addHierarchyListener(evt -> {
+            long flags = evt.getChangeFlags();
+            if ((flags & java.awt.event.HierarchyEvent.SHOWING_CHANGED) != 0 && isShowing()) {
+                updateMaintenanceButtons();
+            }
+        });
     }
 
     /**
@@ -580,6 +603,46 @@ public class DashboardForm extends SimpleForm {
 
         dialog.setContentPane(content);
         dialog.setVisible(true);
+    }
+
+    /**
+     * Update the enabled/tooltip state of admin buttons when maintenance mode changes.
+     */
+    private void updateMaintenanceButtons() {
+        boolean maintenance = edu.univ.erp.ui.components.MaintenanceModeManager.getInstance().isMaintenanceMode();
+        JButton[] guarded = new JButton[] { btnSendNotification, btnCreateInstructor, btnCreateSection, btnReassignInstructor, btnSetDeadline };
+        for (JButton b : guarded) {
+            if (b == null) continue;
+            b.setEnabled(!maintenance);
+            if (maintenance) {
+                b.setToolTipText("Cannot make edits when maintenance mode is on");
+                java.awt.Color disabledColor = UIManager.getColor("Button.disabledBackground");
+                if (disabledColor == null) disabledColor = new java.awt.Color(200, 200, 200);
+                b.setBackground(disabledColor);
+                b.setForeground(UIManager.getColor("Label.disabledForeground") != null ? UIManager.getColor("Label.disabledForeground") : new java.awt.Color(120,120,120));
+            } else {
+                b.setToolTipText(null);
+                // restore primary black/white style when maintenance is off
+                b.setBackground(Color.BLACK);
+                b.setForeground(Color.WHITE);
+                b.setOpaque(true);
+            }
+        }
+    }
+
+    /**
+     * Check maintenance mode and show a warning dialog if edits are not allowed.
+     * @return true if edits are allowed, false if maintenance mode is active
+     */
+    private boolean checkMaintenanceAndWarn() {
+        if (edu.univ.erp.ui.components.MaintenanceModeManager.getInstance().isMaintenanceMode()) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot make edits while maintenance mode is active.",
+                    "Maintenance Active",
+                    JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        return true;
     }
 
     private void showReassignInstructorDialog() {
@@ -1299,6 +1362,9 @@ public class DashboardForm extends SimpleForm {
                 try {
                     edu.univ.erp.ui.actions.AdminActions adminActions = new edu.univ.erp.ui.actions.AdminActions();
                     adminActions.toggleMaintenance(true);
+                    // Update local maintenance manager immediately so UI reflects change
+                    edu.univ.erp.ui.components.MaintenanceModeManager.getInstance().setMaintenanceMode(true);
+                    updateMaintenanceButtons();
                 } catch (Exception ex) {
                     System.err.println("Failed to toggle maintenance mode: " + ex.getMessage());
                 }
@@ -1327,6 +1393,9 @@ public class DashboardForm extends SimpleForm {
                 try {
                     edu.univ.erp.ui.actions.AdminActions adminActions = new edu.univ.erp.ui.actions.AdminActions();
                     adminActions.toggleMaintenance(false);
+                    // Update local maintenance manager immediately so UI reflects change
+                    edu.univ.erp.ui.components.MaintenanceModeManager.getInstance().setMaintenanceMode(false);
+                    updateMaintenanceButtons();
                 } catch (Exception ex) {
                     System.err.println("Failed to toggle maintenance mode: " + ex.getMessage());
                 }
@@ -1339,14 +1408,32 @@ public class DashboardForm extends SimpleForm {
         });
 
         // "Send Notification" Button
-        btnSendNotification.addActionListener(e -> showNotificationPopup());
+        btnSendNotification.addActionListener(e -> {
+            if (!checkMaintenanceAndWarn()) return;
+            showNotificationPopup();
+        });
 
-        // Create / admin tool buttons
-        btnCreateCourse.addActionListener(e -> showCreateCourseDialog());
-        btnCreateStudent.addActionListener(e -> showCreateStudentDialog());
-        btnCreateInstructor.addActionListener(e -> showCreateInstructorDialog());
-        btnCreateSection.addActionListener(e -> showCreateSectionDialog());
-        btnReassignInstructor.addActionListener(e -> showReassignInstructorDialog());
+        // Create / admin tool buttons (guarded by maintenance mode)
+        btnCreateCourse.addActionListener(e -> {
+            if (!checkMaintenanceAndWarn()) return;
+            showCreateCourseDialog();
+        });
+        btnCreateStudent.addActionListener(e -> {
+            if (!checkMaintenanceAndWarn()) return;
+            showCreateStudentDialog();
+        });
+        btnCreateInstructor.addActionListener(e -> {
+            if (!checkMaintenanceAndWarn()) return;
+            showCreateInstructorDialog();
+        });
+        btnCreateSection.addActionListener(e -> {
+            if (!checkMaintenanceAndWarn()) return;
+            showCreateSectionDialog();
+        });
+        btnReassignInstructor.addActionListener(e -> {
+            if (!checkMaintenanceAndWarn()) return;
+            showReassignInstructorDialog();
+        });
 
         // --- Other admin button implementations ---
         btnSetDeadline.addActionListener(e -> showSetDropDeadlineDialog());

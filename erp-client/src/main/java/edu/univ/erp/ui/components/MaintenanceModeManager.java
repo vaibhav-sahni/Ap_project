@@ -19,6 +19,8 @@ public class MaintenanceModeManager {
 
     private static MaintenanceModeManager instance;
     private boolean maintenanceMode = false;
+    // If the user manually dismissed the maintenance notification, don't re-show until maintenance toggles
+    private boolean dismissedByUser = false;
     private Window currentWindow;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final CommonAPI commonAPI = new CommonAPI();
@@ -41,11 +43,29 @@ public class MaintenanceModeManager {
      * Set maintenance mode state
      */
     public void setMaintenanceMode(boolean enabled) {
+        boolean previous = this.maintenanceMode;
         this.maintenanceMode = enabled;
+
+        // Reset dismissed flag when maintenance mode transitions from OFF -> ON
+        if (enabled && !previous) {
+            dismissedByUser = false;
+        }
 
         if (currentWindow != null) {
             SwingUtilities.invokeLater(() -> {
-                ToastNotification.showMaintenanceNotification(currentWindow, enabled);
+                // Only show notification if not dismissed by user
+                if (!dismissedByUser) {
+                    ToastNotification.showMaintenanceNotification(currentWindow, enabled);
+                } else {
+                    // if dismissed and maintenance turned off, ensure any toast is hidden
+                    if (!enabled && ToastNotification.isMaintenanceNotificationVisible()) {
+                        ToastNotification.showMaintenanceNotification(currentWindow, false);
+                    }
+                }
+                // repaint window so forms can update (eg. disable buttons)
+                currentWindow.invalidate();
+                currentWindow.validate();
+                currentWindow.repaint();
             });
         }
     }
@@ -60,11 +80,10 @@ public class MaintenanceModeManager {
         window.addWindowFocusListener(new WindowFocusListener() {
             @Override
             public void windowGainedFocus(WindowEvent e) {
-                if (maintenanceMode) {
+                if (maintenanceMode && !dismissedByUser) {
                     long currentTime = System.currentTimeMillis();
                     if (currentTime - lastNotificationTime > NOTIFICATION_COOLDOWN) {
-                        // Always show notification when window gains focus if maintenance mode is active
-                        // This ensures notification reappears even if user previously closed it
+                        // Show notification when window gains focus if maintenance mode is active and not dismissed
                         scheduler.schedule(() -> {
                             SwingUtilities.invokeLater(() -> {
                                 ToastNotification.showMaintenanceNotification(window, true);
@@ -134,6 +153,14 @@ public class MaintenanceModeManager {
                 ToastNotification.showNotification(currentWindow, message, type);
             });
         }
+    }
+
+    /**
+     * Called when user dismisses the maintenance toast. This prevents re-showing
+     * the maintenance banner until maintenance mode toggles.
+     */
+    public void notifyToastDismissed() {
+        this.dismissedByUser = true;
     }
 
     /**

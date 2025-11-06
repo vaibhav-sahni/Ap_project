@@ -218,6 +218,10 @@ public class ToastNotification extends JWindow {
                         if (currentToast == ToastNotification.this) {
                             currentToast = null;
                         }
+                        // Notify manager that user closed the toast (so it won't reappear until maintenance toggles)
+                        try {
+                            edu.univ.erp.ui.components.MaintenanceModeManager.getInstance().notifyToastDismissed();
+                        } catch (Throwable ignore) {}
                     }
                 }
             });

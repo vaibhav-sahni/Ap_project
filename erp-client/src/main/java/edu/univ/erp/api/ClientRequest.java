@@ -52,16 +52,23 @@ public class ClientRequest {
                     throw new Exception("Persistent session lost. Please login again before retrying this operation.", e);
                 }
 
-                // If the server signaled maintenance or authentication loss, treat this as session loss.
+                // If the server signaled authentication loss, treat this as session loss.
+                // Maintenance messages should not force a session clear — show the message but keep the session.
                 String serverMsg = e.getMessage() == null ? "" : e.getMessage();
-                if (serverMsg.contains("MAINTENANCE_ON") || serverMsg.contains("NOT_AUTHENTICATED") || serverMsg.contains("NOT_AUTH")) {
+                if (serverMsg.contains("NOT_AUTHENTICATED") || serverMsg.contains("NOT_AUTH")) {
                     try { ClientSession.clear(); } catch (Exception ignore) {}
-                    System.err.println("CLIENT WARN: server requested session clear due to maintenance/auth: " + serverMsg);
+                    System.err.println("CLIENT WARN: server requested session clear due to auth: " + serverMsg);
                     // Only show the session-lost notifier if not suppressed by an intentional action
                     try {
                         if (!ClientSession.isSuppressSessionLost()) SessionLostNotifier.notifyAndRedirect();
                     } catch (Exception ignore) {}
                     throw new Exception("Session invalidated: " + serverMsg, e);
+                }
+
+                // If server reports maintenance, surface the message to caller but DO NOT clear the session.
+                if (serverMsg.contains("MAINTENANCE_ON")) {
+                    System.err.println("CLIENT INFO: server reports maintenance: " + serverMsg);
+                    throw new Exception(serverMsg, e);
                 }
 
                 // Server-side application error; do not clear the persistent session. Surface the server message to caller.

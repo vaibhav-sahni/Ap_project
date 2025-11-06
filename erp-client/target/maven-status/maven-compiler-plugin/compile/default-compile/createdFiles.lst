@@ -45,6 +45,7 @@ edu\univ\erp\ui\loginpage\swing\TextField$2.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$3.class
 edu\univ\erp\net\ClientSession.class
 edu\univ\erp\ui\admindashboard\menu\ThemesChange.class
+edu\univ\erp\ui\instructordashboard\forms\MyCourseForm$8.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$4.class
 edu\univ\erp\ui\studentdashboard\forms\NotificationForm$1.class
 edu\univ\erp\ui\admindashboard\swing\slider\PanelSlider.class
@@ -210,6 +211,7 @@ edu\univ\erp\ui\studentdashboard\forms\InboxForm.class
 edu\univ\erp\ui\instructordashboard\utils\UndoRedo.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$10.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$ModernTable.class
+edu\univ\erp\ui\admindashboard\forms\DashboardForm$5.class
 edu\univ\erp\ui\studentdashboard\forms\RegisterCoursesForm$RoundButton.class
 edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$3.class
 edu\univ\erp\ui\instructordashboard\model\ModelUser.class

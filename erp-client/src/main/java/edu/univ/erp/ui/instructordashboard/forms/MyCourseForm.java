@@ -176,6 +176,30 @@ public class MyCourseForm extends SimpleForm {
         sorter = new TableRowSorter<>(tableModel);
         gradeTable.setRowSorter(sorter);
 
+        // Intercept double-clicks: if maintenance mode is active, prevent editing and show message.
+        gradeTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    boolean maintenance = false;
+                    try {
+                        maintenance = edu.univ.erp.ui.components.MaintenanceModeManager.getInstance().isMaintenanceMode();
+                    } catch (Throwable ignore) {}
+                    if (maintenance) {
+                        // Inform user and prevent any editor activation
+                        JOptionPane.showMessageDialog(MyCourseForm.this,
+                                "cannot edit while maintenance mode is active",
+                                "Maintenance", JOptionPane.WARNING_MESSAGE);
+                        try {
+                            if (gradeTable.isEditing()) {
+                                gradeTable.getCellEditor().cancelCellEditing();
+                            }
+                        } catch (Throwable ignore) {}
+                    }
+                }
+            }
+        });
+
     tableScrollPane = new JScrollPane(gradeTable);
     tableScrollPane.setOpaque(false);
     tableScrollPane.getViewport().setOpaque(false);

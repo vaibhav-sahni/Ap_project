@@ -1332,6 +1332,22 @@ public class RegisterCoursesForm extends SimpleForm {
             CourseSection course = (CourseSection) value;
             registerButton.setVisible(!course.isRegistered && course.enrolledCount < course.capacity);
 
+            // Disable / grey out register when maintenance mode is active
+            boolean maintenance = false;
+            try {
+                maintenance = edu.univ.erp.ui.components.MaintenanceModeManager.getInstance().isMaintenanceMode();
+            } catch (Throwable ignore) {}
+
+            if (maintenance) {
+                registerButton.setEnabled(false);
+                registerButton.setBackground(Color.decode("#6B7280")); // gray
+                registerButton.setToolTipText("Registration is disabled during maintenance");
+            } else {
+                registerButton.setEnabled(true);
+                registerButton.setBackground(Color.decode("#10B981"));
+                registerButton.setToolTipText(null);
+            }
+
             panel.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
         }
 
