@@ -43,7 +43,7 @@ This README enumerates the features implemented across the server and client so 
 
 ## Architecture Overview
 
-- Language: Java 17
+- Language: Java 24
 - Build: Maven (multi-module)
 - Serialization: Gson (JSON) for domain objects.
 - Transport: custom single-line TCP command protocol (plain text over socket). Each request is a single line command with colon-separated arguments. Responses are single-line strings prefixed with `SUCCESS:`, `ERROR:`, or `FILE_DOWNLOAD:` for binary/content transfers.
