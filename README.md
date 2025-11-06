@@ -7,7 +7,7 @@ It uses a MySQL DB to store data, and features a client and server application c
 There are 3 kinds of users in the app
 
 # User types and supported actions
-Students: 
+1. Students: 
 - Browse Course Catalog and register for a course
 - View Registered Courses
 - View Timetable
@@ -15,7 +15,7 @@ Students:
 - Get Notifications
 - Change Password
 
-Instructors: 
+2. Instructors: 
 - View Assigned Sections
 - View Student roster and component-wise grades for an assigned section
 - View Section Stats
@@ -25,7 +25,7 @@ Instructors:
 - Get Notifications
 - Change Password
 
-Administrator:
+2. Administrator:
 - Toggle Maintenance Mode
 - Set Course Drop Deadline
 - Download/Restore DB Backup (uses gzip format.)
@@ -33,12 +33,7 @@ Administrator:
 - Create Courses/Sections/Students/Instructors
 - Reassign Instructors to Sections
 
-Top-level features:
-- Login / session management with account lockout and last-login tracking.
-- Student flow: view course catalog → register for a section (capacity checks) → view timetable and grades → download transcript.
-- Instructor flow: view assigned sections → open roster → record component scores → compute final grade → export/import grades (CSV).
-- Admin flow: create students/instructors/courses/sections → toggle maintenance mode → DB backup/restore (gzipped SQL via safe BASE64 transfer).
-
+# Client Server Communication
 Protocol:
 - The client sends single-line commands over TCP, e.g. `LOGIN:username:password`.
 - The server responds with `SUCCESS:<payload>` or `ERROR:<message>`; files are transferred as `FILE_DOWNLOAD:<mime>:<name>:BASE64:<payload>`.
