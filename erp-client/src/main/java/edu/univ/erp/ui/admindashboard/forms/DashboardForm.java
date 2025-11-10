@@ -17,6 +17,7 @@ import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -75,6 +76,8 @@ public class DashboardForm extends SimpleForm {
     private CardPanel tabWrapper;
     // Simple in-memory store for created instructors (dummy mode)
     private List<String> instructors = new ArrayList<>();
+    // Map display string -> instructor userId (populated from server)
+    private java.util.Map<String, Integer> instructorDisplayToId = new java.util.HashMap<>();
 
     // --- UI theme helpers (from student dashboard file) ---
     private Color uiColor(String key, Color fallback) {
@@ -368,8 +371,10 @@ public class DashboardForm extends SimpleForm {
             }
         });
 
-        dialog.setContentPane(content);
-        dialog.setVisible(true);
+    dialog.setContentPane(content);
+    // Size to fit preferred sizes of the newly added components
+    dialog.pack();
+    dialog.setVisible(true);
     }
 
     private void showCreateStudentDialog() {
@@ -527,7 +532,9 @@ public class DashboardForm extends SimpleForm {
     }
 
     private void showCreateSectionDialog() {
-        JDialog dialog = createStandardDialog("Create Section");
+    JDialog dialog = createStandardDialog("Create Section");
+    // Keep pack() behaviour but enforce a slightly larger minimum height so all fields fit
+    dialog.setMinimumSize(new java.awt.Dimension(760, 700));
         JPanel content = new JPanel(new MigLayout("wrap, fillx, insets 25", "[grow,fill]"));
 
         // Course selector (from course table)
@@ -545,26 +552,62 @@ public class DashboardForm extends SimpleForm {
         courseDropdown.setPreferredSize(new java.awt.Dimension(200, 30));
         content.add(courseDropdown, "gapbottom 15");
 
-        content.add(new JLabel("Instructor:"));
-        JComboBox<String> instrDropdown = new JComboBox<>(instructors.toArray(new String[0]));
-        instrDropdown.setEditable(true); // allow manual entry
-        instrDropdown.setPreferredSize(new java.awt.Dimension(200, 30));
-        content.add(instrDropdown, "gapbottom 15");
+    content.add(new JLabel("Instructor:"));
+    // Populate instructor dropdown from the cached map if available, otherwise fallback to instructors list
+    String[] instrItems = instructorDisplayToId.isEmpty() ? instructors.toArray(new String[0]) : instructorDisplayToId.keySet().toArray(new String[0]);
+    JComboBox<String> instrDropdown = new JComboBox<>(instrItems);
+    instrDropdown.setEditable(true); // allow manual entry but prefer selecting existing
+    instrDropdown.setPreferredSize(new java.awt.Dimension(200, 30));
+    content.add(instrDropdown, "gapbottom 15");
 
-        content.add(new JLabel("Day/Time:"));
-        JTextField txtDT = new JTextField();
-        txtDT.setPreferredSize(new java.awt.Dimension(200, 30));
-        content.add(txtDT, "gapbottom 15");
+    content.add(new JLabel("Day/Time:"));
+    // Weekday multi-select using checkboxes (Mon-Fri)
+    JPanel dayPanel = new JPanel(new MigLayout("ins 0, gap 6", "[]6[]6[]6[]6", "[]"));
+    dayPanel.setOpaque(false);
+    JCheckBox cbMon = new JCheckBox("Mon");
+    JCheckBox cbTue = new JCheckBox("Tue");
+    JCheckBox cbWed = new JCheckBox("Wed");
+    JCheckBox cbThu = new JCheckBox("Thu");
+    JCheckBox cbFri = new JCheckBox("Fri");
+    cbMon.setOpaque(false); cbTue.setOpaque(false); cbWed.setOpaque(false); cbThu.setOpaque(false); cbFri.setOpaque(false);
+    dayPanel.add(cbMon);
+    dayPanel.add(cbTue);
+    dayPanel.add(cbWed);
+    dayPanel.add(cbThu);
+    dayPanel.add(cbFri, "wrap");
+    content.add(dayPanel, "gapbottom 8, span, split 2, w 420!");
+
+    String[] timeSlots = new String[] {
+        "08:00-09:00", "09:00-10:00", "10:00-11:00", "11:00-12:00",
+        "12:00-13:00", "13:00-14:00", "14:00-15:00", "15:00-16:00",
+        "16:00-17:00", "17:00-18:00", "18:00-19:00", "19:00-20:00"
+    };
+    JComboBox<String> timeCombo = new JComboBox<>(timeSlots);
+    timeCombo.setPreferredSize(new java.awt.Dimension(200, 30));
+    timeCombo.setEditable(false);
+    content.add(timeCombo, "gapbottom 15");
 
         content.add(new JLabel("Room:"));
         JTextField txtRoom = new JTextField();
         txtRoom.setPreferredSize(new java.awt.Dimension(200, 30));
         content.add(txtRoom, "gapbottom 15");
 
-        content.add(new JLabel("Capacity:"));
+    content.add(new JLabel("Capacity:"));
         JTextField txtCap = new JTextField();
         txtCap.setPreferredSize(new java.awt.Dimension(200, 30));
         content.add(txtCap, "gapbottom 20");
+
+    // Semester and Year fields to satisfy DB constraints
+    content.add(new JLabel("Semester:"));
+    JComboBox<String> semCombo = new JComboBox<>(new String[] {"Monsoon", "Summer", "Winter"});
+    semCombo.setPreferredSize(new java.awt.Dimension(200, 30));
+    content.add(semCombo, "gapbottom 15");
+
+    content.add(new JLabel("Year:"));
+    JTextField txtYear = new JTextField();
+    txtYear.setPreferredSize(new java.awt.Dimension(200, 30));
+    txtYear.setText(String.valueOf(java.time.LocalDate.now().getYear()));
+    content.add(txtYear, "gapbottom 20");
 
         JPanel buttons = new JPanel(new MigLayout("align center", "[120!][120!]"));
         JButton btnCancel = new JButton("Cancel");
@@ -579,30 +622,153 @@ public class DashboardForm extends SimpleForm {
         btnCreate.addActionListener(a -> {
             String course = (String) courseDropdown.getSelectedItem();
             String instructor = (String) instrDropdown.getSelectedItem();
-            String dt = txtDT.getText().trim();
+            // Collect selected weekdays
+            java.util.List<String> selDays = new java.util.ArrayList<>();
+            if (cbMon.isSelected()) selDays.add("M");
+            if (cbTue.isSelected()) selDays.add("T");
+            if (cbWed.isSelected()) selDays.add("W");
+            if (cbThu.isSelected()) selDays.add("Th");
+            if (cbFri.isSelected()) selDays.add("F");
+            String day = String.join("/", selDays);
+            String time = (String) timeCombo.getSelectedItem();
+            String dt = (day == null ? "" : day.trim()) + " " + (time == null ? "" : time.trim());
+            dt = dt.trim();
             String room = txtRoom.getText().trim();
             String cap = txtCap.getText().trim();
             if (course == null || course.isEmpty() || instructor == null || instructor.isEmpty() || dt.isEmpty() || room.isEmpty() || cap.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "All fields are required.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
+            // Ensure instructor selection maps to a known instructor id (to satisfy FK constraints)
+            boolean hasInstrId = instructorDisplayToId.containsKey(instructor) || instructors.contains(instructor);
+            if (!hasInstrId) {
+                JOptionPane.showMessageDialog(dialog, "Please select an existing instructor from the dropdown or create the instructor first.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Validate combined Day/Time format: e.g. "MWF 10:00-11:00"
+            if (!validateDayTimeFormat(dt)) {
+                JOptionPane.showMessageDialog(dialog, "Invalid Day/Time format. Expected like: 'MWF 10:00-11:00' (use T for Tuesday, Th for Thursday).", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             try {
                 int c = Integer.parseInt(cap);
-                DefaultTableModel model = (DefaultTableModel) sectionTable.getModel();
-                model.addRow(new Object[]{course, instructor, dt, room, c});
-                // keep instructor in list for reuse
-                if (!instructors.contains(instructor)) {
-                    instructors.add(instructor);
+                // Read semester/year from form
+                String semester = (String) semCombo.getSelectedItem();
+                int yearVal;
+                try {
+                    yearVal = Integer.parseInt(txtYear.getText().trim());
+                } catch (NumberFormatException nfe) {
+                    JOptionPane.showMessageDialog(dialog, "Year must be a number.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
-                dialog.dispose();
-                JOptionPane.showMessageDialog(this, "Section created.", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+                // Build CourseCatalog object for createSection API call
+                // We need instructorId; attempt to resolve from server-side instructor list
+                final int capacity = c;
+                final String fCourse = course;
+                final String fInstructorDisplay = instructor;
+                final String fDayTime = dt;
+                final String fRoom = room;
+
+                final String fSemester = semester;
+                final int fYear = yearVal;
+
+                // Call server in background thread
+                new Thread(() -> {
+                    try {
+                        edu.univ.erp.ui.actions.AdminActions adminActions = new edu.univ.erp.ui.actions.AdminActions();
+
+                        // Resolve instructorId from cached map if possible
+                        int instructorId = 0;
+                        String instructorName = fInstructorDisplay == null ? "" : fInstructorDisplay;
+                        try {
+                            if (instructorDisplayToId.containsKey(fInstructorDisplay)) {
+                                instructorId = instructorDisplayToId.get(fInstructorDisplay);
+                                // Try to extract a nicer name (display may contain dept)
+                                int idx = fInstructorDisplay.indexOf('(');
+                                if (idx > 0) instructorName = fInstructorDisplay.substring(0, idx).trim();
+                            }
+                        } catch (Exception ignore) {
+                        }
+
+                        // Create CourseCatalog using the 12-arg constructor (backward compatible)
+                edu.univ.erp.domain.CourseCatalog section = new edu.univ.erp.domain.CourseCatalog(
+                                fCourse,
+                                "", // title not required here
+                                0, // credits unknown
+                                0, // section id (server will allocate)
+                                fDayTime,
+                                fRoom,
+                                capacity,
+                                0, // enrolled count
+                    fSemester,
+                    fYear,
+                                instructorId,
+                                instructorName
+                        );
+
+                        String resp = adminActions.createSectionOnly(section);
+                        SwingUtilities.invokeLater(() -> {
+                            dialog.dispose();
+                            JOptionPane.showMessageDialog(this, resp == null || resp.isEmpty() ? "Section created." : resp, "Success", JOptionPane.INFORMATION_MESSAGE);
+                            // Refresh section table from server
+                            try {
+                                DefaultTableModel secModel = (DefaultTableModel) sectionTable.getModel();
+                                loadSectionDataAsync(secModel);
+                            } catch (Exception ignore) {}
+                        });
+                    } catch (Exception ex) {
+                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Failed to create section: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE));
+                    }
+                }).start();
+
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dialog, "Capacity must be a number.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
 
-        dialog.setContentPane(content);
-        dialog.setVisible(true);
+    dialog.setContentPane(content);
+    // Size to fit preferred sizes of the newly added components, then center on screen
+    dialog.pack();
+    dialog.setLocationRelativeTo(null);
+    dialog.setVisible(true);
+    }
+
+    /**
+     * Validate that the combined Day/Time string matches a simple expected pattern.
+     * Accepts values like: "MWF 10:00-11:00", "Mon/Wed/Fri 09:00-10:00" or "Daily 08:00-09:00".
+     */
+    private boolean validateDayTimeFormat(String dt) {
+        if (dt == null) return false;
+        dt = dt.trim();
+        if (dt.isEmpty()) return false;
+
+        String[] parts = dt.split("\\s+", 2);
+        if (parts.length != 2) return false;
+
+        String days = parts[0];
+        String times = parts[1];
+
+        // time part must be HH:MM-HH:MM
+        if (!times.matches("\\d{2}:\\d{2}-\\d{2}:\\d{2}")) return false;
+        try {
+            String[] tt = times.split("-");
+            java.time.LocalTime start = java.time.LocalTime.parse(tt[0]);
+            java.time.LocalTime end = java.time.LocalTime.parse(tt[1]);
+            if (!start.isBefore(end)) return false;
+        } catch (Exception ex) {
+            return false;
+        }
+
+        // days part must be compact abbreviations like M, T, W, Th, F concatenated
+        // Examples: MWF, TTh, MThF, M
+        // Use alternation to prefer matching 'Th' before 'T'
+        if ("Daily".equalsIgnoreCase(days)) return true;
+        if (!days.matches("(?:(?:Th)|M|T|W|F)+")) return false;
+        return true;
     }
 
     /**
@@ -1296,6 +1462,7 @@ public class DashboardForm extends SimpleForm {
             java.util.List<java.util.Map<String, Object>> instructorList = adminActions.fetchAllInstructors();
 
             instructors.clear();
+            instructorDisplayToId.clear();
             if (instructorList != null) {
                 for (java.util.Map<String, Object> inst : instructorList) {
                     String username = inst.get("username") == null ? "" : inst.get("username").toString();
@@ -1311,6 +1478,19 @@ public class DashboardForm extends SimpleForm {
                         display = name.isEmpty() ? (username.isEmpty() ? "Unnamed" : username) : name;
                     }
                     instructors.add(display);
+
+                    // Try to read user id
+                    int uid = 0;
+                    Object idObj = inst.get("userId");
+                    if (idObj == null) idObj = inst.get("id");
+                    if (idObj == null) idObj = inst.get("user_id");
+                    if (idObj != null) {
+                        try {
+                            if (idObj instanceof Number) uid = ((Number) idObj).intValue();
+                            else uid = Integer.parseInt(idObj.toString());
+                        } catch (Exception ignore) {}
+                    }
+                    instructorDisplayToId.put(display, uid);
                 }
             }
         } catch (Exception e) {
