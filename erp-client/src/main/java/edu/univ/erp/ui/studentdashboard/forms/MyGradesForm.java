@@ -183,11 +183,27 @@ public class MyGradesForm extends SimpleForm {
         if (cu == null) return;
         final int uid = cu.getUserId();
         edu.univ.erp.api.student.StudentAPI api = new edu.univ.erp.api.student.StudentAPI();
-    edu.univ.erp.util.UIHelper.runAsync(() -> api.getMyGrades(uid), (java.util.List<edu.univ.erp.domain.Grade> grades) -> {
+
+    // Fetch course catalog first so we can display course codes; then fetch grades.
+    edu.univ.erp.util.UIHelper.runAsync(() -> {
+        java.util.List<edu.univ.erp.domain.CourseCatalog> catalog = api.getCourseCatalog();
+        java.util.Map<String,String> titleToCode = new java.util.HashMap<>();
+        if (catalog != null) {
+            for (edu.univ.erp.domain.CourseCatalog c : catalog) {
+                if (c.getCourseTitle() != null) titleToCode.put(c.getCourseTitle(), c.getCourseCode());
+            }
+        }
+        // Now fetch grades
+        return new java.util.AbstractMap.SimpleEntry<>(titleToCode, api.getMyGrades(uid));
+    }, (java.util.Map.Entry<java.util.Map<String,String>, java.util.List<edu.univ.erp.domain.Grade>> pair) -> {
+            if (pair == null) return;
+            java.util.Map<String,String> titleToCode = pair.getKey();
+            java.util.List<edu.univ.erp.domain.Grade> grades = pair.getValue();
             if (grades == null) return;
             java.util.List<GradeEntry> converted = new java.util.ArrayList<>();
             for (edu.univ.erp.domain.Grade g : grades) {
-                String course = g.getCourseName() == null ? "Unknown Course" : g.getCourseName();
+                String title = g.getCourseName() == null ? "Unknown Course" : g.getCourseName();
+                String code = titleToCode.getOrDefault(title, "");
                 // Map assessment components into the common slots if names match
                 String quiz = "N/A", mid = "N/A", assign = "N/A", end = "N/A";
                 if (g.getComponents() != null) {
@@ -200,7 +216,7 @@ public class MyGradesForm extends SimpleForm {
                         else if (n.contains("end") || n.contains("final")) end = val;
                     }
                 }
-                GradeEntry e = new GradeEntry(course, course, quiz, mid, assign, end, g.getFinalGrade());
+                GradeEntry e = new GradeEntry(code, title, quiz, mid, assign, end, g.getFinalGrade());
                 converted.add(e);
             }
             gradeEntries = converted;

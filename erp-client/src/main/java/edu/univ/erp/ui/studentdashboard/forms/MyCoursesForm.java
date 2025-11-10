@@ -750,7 +750,7 @@ public class MyCoursesForm extends SimpleForm {
         rightCluster.setOpaque(false);
 
         // Professional Department Filter (same height as search)
-        deptFilter = new JComboBox<>(new String[]{"All Departments", "CS", "MATH", "PHYS", "ENG"});
+        deptFilter = new JComboBox<>(new String[]{"All Departments", "CSE", "MTH", "COM", "ECE","SSH","DES"});
         styleComboBox(deptFilter);
         deptFilter.setPreferredSize(new Dimension(160, 40));
         deptFilter.addActionListener(e -> applyFilters());
