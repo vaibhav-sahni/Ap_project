@@ -74,10 +74,10 @@ public class RegisterCoursesForm extends SimpleForm {
     private JComboBox<String> creditsFilter;
     private JButton clearBtn;
     private JLabel statsLabel; // shows "X courses available"
-    private JLabel titleLabel;
-    private JPanel filterPanel;
+    private JLabel titleLabel; // "Register Courses" title
+    private JPanel filterPanel; // holds the entire filter bar
     private JPanel searchPanelContainer; // holds the rounded search box for re-theming
-    private CardPanel tablePanel;
+    private CardPanel tablePanel; // holds the table with consistent padding/background
     private FadePanel contentFadePanel; // wraps the table to enable fade-in like Dashboard notifications
     private CapacityHealthBarRenderer capacityRenderer; // keep reference to trigger animations
     private boolean openAnimationPlayed = false; // ensure open animation runs once
@@ -85,8 +85,8 @@ public class RegisterCoursesForm extends SimpleForm {
     private Color capacityTrackColor = Color.decode("#3A3A3A");
 
     // Hover tracking for capacity cell behavior
-    private int hoverRow = -1;
-    private int hoverCol = -1;
+    private int hoverRow = -1; // -1 means no hover
+    private int hoverCol = -1; // -1 means no hover
 
     // Data storage: unregistered and registered courses
     private List<CourseSection> unregisteredCourses;

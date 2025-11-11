@@ -253,6 +253,13 @@ public class InstructorUiHandlers {
         }
 
         javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+        // Suggest a default filename: grades_section_<sectionId>_<YYYY-MM-DD>.csv
+        try {
+            java.io.File suggested = new java.io.File(String.format("grades_section_%d_%s.csv", sectionId, java.time.LocalDate.now().toString()));
+            chooser.setSelectedFile(suggested);
+        } catch (Exception ignore) {
+            // ignore and proceed without suggested filename
+        }
         int ret = chooser.showSaveDialog(null);
         if (ret != javax.swing.JFileChooser.APPROVE_OPTION) return false;
         java.io.File file = chooser.getSelectedFile();

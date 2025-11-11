@@ -248,13 +248,7 @@ Testing the flow
 mvn -f "c:\Users\sahni\Documents\GitHub\Ap_project\erp-server" exec:java
 ```
 
-- Use the client UI: open Login → "Forgot Password?" → enter username + desired new password → click CHANGE PASSWORD. If configured correctly the server will email `ADMIN_EMAIL` and the client will show a success message.
 
-- Quick command-line test (advanced): you can send a `RESET_PASSWORD:username:newpass` command to the server using a simple TCP client or by creating a small Java test that uses `ClientRequest.send("RESET_PASSWORD:...")`.
-
-Notes & security
-- The current implementation (by design) sends the requested new password in the notification email to the admin — it does NOT automatically update the user's password in the DB. This is intentionally implemented the way you specified, but it is insecure for production. Consider a token-based reset flow or sending a secure one-time token instead.
-- If SMTP is not configured or the mail library is not on the runtime classpath, the server will log an error and return a readable `ERROR:` response to the client. When running for development, Mailtrap or a local SMTP test tool (smtp4dev) is recommended.
 
 ## Where to look in the codebase (entry points)
 
