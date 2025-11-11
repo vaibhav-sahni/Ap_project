@@ -20,9 +20,12 @@ public class InstructorUiHandlers {
     // Helper: convert numeric score to letter grade (same scale as server)
     private String computeLetterFromNumeric(double score) {
         if (score >= 90.0) return "A";
-        if (score >= 80.0) return "B";
-        if (score >= 70.0) return "C";
-        if (score >= 60.0) return "D";
+        if (score >= 80.0) return "A-";
+        if (score >= 70.0) return "B";
+        if (score >= 60.0) return "B-";
+        if (score >= 50.0) return "C";
+        if (score >= 40.0) return "C-";
+        if (score >= 30.0) return "D";
         return "F";
     }
 
