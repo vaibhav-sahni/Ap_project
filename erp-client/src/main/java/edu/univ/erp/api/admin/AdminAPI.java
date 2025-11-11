@@ -16,8 +16,7 @@ public class AdminAPI {
     private final Gson gson = new Gson();
 
     // ----------------------------------------------------------------------
-    // --- 1. CREATE NEW STUDENT -------------------------------------------
-    // ----------------------------------------------------------------------
+
     public String createStudent(Student student, String password) throws Exception {
     
     // If student.userId is 0, server will allocate a new one
@@ -40,8 +39,7 @@ public class AdminAPI {
     throw new Exception(response.startsWith("ERROR:") ? response.substring("ERROR:".length()) : "Unknown error creating student");
 }
     // ----------------------------------------------------------------------
-    // --- 2. CREATE COURSE AND SECTION ------------------------------------
-    // ----------------------------------------------------------------------
+   
     public String createCourseAndSection(CourseCatalog course) throws Exception {
         // URL-encode dayTime to avoid breaking the colon-separated protocol (dayTime contains ':' characters)
         String encodedDayTime = java.net.URLEncoder.encode(course.getDayTime() == null ? "" : course.getDayTime(), java.nio.charset.StandardCharsets.UTF_8.toString());
@@ -96,8 +94,7 @@ public class AdminAPI {
     }
 
     // ----------------------------------------------------------------------
-    // --- 3. TOGGLE MAINTENANCE -------------------------------------------
-    // ----------------------------------------------------------------------
+  
     public String toggleMaintenance(boolean on) throws Exception {
         String request = "TOGGLE_MAINTENANCE:" + (on ? "ON" : "OFF");
         String response = ClientRequest.send(request);
@@ -121,8 +118,7 @@ public class AdminAPI {
         throw new Exception("Unknown response from server: " + response);
     }
     // ----------------------------------------------------------------------
-    // --- 4. GET ALL COURSES / SECTIONS (Optional helper for admin UI) ---
-    // ----------------------------------------------------------------------
+  
     public List<CourseCatalog> getAllCourses() throws Exception {
         String request = "GET_ALL_COURSES";
         String response = ClientRequest.send(request);
@@ -136,8 +132,7 @@ public class AdminAPI {
     }
 
     // ----------------------------------------------------------------------
-    // --- 5. GET ALL STUDENTS (Optional helper for admin UI) -------------
-    // ----------------------------------------------------------------------
+  
     public List<Student> getAllStudents() throws Exception {
         String request = "GET_ALL_STUDENTS";
         String response = ClientRequest.send(request);

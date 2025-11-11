@@ -64,7 +64,7 @@ public class AuthAPI {
     }
 
     /**
-     * NEW: Sends a request to the server to change the user's password.
+     *  Sends a request to the server to change the user's password.
      * @param userId The ID of the currently logged-in user.
      * @param oldPassword The current raw password.
      * @param newPassword The new raw password.

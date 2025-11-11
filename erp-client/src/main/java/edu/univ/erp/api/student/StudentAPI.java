@@ -15,11 +15,7 @@ import edu.univ.erp.domain.Grade;
 public class StudentAPI { 
     private final Gson gson = new Gson();
 
-    // NEW COMMAND: Used to fetch the transcript CSV file content.
-    private static final String CMD_DOWNLOAD_TRANSCRIPT = "DOWNLOAD_TRANSCRIPT";
 
-    // ----------------------------------------------------------------------
-    // --- 1. ENROLLMENT / DROP FEATURES (EXISTING) -------------------------
     // ----------------------------------------------------------------------
     
     /**
@@ -72,9 +68,7 @@ public class StudentAPI {
 
 
     // ----------------------------------------------------------------------
-    // --- 2. TIMETABLE FEATURE (EXISTING) ----------------------------------
-    // ----------------------------------------------------------------------
-
+   
     /**
      * Sends a request to the server to fetch the student's current course schedule.
      * Command: GET_TIMETABLE:userId
@@ -96,9 +90,7 @@ public class StudentAPI {
 
 
     // ----------------------------------------------------------------------
-    // --- 3. COURSE CATALOG FEATURE (EXISTING) -----------------------------
-    // ----------------------------------------------------------------------
-    
+   
     /**
      * Sends a request to the server to fetch the entire course catalog.
      */
@@ -117,9 +109,6 @@ public class StudentAPI {
     }
 
     // ----------------------------------------------------------------------
-    // --- 4. GRADES FEATURE (EXISTING) -------------------------------------
-    // ----------------------------------------------------------------------
-
     public List<Grade> getMyGrades(int userId) throws Exception {
         String request = "GET_GRADES:" + userId;
         String response = ClientRequest.send(request);
@@ -160,11 +149,7 @@ public class StudentAPI {
         public Double cgpa;
         public Double totalCreditsEarned;
     }
-
     // ----------------------------------------------------------------------
-    // --- 5. DOWNLOAD TRANSCRIPT FEATURE (NEW) -----------------------------
-    // ----------------------------------------------------------------------
-
     /**
      * Requests the full student transcript as a CSV string.
      * Command: DOWNLOAD_TRANSCRIPT:userId

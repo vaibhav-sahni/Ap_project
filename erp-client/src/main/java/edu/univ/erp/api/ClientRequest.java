@@ -13,7 +13,7 @@ import edu.univ.erp.util.SessionLostNotifier;
 public class ClientRequest {
     private static final String SERVER_HOST = "localhost"; 
     private static final int SERVER_PORT = 9090;
-    // gson was previously declared for convenience but is not required in this helper
+    
 
     /**
      * Sends a request string to the server and returns the raw response string.

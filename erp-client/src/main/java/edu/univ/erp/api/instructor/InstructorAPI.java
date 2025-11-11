@@ -20,8 +20,6 @@ public class InstructorAPI {
     private final Gson gson = new Gson();
 
     // ----------------------------------------------------------------------
-    // --- 1. SECTION VIEW FEATURE ------------------------------------------
-    // ----------------------------------------------------------------------
 
     /**
      * Fetches all sections assigned to a specific instructor.
@@ -59,9 +57,7 @@ public class InstructorAPI {
     }
 
     // ----------------------------------------------------------------------
-    // --- 2. GRADING FEATURES ----------------------------------------------
-    // ----------------------------------------------------------------------
-
+ 
     /**
      * Records or updates a score for a single assessment component.
      * Command: RECORD_SCORE:instructorId:enrollmentId:componentName:score
