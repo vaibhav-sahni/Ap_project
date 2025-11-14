@@ -8,9 +8,9 @@ import javax.swing.SwingUtilities;
 
 import com.formdev.flatlaf.FlatClientProperties;
 
+import drawercomponents.drawer.component.DrawerBuilder;
+import drawercomponents.drawer.component.DrawerPanel;
 import net.miginfocom.swing.MigLayout;
-import raven.drawer.component.DrawerBuilder;
-import raven.drawer.component.DrawerPanel;
 
 public class Menu extends JPanel {
 

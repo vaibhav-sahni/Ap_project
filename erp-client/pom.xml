@@ -102,13 +102,7 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/datechooser-swing-1.4.1.jar</systemPath>
         </dependency>
-        <dependency>
-            <groupId>io.raven</groupId>
-            <artifactId>swing-glasspane-popup</artifactId>
-            <version>1.5.1</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/swing-glasspane-popup-1.5.1.jar</systemPath>
-        </dependency>
+        <!-- `swing-glasspane-popup` removed: source copied into project under `drawercomponents` -->
         <dependency>
             <groupId>io.raven</groupId>
             <artifactId>swing-chart</artifactId>

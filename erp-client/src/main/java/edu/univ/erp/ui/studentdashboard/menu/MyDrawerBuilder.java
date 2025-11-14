@@ -13,19 +13,19 @@ import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 import edu.univ.erp.ui.studentdashboard.forms.*;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
-import raven.drawer.component.DrawerPanel;
-import raven.drawer.component.SimpleDrawerBuilder;
-import raven.drawer.component.footer.SimpleFooterData;
-import raven.drawer.component.header.SimpleHeaderData;
-import raven.drawer.component.header.SimpleHeaderStyle;
-import raven.drawer.component.menu.MenuAction;
-import raven.drawer.component.menu.MenuEvent;
-import raven.drawer.component.menu.MenuValidation;
-import raven.drawer.component.menu.SimpleMenuOption;
-import raven.drawer.component.menu.SimpleMenuStyle;
-import raven.drawer.component.menu.data.Item;
-import raven.drawer.component.menu.data.MenuItem;
-import raven.swing.AvatarIcon;
+import drawercomponents.drawer.component.DrawerPanel;
+import drawercomponents.drawer.component.SimpleDrawerBuilder;
+import drawercomponents.drawer.component.footer.SimpleFooterData;
+import drawercomponents.drawer.component.header.SimpleHeaderData;
+import drawercomponents.drawer.component.header.SimpleHeaderStyle;
+import drawercomponents.drawer.component.menu.MenuAction;
+import drawercomponents.drawer.component.menu.MenuEvent;
+import drawercomponents.drawer.component.menu.MenuValidation;
+import drawercomponents.drawer.component.menu.SimpleMenuOption;
+import drawercomponents.drawer.component.menu.SimpleMenuStyle;
+import drawercomponents.drawer.component.menu.data.Item;
+import drawercomponents.drawer.component.menu.data.MenuItem;
+import drawercomponents.swing.AvatarIcon;
 
 public class MyDrawerBuilder extends SimpleDrawerBuilder {
 
