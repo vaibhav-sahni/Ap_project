@@ -1,0 +1,65 @@
+cd "c:\ROAD TO SDE\iiitd\third sem\AP project\Ap_project\erp-client"
+
+# Copy ALL SVG files to the correct location
+Copy-Item "src\main\java\edu\univ\erp\ui\studentdashboard\resources\menu\*.svg" "src\main\resources\menu\" -Force
+
+
+
+//run student
+cd "c:\ROAD TO SDE\iiitd\third sem\AP project\Ap_project\erp-client"
+mvn clean compile
+java -cp "target\classes;lib\*" application.Application
+//run loginpage
+mvn clean compile && mvn exec:java "-Dexec.mainClass=edu.univ.erp.ui.loginpage.main.Login"
+
+///adding menu functionality
+// In your Main.java, find menu.addEvent(...) and use this code:
+
+menu.addEvent(new MenuEvent() {
+    @Override
+    public void selected(int index, int subIndex) {
+        
+        // The index corresponds to the main clickable "Item"
+        // The subIndex corresponds to the ".subMenu()" item
+
+        if (index == 0) {
+            // Clicked "Dashboard"
+            showForm(new Form_Student_Dashboard());
+        
+        } else if (index == 1) {
+            // Clicked "Course Catalog"
+            if (subIndex == 0) {
+                // Clicked "All Courses"
+                showForm(new Form_Student_Catalog_All()); 
+            } else if (subIndex == 1) {
+                // Clicked "My Registered Courses"
+                showForm(new Form_Student_Registered());
+            }
+        
+        } else if (index == 2) {
+            // Clicked "My Timetable"
+            showForm(new Form_Student_Timetable());
+        
+        } else if (index == 3) {
+            // Clicked "My Grades"
+            showForm(new Form_Student_Grades());
+        
+        } else if (index == 4) {
+            // Clicked "Notification"
+            showForm(new Form_Student_Notifications());
+        
+        } else if (index == 5) {
+            // Clicked "Logout"
+            
+            // This is not a form, it's an action.
+            // 1. Close the dashboard window
+            dispose(); 
+            
+            // 2. Show the login window again (assuming it's named LoginFrame.java)
+            // Make sure to run this on the Event Dispatch Thread
+            SwingUtilities.invokeLater(() -> {
+                new LoginFrame().setVisible(true);
+            });
+        }
+    }
+});

@@ -212,6 +212,9 @@ public class DashboardForm extends SimpleForm {
         // async fetch will be a no-op if no current user is set
         fetchAndPopulateStudentMetrics();
 
+    // Log that an async refresh has been triggered for debugging/visibility
+    System.out.println("Client LOG: Student Dashboard refresh requested (async reloads started).");
+
         // Refresh the entire window when Look & Feel (mode) changes.
         // Register this listener only once to avoid accumulating handlers
         // which cause repeated rebuilds and layout corruption.

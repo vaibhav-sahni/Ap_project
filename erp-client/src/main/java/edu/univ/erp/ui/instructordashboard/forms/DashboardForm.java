@@ -204,6 +204,9 @@ public class DashboardForm extends SimpleForm {
         // Ensure courses are fetched to populate the list
         fetchAndPopulateInstructorCourses();
 
+    // Log that an async refresh has been triggered for debugging/visibility
+    System.out.println("Client LOG: Instructor Dashboard refresh requested (async reloads started).");
+
         // Refresh the entire window when Look & Feel (mode) changes.
         // This logic is PRESERVED as requested.
         if (!lafListenerInstalled) {

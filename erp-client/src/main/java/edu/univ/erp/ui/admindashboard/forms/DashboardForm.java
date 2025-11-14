@@ -1623,17 +1623,39 @@ public class DashboardForm extends SimpleForm {
 
     @Override
     public void formRefresh() {
-        // Update background color on theme change
+        // Update theme-aware colors
         setBackground(panelBg());
-
-        // Update text color on theme change
         if (lbTitle != null) {
             lbTitle.setForeground(textColor());
         }
 
-        // In a real app, this method would be called to refresh the data
-        // in the tables (e.g., studentTable.getModel()...)
-        System.out.println("Client LOG: DashboardForm refreshed.");
+        // Update maintenance-guarded button states (theme or mode may have changed)
+        try {
+            updateMaintenanceButtons();
+        } catch (Throwable ignore) {}
+
+        // Trigger async reloads for all tables so the UI reflects server state.
+        // The load*DataAsync methods run network calls off the EDT and update models on the EDT.
+        try {
+            if (studentTable != null && studentTable.getModel() instanceof javax.swing.table.DefaultTableModel) {
+                loadStudentDataAsync((javax.swing.table.DefaultTableModel) studentTable.getModel());
+            }
+        } catch (Throwable ignore) {}
+
+        try {
+            if (courseTable != null && courseTable.getModel() instanceof javax.swing.table.DefaultTableModel) {
+                loadCourseDataAsync((javax.swing.table.DefaultTableModel) courseTable.getModel());
+            }
+        } catch (Throwable ignore) {}
+
+        try {
+            if (sectionTable != null && sectionTable.getModel() instanceof javax.swing.table.DefaultTableModel) {
+                loadSectionDataAsync((javax.swing.table.DefaultTableModel) sectionTable.getModel());
+            }
+        } catch (Throwable ignore) {}
+
+        // For debugging / logs
+        System.out.println("Client LOG: DashboardForm refresh requested (async reloads started).");
     }
 
     @Override
