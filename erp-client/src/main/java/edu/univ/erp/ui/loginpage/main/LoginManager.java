@@ -2,6 +2,7 @@ package edu.univ.erp.ui.loginpage.main;
 
 import java.awt.Window;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.swing.SwingUtilities;
 
 /**

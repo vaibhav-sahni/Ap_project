@@ -8,7 +8,6 @@ import javax.swing.SwingUtilities;
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 
 import edu.univ.erp.ui.components.MaintenanceModeManager;
-// Use LoginManager.showLogin() where needed; avoid direct Login imports
 import edu.univ.erp.ui.studentdashboard.components.MainForm;
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
