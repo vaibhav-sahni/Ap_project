@@ -55,7 +55,7 @@ public class ClientRequest {
                 // If the server signaled authentication loss, treat this as session loss.
                 // Maintenance messages should not force a session clear — show the message but keep the session.
                 String serverMsg = e.getMessage() == null ? "" : e.getMessage();
-                if (serverMsg.contains("NOT_AUTHENTICATED") || serverMsg.contains("NOT_AUTH")) {
+                if (serverMsg.contains("NOT_AUTHENTICATED")) {
                     try { ClientSession.clear(); } catch (Exception ignore) {}
                     System.err.println("CLIENT WARN: server requested session clear due to auth: " + serverMsg);
                     // Only show the session-lost notifier if not suppressed by an intentional action
@@ -94,7 +94,7 @@ public class ClientRequest {
             if (response.startsWith("ERROR:")) {
                 String errorMessage = response.substring("ERROR:".length());
                 // If server indicates unauthenticated, clear persistent session and redirect to login
-                if (errorMessage.startsWith("NOT_AUTHENTICATED") || errorMessage.startsWith("NOT_AUTH")) {
+                if (errorMessage.startsWith("NOT_AUTHENTICATED")) {
                     try { ClientSession.clear(); } catch (Exception ignore) {}
                     try { SessionLostNotifier.notifyAndRedirect(); } catch (Exception ignore) {}
                     throw new Exception(errorMessage);

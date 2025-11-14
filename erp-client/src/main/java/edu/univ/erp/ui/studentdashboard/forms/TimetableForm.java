@@ -24,6 +24,7 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.UIManager;
 
 import com.formdev.flatlaf.FlatLaf;
@@ -427,7 +428,9 @@ public class TimetableForm extends SimpleForm {
         private static final LocalTime END_TIME = LocalTime.of(20, 0); // 8 PM
         private static final int HEADER_HEIGHT = 50;
         private static final int TIME_COL_WIDTH = 80;
-        private static final int ROW_HEIGHT_PER_30_MINS = 60; // Each 30-min block is 60px tall
+        // Reduce vertical density so the timetable fits typical 768px-high frames.
+        // Each 30-min block is now 30px tall (was 60px) which halves total height.
+        private static final int ROW_HEIGHT_PER_30_MINS = 30; // Each 30-min block is 30px tall
         private static final DayOfWeek[] DAYS_TO_SHOW = {
             DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY
         };
@@ -525,6 +528,9 @@ public class TimetableForm extends SimpleForm {
                     double x = TIME_COL_WIDTH + (dayIndex * colWidth);
                     double y = timeToY(entry.startTime);
                     double height = timeToY(entry.endTime) - y;
+
+                    // Use the exact time-slot height so the block fits the timetable grid.
+                    // (Do not expand to preferred height -- this keeps blocks aligned with time.)
 
                     // Apply a small margin
                     block.setBounds((int) x + 2, (int) y + 2, (int) colWidth - 4, (int) height - 4);
@@ -656,8 +662,16 @@ public class TimetableForm extends SimpleForm {
             setLayout(new MigLayout("fill, insets 8 10 8 10", "[fill]", "[]5[]push[]"));
             setOpaque(false); // We will paint our own rounded rect
 
-            JLabel titleLabel = new JLabel(entry.courseTitle);
-            titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+            // Use a wrapping JTextArea for the title so long course titles
+            // will wrap to multiple lines and remain visible inside the block.
+            JTextArea titleArea = new JTextArea(entry.courseTitle);
+            titleArea.setLineWrap(true);
+            titleArea.setWrapStyleWord(true);
+            titleArea.setOpaque(false);
+            titleArea.setEditable(false);
+            titleArea.setFocusable(false);
+            titleArea.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+            titleArea.setBorder(null);
 
             JLabel codeLabel = new JLabel(entry.courseCode);
             codeLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
@@ -667,14 +681,31 @@ public class TimetableForm extends SimpleForm {
             JLabel roomLabel = new JLabel(entry.room);
             roomLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
 
-            add(titleLabel, "wrap, gaptop 2");
+            add(titleArea, "wrap, gaptop 2");
             add(codeLabel, "wrap");
             add(profLabel, "wrap");
             add(roomLabel, "wrap"); // 'push' moves this to the bottom
 
+            // Tooltip showing exact timings and the requested format.
+            try {
+                java.time.format.DateTimeFormatter tf = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+                String times = entry.startTime.format(tf) + " - " + entry.endTime.format(tf);
+                // Use HTML for line breaks and simple styling.
+                String tip = "<html><b>" + times + "</b><br/>" +
+                        escapeHtml(entry.courseTitle) + " - " + escapeHtml(entry.courseCode) + "<br/>" +
+                        escapeHtml(entry.instructorName) + " - " + escapeHtml(entry.room) + "</html>";
+                setToolTipText(tip);
+            } catch (Throwable ignore) {
+            }
+
             // avoid calling overridable methods from ctor; colors are
             // applied dynamically in paintComponent so an explicit
             // initial call isn't required here.
+        }
+
+        private String escapeHtml(String s) {
+            if (s == null) return "";
+            return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
         }
 
         public TimetableEntry getEntry() {
