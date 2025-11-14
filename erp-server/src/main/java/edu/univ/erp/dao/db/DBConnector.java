@@ -19,15 +19,16 @@ public final class DBConnector {
     static {
         // Auth DB pool
         HikariConfig authCfg = new HikariConfig();
-        authCfg.setJdbcUrl(System.getProperty("erp.auth.jdbcUrl", "jdbc:mysql://localhost:3306/auth_db"));
-        authCfg.setUsername(System.getProperty("erp.auth.user", "auth_user"));
-        authCfg.setPassword(System.getProperty("erp.auth.pass", "auth_pass"));
-        authCfg.setMaximumPoolSize(Integer.parseInt(System.getProperty("erp.auth.maxPool", "5")));
-        authCfg.setMinimumIdle(Integer.parseInt(System.getProperty("erp.auth.minIdle", "1")));
-        authCfg.setConnectionTimeout(Long.parseLong(System.getProperty("erp.auth.connTimeout", "30000")));
-        authCfg.setIdleTimeout(Long.parseLong(System.getProperty("erp.auth.idleTimeout", "300000")));
-        authCfg.setMaxLifetime(Long.parseLong(System.getProperty("erp.auth.maxLifetime", "1800000")));
-        authCfg.setLeakDetectionThreshold(Long.parseLong(System.getProperty("erp.auth.leakThreshold", "5000")));
+        authCfg.setJdbcUrl(System.getProperty("erp.auth.jdbcUrl", "jdbc:mysql://localhost:3306/auth_db")); // separate auth DB
+        authCfg.setUsername(System.getProperty("erp.auth.user", "auth_user")); // separate auth user
+        authCfg.setPassword(System.getProperty("erp.auth.pass", "auth_pass")); // separate auth password
+        authCfg.setMaximumPoolSize(Integer.parseInt(System.getProperty("erp.auth.maxPool", "5"))); // smaller pool for auth DB
+        authCfg.setMinimumIdle(Integer.parseInt(System.getProperty("erp.auth.minIdle", "1"))); // smaller idle for auth DB
+        authCfg.setConnectionTimeout(Long.parseLong(System.getProperty("erp.auth.connTimeout", "30000"))); // 30s
+        authCfg.setIdleTimeout(Long.parseLong(System.getProperty("erp.auth.idleTimeout", "300000"))); // 5min
+        authCfg.setMaxLifetime(Long.parseLong(System.getProperty("erp.auth.maxLifetime", "1800000"))); // 30min
+        authCfg.setLeakDetectionThreshold(Long.parseLong(System.getProperty("erp.auth.leakThreshold", "5000"))); // 5s
+        // driver tuning
         authDs = new HikariDataSource(authCfg);
 
         // ERP DB pool
@@ -42,9 +43,9 @@ public final class DBConnector {
         erpCfg.setMaxLifetime(Long.parseLong(System.getProperty("erp.maxLifetime", "1800000")));
         erpCfg.setLeakDetectionThreshold(Long.parseLong(System.getProperty("erp.leakThreshold", "5000")));
         // driver tuning
-        erpCfg.addDataSourceProperty("cachePrepStmts", "true");
-        erpCfg.addDataSourceProperty("prepStmtCacheSize", "250");
-        erpCfg.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        erpCfg.addDataSourceProperty("cachePrepStmts", "true"); // enable prepared statement caching
+        erpCfg.addDataSourceProperty("prepStmtCacheSize", "250"); // number of prepared statements to cache
+        erpCfg.addDataSourceProperty("prepStmtCacheSqlLimit", "2048"); // max length of prepared SQL statements to cache
         erpDs = new HikariDataSource(erpCfg);
     }
 

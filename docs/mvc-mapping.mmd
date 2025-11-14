@@ -1,0 +1,41 @@
+flowchart LR
+  subgraph Client
+    View["View (Swing forms)\nDashboardForm, RegisterCoursesForm, etc."]
+    Actions["Controller / Actions\nStudentActions, AdminActions"]
+    API["Client API Adapter\nStudentAPI"]
+    ClientReq["Transport\nClientRequest / ClientSession (Socket)"]
+    FormMgr["FormManager / Navigation"]
+    Ctx["ClientContext (current user)"]
+  end
+
+  Socket((Socket))
+
+  subgraph Server
+    Handler["Server Router / Controller\nClientHandler"]
+    Service["Service (business logic)\nStudentService, AdminService"]
+    DAO["DAO / Persistence\nEnrollmentDAO, CourseDAO, GradeDAO"]
+    DB[(Database)]
+  end
+
+  %% Client flow
+  View -->|calls| Actions
+  Actions -->|delegates| API
+  API -->|sends string requests| ClientReq
+  ClientReq -->|socket| Socket
+  Socket -->|accepted by| Handler
+  Handler -->|invokes| Service
+  Service -->|uses| DAO
+  DAO -->|reads/writes| DB
+
+  %% Navigation/context
+  FormMgr --> View
+  Ctx --> View
+  Handler -->|returns SUCCESS/ERROR| ClientReq
+  ClientReq --> API
+  API --> Actions
+  Actions --> View
+
+  classDef client fill:#f5faff,stroke:#3b82f6
+  classDef server fill:#fff7ed,stroke:#f59e0b
+  class ClientNode client
+  class ServerNode server
