@@ -14,6 +14,13 @@ public class SessionLostNotifier {
     private static final AtomicBoolean showing = new AtomicBoolean(false);
 
     public static void notifyAndRedirect() {
+        // Respect suppression flag: if the application intentionally suppressed
+        // session-lost notifications (e.g., during an explicit logout), do nothing.
+        try {
+            if (edu.univ.erp.net.ClientSession.isSuppressSessionLost()) return;
+        } catch (Throwable ignore) {
+            // If the ClientSession class is not available for some reason, continue.
+        }
         // Only show one dialog at a time
         if (!showing.compareAndSet(false, true)) return;
 
@@ -30,24 +37,18 @@ public class SessionLostNotifier {
                         try { if (w != null) w.dispose(); } catch (Exception ignore) {}
                     }
 
-                    // Open the login screen (use fully-qualified class to avoid cyclic imports)
+                    // Delegate to LoginManager to ensure single-instance behavior
                     try {
-                        Class<?> loginClass = Class.forName("edu.univ.erp.ui.loginpage.main.Login");
-                        Object login = loginClass.getDeclaredConstructor().newInstance();
-                        if (login instanceof java.awt.Window) {
-                            ((java.awt.Window) login).setVisible(true);
-                        }
-                    } catch (Exception ex) {
-                        // If reflection fails, there's nothing more we can do here.
-                        ex.printStackTrace();
+                        edu.univ.erp.ui.loginpage.main.LoginManager.showLogin();
+                    } catch (Throwable ex) {
+                        // failed to invoke LoginManager; swallow to avoid crash
                     }
                 } finally {
                     showing.set(false);
                 }
             });
         } catch (Throwable t) {
-            // In case Swing isn't available or we are off-EDT, just log and reset flag
-            t.printStackTrace();
+            // In case Swing isn't available or we are off-EDT, ensure flag is reset
             showing.set(false);
         }
     }

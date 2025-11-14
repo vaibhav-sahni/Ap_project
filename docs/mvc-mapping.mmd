@@ -1,41 +1,47 @@
 flowchart LR
+  %% Client-side UI layer
   subgraph Client
-    View["View (Swing forms)\nDashboardForm, RegisterCoursesForm, etc."]
-    Actions["Controller / Actions\nStudentActions, AdminActions"]
-    API["Client API Adapter\nStudentAPI"]
-    ClientReq["Transport\nClientRequest / ClientSession (Socket)"]
-    FormMgr["FormManager / Navigation"]
-    Ctx["ClientContext (current user)"]
+    View["View (Swing UI)<br/>Examples: erp-client/src/main/java/edu/univ/erp/ui/studentdashboard/forms/DashboardForm.java<br/>RegisterCoursesForm.java<br/>MyGradesForm.java"]
+    Actions["Client Controllers / Actions<br/>erp-client/src/main/java/edu/univ/erp/ui/actions/StudentActions.java<br/>AdminActions.java, InstructorActions.java"]
+    API["Client API Adapters<br/>erp-client/src/main/java/edu/univ/erp/api/*<br/>StudentAPI, NotificationAPI, AuthAPI, etc."]
+    ClientReq["Transport Layer<br/>erp-client/src/main/java/edu/univ/erp/api/ClientRequest.java<br/>ClientSession/ClientConnection"]
+    FormMgr["Navigation / UI Manager<br/>erp-client/src/main/java/edu/univ/erp/ui/studentdashboard/menu/FormManager.java"]
+    Ctx["ClientContext (current user)<br/>erp-client/src/main/java/edu/univ/erp/ClientContext.java"]
+    ClientModel["TableModels (inner classes in forms) use domain types from<br/>edu.univ.erp.domain (deserialized by APIs)<br/>Examples: CourseCatalog, Grade, EnrollmentRecord"]
   end
 
-  Socket((Socket))
+  Socket((TCP Socket))
 
+  %% Server-side layers
   subgraph Server
-    Handler["Server Router / Controller\nClientHandler"]
-    Service["Service (business logic)\nStudentService, AdminService"]
-    DAO["DAO / Persistence\nEnrollmentDAO, CourseDAO, GradeDAO"]
+    Handler["Server Router / Controller<br/>erp-server/src/main/java/edu/univ/erp/server/ClientHandler.java"]
+    Service["Service (business logic)<br/>erp-server/src/main/java/edu/univ/erp/service/StudentService.java<br/>AdminService, InstructorService"]
+    DAO["DAO / Persistence layer<br/>erp-server/src/main/java/edu/univ/erp/dao/*<br/>EnrollmentDAO, CourseDAO, GradeDAO"]
+    ServerDomain["Domain models (server-side)<br/>erp-server/src/main/java/edu/univ/erp/domain/*<br/>CourseCatalog, Grade, EnrollmentRecord, UserAuth, Notification"]
     DB[(Database)]
   end
 
-  %% Client flow
-  View -->|calls| Actions
-  Actions -->|delegates| API
-  API -->|sends string requests| ClientReq
-  ClientReq -->|socket| Socket
+  %% Typical action flow (example: Register Course)
+  View -->|user clicks / triggers| Actions
+  Actions -->|calls| API
+  API -->|parses server responses into| ClientModel
+  ClientModel -->|renders data in| View
+  API -->|sends protocol requests via| ClientReq
+  ClientReq -->|writes to| Socket
   Socket -->|accepted by| Handler
-  Handler -->|invokes| Service
-  Service -->|uses| DAO
-  DAO -->|reads/writes| DB
+  Handler -->|routes command to| Service
+  Service -->|applies business rules and calls| DAO
+  DAO -->|reads/writes| ServerDomain
+  DAO -->|persists to| DB
+  Service -->|returns domain objects| Handler
+  Handler -->|sends SUCCESS/ERROR or FILE_DOWNLOAD to| ClientReq
+  ClientReq -->|delivers response to| API
+  API -->|returns parsed objects or errors to| Actions
+  Actions -->|notifies| View
 
-  %% Navigation/context
+  %% Navigation & context links
   FormMgr --> View
   Ctx --> View
-  Handler -->|returns SUCCESS/ERROR| ClientReq
-  ClientReq --> API
-  API --> Actions
-  Actions --> View
 
   classDef client fill:#f5faff,stroke:#3b82f6
   classDef server fill:#fff7ed,stroke:#f59e0b
-  class ClientNode client
-  class ServerNode server

@@ -1,47 +1,92 @@
+
 **MVC Mapping — Dashboards & Forms**
 
-**Overview**
+Overview
 
-- This document maps the main MVC relationships for the student dashboards and associated forms in the project.
-- It highlights file-level responsibilities, an example end-to-end flow, and recommendations.
++ This document maps how the project's student dashboards and forms implement an MVC-like separation across the client and server.
++ It lists file-level responsibilities, where table models live and which domain classes they use, an end-to-end example, protocol notes, and recommendations.
 
-**Quick mapping (files & roles)**n
-- **View (UI / Swing forms)**: `erp-client/src/main/java/edu/univ/erp/ui/studentdashboard/forms/*` — e.g., `DashboardForm.java`, `RegisterCoursesForm.java`
-- **Client Controllers / Actions**: `erp-client/src/main/java/edu/univ/erp/ui/actions/*` — e.g., `StudentActions.java` (thin controller wrappers)
-- **Client API Adapter**: `erp-client/src/main/java/edu/univ/erp/api/*` — e.g., `StudentAPI.java`, `ClientRequest.java` (socket transport)
-- **Client Context / Navigation**: `ClientContext.java`, `FormManager.java`, `Application.java`
-- **Server Router / Controller**: `erp-server/src/main/java/edu/univ/erp/server/ClientHandler.java` (text-command router)
-- **Server Service (business logic)**: `erp-server/src/main/java/edu/univ/erp/service/*` — e.g., `StudentService.java`
-- **Server DAOs / Domain**: `erp-server/src/main/java/edu/univ/erp/dao/*` and `erp-server/src/main/java/edu/univ/erp/domain/*`
+Quick mapping (files & roles
+)
 
-**End-to-end example: Registering for a course**
++ **View (UI / Swing forms):**
+	+ `erp-client/src/main/java/edu/univ/erp/ui/studentdashboard/forms/*`
+	+ Examples: `DashboardForm.java`, `RegisterCoursesForm.java`, `MyGradesForm.java`
++ **Client Controllers / Actions:**
+	+ `erp-client/src/main/java/edu/univ/erp/ui/actions/*`
+	+ Examples: `StudentActions.java`, `AdminActions.java`, `InstructorActions.java`
++ **Client API Adapter & Transport:**
+	+ `erp-client/src/main/java/edu/univ/erp/api/*`
+	+ Examples: `StudentAPI.java`, `NotificationAPI.java`, `ClientRequest.java` (socket layer)
++ **Client Context & Navigation:**
+	+ `erp-client/src/main/java/edu/univ/erp/ClientContext.java`
+	+ `erp-client/src/main/java/edu/univ/erp/ui/studentdashboard/menu/FormManager.java`
++ **Server Router / Controller:**
+	+ `erp-server/src/main/java/edu/univ/erp/server/ClientHandler.java`
++ **Server Service (business logic):**
+	+ `erp-server/src/main/java/edu/univ/erp/service/*`
+	+ Examples: `StudentService.java`, `AdminService.java`
++ **Server DAOs / Domain models:**
+	+ `erp-server/src/main/java/edu/univ/erp/dao/*`
+	+ `erp-server/src/main/java/edu/univ/erp/domain/*`
 
-1. View: `RegisterCoursesForm` detects user action and calls `StudentActions.registerCourse(userId, sectionId)`.
-2. Controller: `StudentActions.registerCourse` delegates to `StudentAPI.registerCourse(userId, sectionId)`.
-3. Client API: `StudentAPI` builds the text command `"REGISTER:<userId>:<sectionId>"` and calls `ClientRequest.send(request)`.
-4. Transport: `ClientRequest` sends the request over TCP (socket) to the server.
-5. Server Router: `ServerMain` accepts the socket; `ClientHandler` reads the line and routes to `handleRegisterCourse(...)`.
-6. Service: `handleRegisterCourse` calls `StudentService.registerCourse(...)` which enforces business rules (capacity, conflicts, authorization checks).
-7. DAO: `StudentService` uses `EnrollmentDAO` (and other DAOs) to persist the registration.
-8. Response: `ClientHandler` returns `SUCCESS:<message>` or `ERROR:<message>` over the socket back to the client.
-9. Client: `ClientRequest` returns the raw response; `StudentAPI` parses and returns to `StudentActions`, which returns to the View.
+TableModels & domain usage
 
-**Mermaid diagram**
++ Table model classes (the data models used by `JTable`) are implemented as private inner classes inside the form files. For example:
+	+ `RegisterCoursesForm.java` contains `CourseTableModel` (extends `AbstractTableModel`) and custom renderers/editors (e.g., `CapacityHealthBarRenderer`, `ActionsCellEditor`).
+	+ `MyGradesForm.java` contains `GradesTableModel` and `GradeRenderer`.
+	+ `MyCoursesForm.java` and instructor/admin forms follow the same pattern.
++ Although the TableModel classes live on the client, they typically store and present objects from the server **domain** package — `edu.univ.erp.domain` — deserialized by the client API adapters. Typical domain types used by table models include:
+	+ `edu.univ.erp.domain.CourseCatalog`
+	+ `edu.univ.erp.domain.Grade`
+	+ `edu.univ.erp.domain.EnrollmentRecord`
 
-See `docs/mvc-mapping.mmd` for a diagram you can open in VS Code (Mermaid preview).
+End-to-end example: Registering for a course
 
-**Assessment & Suggestions**
+1. View: User clicks "Register" in `RegisterCoursesForm` (client view).
+2. Action: `RegisterCoursesForm` calls `StudentActions.registerCourse(userId, sectionId)` (client controller wrapper).
+3. API: `StudentActions` calls `StudentAPI.registerCourse(...)`. `StudentAPI` builds protocol request and calls `ClientRequest.send(request)`.
+4. Transport: `ClientRequest` writes the request to the TCP socket (persistent or new socket depending on session).
+5. Server Router: `ServerMain` accepts the socket; `ClientHandler` reads the request line and routes `REGISTER` to `handleRegisterCourse(...)`.
+6. Service: `ClientHandler` calls `StudentService.registerCourse(...)` which enforces business rules (capacity, scheduling conflicts, authorization checks).
+7. DAO: `StudentService` uses `EnrollmentDAO`/`CourseDAO` to apply changes; DAOs operate on server-side domain models and persist to the database.
+8. Response: `ClientHandler` returns a single-line protocol response such as `SUCCESS:Successfully registered` or `ERROR:Section is full` (or a structured `FILE_DOWNLOAD:` payload for files).
+9. Client: `ClientRequest` receives the raw response, `StudentAPI` parses it into domain objects or throws an exception; `StudentActions` reports the result back to the view which updates UI and/or shows messages.
 
-- The project uses a lightweight, practical MVC separation. Views keep to presentation, services contain business logic, and DAOs manage persistence.
-- Consider migrating from the ad-hoc colon-delimited protocol to a line-delimited JSON protocol to simplify payloads and escaping.
-- Add typed error codes or a small error envelope to make client-side error handling less brittle.
-- If you want to unit-test UI logic more easily, add interfaces for action classes (e.g., `IStudentActions`) and dependency-inject `StudentAPI`.
+Protocol notes (tokens you will see)
 
-**Files changed/added**
++ `SUCCESS:<payload>` — success with optional payload (JSON, plain string, or base64-encoded file payload in the `FILE_DOWNLOAD` form).
++ `ERROR:<message>` — server-side error or business rule violation.
++ `FILE_DOWNLOAD:<content_type>:<filename>:<payload>` — used for file responses; the client parses and handles accordingly (base64 or raw content depending on implementation).
 
-- `docs/mvc-mapping.mmd` — Mermaid diagram
-- `docs/mvc-mapping.md` — This file
+Mermaid diagram
 
-**Next steps**
++ See `docs/mvc-mapping.mmd` for a visual diagram of the flow. It now includes file paths, client table models note, and server domain model nodes.
 
-- I can also open a VS Code mermaid preview or commit these changes into a branch and create a PR. Which would you prefer?
+Assessment & recommendations
+
++ Strengths:
+	+ Clear separation: views handle presentation, server services encapsulate business rules, DAOs encapsulate persistence.
+	+ Client API adapters centralize protocol handling and parsing.
++ Improvements to consider:
+	+ Replace ad-hoc colon-delimited protocol with a line-delimited JSON envelope to avoid fragile string escaping and simplify payloads.
+	+ Add typed error codes or a small JSON error envelope (e.g., `{code: "NOT_AUTH", message: "..."}`) so the client can reliably react to different error conditions.
+	+ Extract frequently-reused UI table helpers (`ModernTable`, `LeftPaddedCellRenderer`) into a shared UI util package to reduce duplication.
+	+ Add interfaces for action classes and dependency-inject `StudentAPI` to enable easier unit testing of UI controllers.
+
+Files added/updated
+
++ `docs/mvc-mapping.mmd` — Mermaid diagram (now includes file paths and domain model notes).
++ `docs/mvc-mapping.md` — this file (updated to include table model details and protocol notes).
+
+Next steps
+
++ I can (pick one):
+	+ Add a Legend to the Mermaid diagram showing protocol tokens and examples.
+	+ Extract `ModernTable` into `erp-client/src/main/java/edu/univ/erp/ui/components/ModernTable.java` and update usages.
+	+ Create a short PR with these docs and recommended TODOs.
+
+Which would you like me to do next?
+
+
+

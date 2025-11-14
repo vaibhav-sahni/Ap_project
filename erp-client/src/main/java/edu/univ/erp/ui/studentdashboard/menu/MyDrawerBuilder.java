@@ -164,40 +164,11 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
 
         // (debug mapping removed)
         simpleMenuOption.setMenuValidation(new MenuValidation() {
-
-            private boolean checkMenu(int[] index, int[] indexHide) {
-                if (index.length == indexHide.length) {
-                    for (int i = 0; i < index.length; i++) {
-                        if (index[i] != indexHide[i]) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-                return true;
-            }
-
             @Override
             public boolean menuValidation(int[] index) {
-                if (user == null) {
-                    return false;
-                }
-                if (!user.isAdmin()) {
-
-                    boolean act
-                            // `Email`->`Gropu Read`->`Read 3`
-                            = checkMenu(index, new int[]{1, 2, 3})
-                            // `Email`->`Gropu Read`->`Read 5`
-                            && checkMenu(index, new int[]{1, 2, 5})
-                            // `Email`->`Group Read`->`Group Item->`Item 4`
-                            && checkMenu(index, new int[]{1, 2, 2, 3})
-                            // `Advanced UI`->`Owl Carousel`
-                            && checkMenu(index, new int[]{4, 1})
-                            // `Special Pages`
-                            && checkMenu(index, new int[]{8});
-                    return act;
-                }
-                return true;
+                // Only disable the menu when there is no authenticated user.
+                // Allow all menu entries for authenticated users (student/instructor/admin).
+                return user != null;
             }
         });
 
@@ -318,10 +289,29 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
                 }
 
                 // Top-level Dashboard
-                if (index != null && index.length == 1 && index[0] == 0) {
-                    FormManager.showForm(new DashboardForm());
-                    return;
+                // If a top-level item is clicked (single index), map known labels to forms.
+                if (index != null && index.length == 1) {
+                    // Prefer actionableLabels mapping (excludes section labels)
+                    int top = index[0];
+                    if (top >= 0 && top < actionableLabels.length) {
+                        if (actionableLabels[top].equalsIgnoreCase("Dashboard")) {
+                            FormManager.showForm(new DashboardForm());
+                            return;
+                        }
+                        // If top-level Course Catalog clicked (no submenu index provided),
+                        // open the default 'All Courses' view (RegisterCoursesForm).
+                        if (actionableLabels[top].equalsIgnoreCase("Course Catalog")) {
+                            FormManager.showForm(new RegisterCoursesForm());
+                            return;
+                        }
+                    }
+                    // Fallback: check raw itemLabels
+                    if (top >= 0 && top < itemLabels.length && itemLabels[top] != null && itemLabels[top].equalsIgnoreCase("Course Catalog")) {
+                        FormManager.showForm(new RegisterCoursesForm());
+                        return;
+                    }
                 }
+                
 
                 // Two-level menu items (submenus)
                 if (index != null && index.length == 2) {

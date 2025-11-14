@@ -8,7 +8,7 @@ import javax.swing.SwingUtilities;
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 
 import edu.univ.erp.ui.components.MaintenanceModeManager;
-import edu.univ.erp.ui.loginpage.main.Login;
+// Use LoginManager.showLogin() where needed; avoid direct Login imports
 import edu.univ.erp.ui.studentdashboard.components.MainForm;
 import edu.univ.erp.ui.studentdashboard.components.SimpleForm;
 import edu.univ.erp.ui.studentdashboard.model.ModelUser;
@@ -28,6 +28,8 @@ public class FormManager {
     private final MainForm mainForm;
     private final Menu menu;
     private final boolean undecorated;
+    // Guard to avoid opening multiple login windows if logout is invoked more than once
+    private static volatile boolean logoutInProgress = false;
 
     public static void install(JFrame frame, boolean undecorated) {
         instance = new FormManager(frame, undecorated);
@@ -65,6 +67,11 @@ public class FormManager {
     }
 
     public static void logout() {
+        // Prevent duplicate logout flows (which can open multiple Login windows)
+        if (logoutInProgress) return;
+        logoutInProgress = true;
+        // Suppress session-lost notifier while we perform the UI logout transition
+        try { edu.univ.erp.net.ClientSession.setSuppressSessionLost(true); } catch (Throwable ignore) {}
         FlatAnimatedLafChange.showSnapshot();
         try {
             // Dispose the current dashboard window and open a new standalone Login JFrame.
@@ -73,7 +80,13 @@ public class FormManager {
                     instance.frame.dispose();
                 } catch (Throwable ignore) {
                 }
-                new Login().setVisible(true);
+                try {
+                    edu.univ.erp.ui.loginpage.main.LoginManager.showLogin();
+                } finally {
+                    // reset the flag after the login window is shown so future logouts can occur
+                    try { edu.univ.erp.net.ClientSession.setSuppressSessionLost(false); } catch (Throwable ignore) {}
+                    logoutInProgress = false;
+                }
             });
         } finally {
             FlatAnimatedLafChange.hideSnapshotWithAnimation();

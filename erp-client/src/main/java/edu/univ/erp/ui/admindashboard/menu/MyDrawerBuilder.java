@@ -156,40 +156,11 @@ public class MyDrawerBuilder extends SimpleDrawerBuilder {
 
         // (debug mapping removed)
         simpleMenuOption.setMenuValidation(new MenuValidation() {
-
-            private boolean checkMenu(int[] index, int[] indexHide) {
-                if (index.length == indexHide.length) {
-                    for (int i = 0; i < index.length; i++) {
-                        if (index[i] != indexHide[i]) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-                return true;
-            }
-
             @Override
             public boolean menuValidation(int[] index) {
-                if (user == null) {
-                    return false;
-                }
-                if (!user.isAdmin()) {
-
-                    boolean act
-                            // `Email`->`Gropu Read`->`Read 3`
-                            = checkMenu(index, new int[]{1, 2, 3})
-                            // `Email`->`Gropu Read`->`Read 5`
-                            && checkMenu(index, new int[]{1, 2, 5})
-                            // `Email`->`Group Read`->`Group Item->`Item 4`
-                            && checkMenu(index, new int[]{1, 2, 2, 3})
-                            // `Advanced UI`->`Owl Carousel`
-                            && checkMenu(index, new int[]{4, 1})
-                            // `Special Pages`
-                            && checkMenu(index, new int[]{8});
-                    return act;
-                }
-                return true;
+                // Only disable the menu when there is no authenticated user.
+                // Allow all menu entries for authenticated users (admin/instructor/student).
+                return user != null;
             }
         });
 

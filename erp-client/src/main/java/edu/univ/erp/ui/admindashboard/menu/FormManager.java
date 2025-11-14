@@ -13,12 +13,14 @@ import edu.univ.erp.ui.admindashboard.model.ModelUser;
 import edu.univ.erp.ui.admindashboard.swing.slider.PanelSlider;
 import edu.univ.erp.ui.admindashboard.swing.slider.SimpleTransition;
 import edu.univ.erp.ui.admindashboard.utils.UndoRedo;
-import edu.univ.erp.ui.loginpage.main.Login;
+// Use LoginManager.showLogin() where needed; avoid direct Login imports
 
 public class FormManager {
 
     private static FormManager instance;
     private final JFrame frame;
+    // Guard to avoid opening multiple login windows if logout is invoked more than once
+    private static volatile boolean logoutInProgress = false;
 
     private final UndoRedo<SimpleForm> forms = new UndoRedo<>();
 
@@ -61,15 +63,24 @@ public class FormManager {
     }
 
     public static void logout() { // logout and return to login screen
+        // Prevent duplicate logout flows
+        if (logoutInProgress) return;
+        logoutInProgress = true;
+        // Suppress session-lost notifier while performing logout transition
+        try { edu.univ.erp.net.ClientSession.setSuppressSessionLost(true); } catch (Throwable ignore) {}
         FlatAnimatedLafChange.showSnapshot();
         try {
-            // Dispose the current dashboard window and open a new standalone Login JFrame.
             java.awt.EventQueue.invokeLater(() -> {
                 try {
                     instance.frame.dispose();
                 } catch (Throwable ignore) {
                 }
-                new Login().setVisible(true);
+                try {
+                    edu.univ.erp.ui.loginpage.main.LoginManager.showLogin();
+                } finally {
+                    try { edu.univ.erp.net.ClientSession.setSuppressSessionLost(false); } catch (Throwable ignore) {}
+                    logoutInProgress = false;
+                }
             });
         } finally {
             FlatAnimatedLafChange.hideSnapshotWithAnimation();
