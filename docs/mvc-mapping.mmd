@@ -1,47 +1,80 @@
-flowchart LR
-  %% Client-side UI layer
-  subgraph Client
-    View["View (Swing UI)<br/>Examples: erp-client/src/main/java/edu/univ/erp/ui/studentdashboard/forms/DashboardForm.java<br/>RegisterCoursesForm.java<br/>MyGradesForm.java"]
-    Actions["Client Controllers / Actions<br/>erp-client/src/main/java/edu/univ/erp/ui/actions/StudentActions.java<br/>AdminActions.java, InstructorActions.java"]
-    API["Client API Adapters<br/>erp-client/src/main/java/edu/univ/erp/api/*<br/>StudentAPI, NotificationAPI, AuthAPI, etc."]
-    ClientReq["Transport Layer<br/>erp-client/src/main/java/edu/univ/erp/api/ClientRequest.java<br/>ClientSession/ClientConnection"]
-    FormMgr["Navigation / UI Manager<br/>erp-client/src/main/java/edu/univ/erp/ui/studentdashboard/menu/FormManager.java"]
-    Ctx["ClientContext (current user)<br/>erp-client/src/main/java/edu/univ/erp/ClientContext.java"]
-    ClientModel["TableModels (inner classes in forms) use domain types from<br/>edu.univ.erp.domain (deserialized by APIs)<br/>Examples: CourseCatalog, Grade, EnrollmentRecord"]
-  end
+flowchart TB
 
-  Socket((TCP Socket))
+%% =============================
+%% CLIENT
+%% =============================
+subgraph Client[Client Side]
+direction TB
 
-  %% Server-side layers
-  subgraph Server
-    Handler["Server Router / Controller<br/>erp-server/src/main/java/edu/univ/erp/server/ClientHandler.java"]
-    Service["Service (business logic)<br/>erp-server/src/main/java/edu/univ/erp/service/StudentService.java<br/>AdminService, InstructorService"]
-    DAO["DAO / Persistence layer<br/>erp-server/src/main/java/edu/univ/erp/dao/*<br/>EnrollmentDAO, CourseDAO, GradeDAO"]
-    ServerDomain["Domain models (server-side)<br/>erp-server/src/main/java/edu/univ/erp/domain/*<br/>CourseCatalog, Grade, EnrollmentRecord, UserAuth, Notification"]
-    DB[(Database)]
-  end
+UI["UI Forms (Swing)
+- DashboardForm
+- RegisterCoursesForm
+- MyGradesForm"]
 
-  %% Typical action flow (example: Register Course)
-  View -->|user clicks / triggers| Actions
-  Actions -->|calls| API
-  API -->|parses server responses into| ClientModel
-  ClientModel -->|renders data in| View
-  API -->|sends protocol requests via| ClientReq
-  ClientReq -->|writes to| Socket
-  Socket -->|accepted by| Handler
-  Handler -->|routes command to| Service
-  Service -->|applies business rules and calls| DAO
-  DAO -->|reads/writes| ServerDomain
-  DAO -->|persists to| DB
-  Service -->|returns domain objects| Handler
-  Handler -->|sends SUCCESS/ERROR or FILE_DOWNLOAD to| ClientReq
-  ClientReq -->|delivers response to| API
-  API -->|returns parsed objects or errors to| Actions
-  Actions -->|notifies| View
+Ctrl["Actions / Controllers
+- StudentActions
+- AdminActions
+- InstructorActions"]
 
-  %% Navigation & context links
-  FormMgr --> View
-  Ctx --> View
+API["API Adapters
+- StudentAPI
+- NotificationAPI
+- AuthAPI"]
 
-  classDef client fill:#f5faff,stroke:#3b82f6
-  classDef server fill:#fff7ed,stroke:#f59e0b
+TransC["Transport Layer
+(ClientRequest, ClientSession)"]
+
+ClientModels["Client Models
+(CourseCatalog, EnrollmentRecord)"]
+
+FormMgr["FormManager (Navigation)"]
+Ctx["ClientContext"]
+end
+
+%% =============================
+%% TRANSPORT
+%% =============================
+Socket((TCP Socket))
+
+%% =============================
+%% SERVER
+%% =============================
+subgraph Server[Server Side]
+direction TB
+
+Handler["ClientHandler (Router)"]
+
+Service["Service Layer
+- StudentService
+- AdminService
+- InstructorService"]
+
+DAO["DAO Layer
+- EnrollmentDAO
+- CourseDAO
+- GradeDAO"]
+
+Domain["Domain Models
+(CourseCatalog, EnrollmentRecord, Notification, UserAuth)"]
+
+DB[(Database)]
+end
+
+%% =============================
+%% FLOW
+%% =============================
+
+UI --> Ctrl --> API --> TransC --> Socket
+Socket --> Handler --> Service --> DAO --> DB
+
+DB --> DAO --> Service --> Handler --> Socket --> TransC --> API --> Ctrl --> UI
+
+API --> ClientModels --> UI
+FormMgr --> UI
+Ctx --> UI
+
+classDef client fill:#eef6ff,stroke:#3b82f6,stroke-width:1px;
+classDef server fill:#fff4e6,stroke:#ff9800,stroke-width:1px;
+
+class UI,Ctrl,API,TransC,ClientModels,FormMgr,Ctx client
+class Handler,Service,DAO,Domain,DB server

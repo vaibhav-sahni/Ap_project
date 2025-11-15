@@ -1,0 +1,126 @@
+flowchart TB
+
+%% ====================================================
+%% C4 LEVEL 1 — SYSTEM CONTEXT
+%% ====================================================
+subgraph L1["C4 Level 1: System Context"]
+direction LR
+
+Student([Student])
+Instructor([Instructor])
+Admin([Admin])
+
+ERPClient["ERP Desktop Client"]
+ERPServer["ERP Backend Server"]
+DB[(University Database)]
+
+Student --> ERPClient
+Instructor --> ERPClient
+Admin --> ERPClient
+
+ERPClient -->|TCP| ERPServer
+ERPServer --> DB
+end
+
+
+%% ====================================================
+%% C4 LEVEL 2 — CONTAINER DIAGRAM
+%% ====================================================
+subgraph L2["C4 Level 2: Container Architecture"]
+direction TB
+
+subgraph Client["Client Application"]
+UI["Swing UI"]
+Actions["Controllers"]
+API["API Adapters"]
+Transport["ClientRequest / ClientConnection"]
+end
+
+Socket((TCP Socket))
+
+subgraph Server["Server Application"]
+Router["ClientHandler"]
+Services["Service Layer"]
+DAOs["DAO Layer"]
+Domain["Domain Models"]
+end
+
+Database[(Database)]
+
+UI --> Actions --> API --> Transport --> Socket
+Socket --> Router --> Services --> DAOs --> Database
+API --> Domain
+end
+
+
+%% ====================================================
+%% C4 LEVEL 3 — COMPONENTS (SERVER)
+%% ====================================================
+subgraph L3S["C4 Level 3: Server Components"]
+direction TB
+
+Router3["ClientHandler"]
+
+subgraph Services3["Service Layer"]
+StudentService3["StudentService"]
+AdminService3["AdminService"]
+InstructorService3["InstructorService"]
+NotificationService3["NotificationService"]
+end
+
+subgraph DAO3["DAO Layer"]
+EnrollmentDAO3
+CourseDAO3
+GradeDAO3
+UserDAO3
+NotificationDAO3
+end
+
+Domain3["Domain Models"]
+end
+
+Router3 --> Services3
+Services3 --> DAO3
+DAO3 --> Domain3
+
+
+%% ====================================================
+%% C4 LEVEL 3 — COMPONENTS (CLIENT)
+%% ====================================================
+subgraph L3C["C4 Level 3: Client Components"]
+direction TB
+
+UI3["UI Forms"]
+Actions3["Actions/Controllers"]
+API3["API Adapters"]
+Transport3["ClientRequest"]
+Context3["ClientContext"]
+Manager3["FormManager"]
+Models3["Client Models"]
+end
+
+UI3 --> Actions3 --> API3 --> Transport3
+API3 --> Models3
+Context3 --> UI3
+Manager3 --> UI3
+
+
+%% ====================================================
+%% C4 LEVEL 4 — CODE STRUCTURE (EXAMPLE FEATURE)
+%% ====================================================
+subgraph L4["C4 Level 4: Code (Register Course Example)"]
+direction TB
+
+ClientHandler4["ClientHandler.registerCourse()"]
+StudentService4["StudentService.registerCourse()"]
+EnrollmentDAO4["EnrollmentDAO.saveEnrollment()"]
+CourseDAO4["CourseDAO.getCourse()"]
+EnrollmentRecord4["EnrollmentRecord (domain)"]
+CourseCatalog4["CourseCatalog (domain)"]
+end
+
+ClientHandler4 --> StudentService4
+StudentService4 --> EnrollmentDAO4
+StudentService4 --> CourseDAO4
+EnrollmentDAO4 --> EnrollmentRecord4
+CourseDAO4 --> CourseCatalog4
