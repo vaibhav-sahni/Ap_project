@@ -6,6 +6,11 @@ It uses a MySQL DB to store data, and features a client and server application c
 
 There are 3 kinds of users in the app
 
+# Demo Video
+[![Demo video](https://img.youtube.com/vi/Re_hPdtRJrQ/0.jpg)](https://youtu.be/Re_hPdtRJrQ)
+
+
+
 # User types and supported actions
 1. Students: 
 - Browse Course Catalog and register for a course
