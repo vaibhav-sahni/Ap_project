@@ -215,6 +215,7 @@ edu\univ\erp\ui\studentdashboard\forms\MyCoursesForm$8.class
 edu\univ\erp\ui\handlers\AuthUiHandlers.class
 edu\univ\erp\ui\studentdashboard\forms\TimetableForm$FadePanel.class
 edu\univ\erp\ui\studentdashboard\utils\DateCalculator$ModelDate.class
+drawercomponents\drawer\component\menu\SimpleMenu$SlidePanel.class
 edu\univ\erp\ui\studentdashboard\model\ModelUser.class
 edu\univ\erp\ui\instructordashboard\menu\FormManager.class
 edu\univ\erp\domain\UserAuth.class
@@ -403,6 +404,7 @@ edu\univ\erp\ui\components\MaintenanceModeService$1.class
 edu\univ\erp\ui\instructordashboard\components\MainForm.class
 edu\univ\erp\ui\instructordashboard\forms\DashboardForm$19.class
 edu\univ\erp\ui\loginpage\swing\PasswordField.class
+drawercomponents\drawer\component\menu\SimpleMenu$SlidePanel$1.class
 edu\univ\erp\ui\handlers\InstructorUiHandlers$3.class
 edu\univ\erp\ui\admindashboard\forms\DashboardForm$SortHeaderRenderer.class
 edu\univ\erp\ui\studentdashboard\forms\DashboardForm$InteractiveCalendarPanel$9.class
