@@ -7,12 +7,13 @@ It uses a MySQL DB to store data, and features a client and server application c
 There are 3 kinds of users in the app
 
 # Demo Video
+
 [![Demo video](https://img.youtube.com/vi/Re_hPdtRJrQ/0.jpg)](https://youtu.be/Re_hPdtRJrQ)
 
-
-
 # User types and supported actions
-1. Students: 
+
+1. Students:
+
 - Browse Course Catalog and register for a course
 - View Registered Courses
 - View Timetable
@@ -20,7 +21,8 @@ There are 3 kinds of users in the app
 - Get Notifications
 - Change Password
 
-2. Instructors: 
+2. Instructors:
+
 - View Assigned Sections
 - View Student roster and component-wise grades for an assigned section
 - View Section Stats
@@ -31,239 +33,231 @@ There are 3 kinds of users in the app
 - Change Password
 
 2. Administrator:
+
 - Toggle Maintenance Mode
-- Set Course Drop Deadline
-- Download/Restore DB Backup (uses gzip format.)
-- Send Notifications to users
-- Create Courses/Sections/Students/Instructors
-- Reassign Instructors to Sections
 
-# Client Server Communication
-Protocol:
-- The client sends single-line commands over TCP, e.g. `LOGIN:username:password`.
-- The server responds with `SUCCESS:<payload>` or `ERROR:<message>`; files are transferred as `FILE_DOWNLOAD:<mime>:<name>:BASE64:<payload>`.
+# Ap_project — University ERP (Merged Documentation)
 
-Quick start (build & run)
-1. Build modules:
+This repository contains a lightweight university ERP-style application implemented in Java (Maven multi-module). The application consists of a server (`erp-server`) and a Swing desktop client (`erp-client`). This README merges the key developer documentation, architecture notes, usage instructions, and integration contracts into a single reference.
 
-```cmd
-cd erp-server
+Table of Contents
+
+- Overview
+- Quick Start (build & run)
+- Architecture & Protocol
+- Features (by user role)
+- Client details (UI & APIs)
+- Dashboard `dashboardcmds` contract (integration guide)
+- MVC Mapping & Where-to-find code
+- Data & schema notes
+- Maintenance Mode & Notifications
+- SMTP / Email setup
+- Testing, Troubleshooting & Notes
+- Contributing
+- Documentation Index
+
+---
+
+## Overview
+
+- Language: Java (JDK 17+ / tested with Java 17+ and modern toolchain)
+- Build: Maven multi-module
+- Modules:
+  - `erp-server` — server-side services, DAOs, request router and utilities
+  - `erp-client` — Swing client, client-side API adapters, UI components
+
+Purpose: manage courses, sections, enrollments, grades and basic admin tasks for a small university using a desktop client and a TCP server.
+
+## Quick Start — Build & Run
+
+From repository root:
+
+```powershell
+cd "c:\ROAD TO SDE\iiitd\third sem\AP project\Ap_project\erp-server"
 mvn -DskipTests package
 
-cd ..\erp-client
+cd "..\erp-client"
 mvn -DskipTests package
 ```
 
-2. Start server: run `ServerMain` in `erp-server` or execute the jar in `erp-server/target`.
-3. Start client: run the main/launcher in `erp-client` or the client JAR.
+Run server (option A: from IDE) — run `ServerMain` in `erp-server`.
 
-# Ap_project (ERP) — Features & Developer README
+Run server (option B: packaged JAR):
 
-This repository contains a small university ERP-style application implemented in Java (Maven multi-module). It has two primary modules:
+```powershell
+java -jar erp-server\target\erp-server-1.0-SNAPSHOT.jar
+```
 
-- `erp-server` — the server-side services, DAOs, and TCP request router.
-- `erp-client` — a Swing-based desktop client, APIs that speak the server protocol, and UI frames.
+Run client (from IDE) — run the `application.Application` in `erp-client` (or the appropriate launcher class for student/instructor/admin).
 
-This README enumerates the features implemented across the server and client so you have a single reference when testing, debugging, or extending the system.
+Run client (from packaged JAR):
 
-## Architecture Overview
+```powershell
+java -jar erp-client\target\erp-client-1.0-SNAPSHOT.jar
+```
 
-- Language: Java 24
-- Build: Maven (multi-module)
-- Serialization: Gson (JSON) for domain objects.
-- Transport: custom single-line TCP command protocol (plain text over socket). Each request is a single line command with colon-separated arguments. Responses are single-line strings prefixed with `SUCCESS:`, `ERROR:`, or `FILE_DOWNLOAD:` for binary/content transfers.
-- Modules:
-  - `erp-server` — contains `server` package (request router `ClientHandler`, `ServerMain`), `service` packages (business logic), `dao` packages (database access), and `domain` objects.
-  - `erp-client` — contains `api` packages (client-side helpers wrapping the protocol), `ui` packages (Swing frames & handlers), and client `domain` objects.
+Notes: the server expects a MySQL database configured (see `erp-server/src/main/resources` for DB configuration). You may need to adjust DB credentials or run the seed SQL found under `data/seeds/dummy_seed.sql`.
 
-## Protocol (high-level)
+## Architecture & Protocol
 
-- Client sends commands as: `COMMAND:arg1:arg2:...`
-- Server responses:
-  - `SUCCESS:<payload>` — success and optional JSON payload.
-  - `ERROR:<message>` — error condition.
-  - `FILE_DOWNLOAD:<mime>:<filename>:BASE64:<base64payload>` — used for file transfers (CSV, HTML, gz archive) to avoid multi-line transport.
+- Transport: simple single-line TCP command protocol. Each client request is a single line using colon-separated tokens.
+- Response types:
+  - `SUCCESS:<payload>` — success with optional JSON payload
+  - `ERROR:<message>` — error
+  - `FILE_DOWNLOAD:<mime>:<filename>:BASE64:<payload>` — file payload for downloads
 
-Example: `LOGIN:alice:password123` → `SUCCESS:{...user json...}` or `ERROR:Invalid username or password.`
+Example request/response:
 
-## Authentication & Security
+```
+LOGIN:alice:password123
+=> SUCCESS:{"userId":123,"role":"Student",...}
+```
 
-- Passwords are hashed with BCrypt (see `org.mindrot.jbcrypt.BCrypt` bundle in the server/client libs).
-- Login flow includes lockout protection:
-  - `failed_attempts` column tracked in DB.
-  - On repeated failures a `locked_until` timestamp is set (current code sets lockout window when attempts >= threshold).
-  - On successful login, `failed_attempts` is reset and `last_login` timestamp is updated.
-- Change Password feature exists (`CHANGE_PASSWORD`) using secure hash update.
+Security:
 
-## Server: Key Features (Commands & Behavior)
+- Passwords hashed with BCrypt.
+- Lockout tracking (`failed_attempts`, `locked_until`) is implemented in the DB and enforced on login.
 
-The server router (`ClientHandler`) supports a rich set of commands. Major features include:
+## Features (by user role)
 
-- Authentication
-  - `LOGIN:username:password` — validates credentials, updates `last_login`, returns a `UserAuth` JSON.
-  - `LOGOUT` — clears the per-connection authenticated user.
-  - `CHANGE_PASSWORD:userId:old:new` — verifies old password then updates hash.
+Student
 
-- Student features
-  - `GET_GRADES:userId` — retrieve list of grades.
-  - `GET_CATALOG` — retrieve course catalog.
-  - `GET_TIMETABLE:userId` — fetch registered timetable.
-  - `REGISTER:userId:sectionId` — register a student into a section (business rules enforced: capacity, duplicate registrations, deadlines, etc.).
-  - `DROP_SECTION:userId:sectionId` — drop a registered course (enforced rules apply).
-  - `DOWNLOAD_TRANSCRIPT:userId` — returns HTML transcript as `FILE_DOWNLOAD`.
+- Browse course catalog, register/drop courses, view timetable, view grades, download transcript, notifications, change password.
 
-- Instructor features
-  - `GET_INSTRUCTOR_SECTIONS:instructorId` — list sections taught by instructor.
-  - `GET_ROSTER:instructorId:sectionId` — fetch roster of a section.
-  - `RECORD_SCORE:instructorId:enrollmentId:component:score` — record a component score.
-  - `COMPUTE_FINAL_GRADE:instructorId:enrollmentId` — compute final grade based on component weights and record it.
-  - `EXPORT_GRADES:instructorId:sectionId` — returns base64 CSV via `FILE_DOWNLOAD`.
-  - `IMPORT_GRADES:instructorId:sectionId:BASE64:<payload>` — import CSV from base64 payload.
+Instructor
 
-- Administrative features
-  - `CREATE_STUDENT:...` / `CREATE_INSTRUCTOR:...` — create accounts (server may auto-assign ID if client supplied 0).
-  - `CREATE_COURSE`, `CREATE_SECTION`, `CREATE_COURSE_SECTION` — create catalog entries and sections.
-  - `GET_ALL_COURSES`, `GET_ALL_INSTRUCTORS`, `GET_ALL_STUDENTS` — admin list endpoints.
-  - `REASSIGN_INSTRUCTOR` — change instructor assignment for sections.
-  - `TOGGLE_MAINTENANCE:ON|OFF` and `CHECK_MAINTENANCE` — maintenance mode blocks many write operations.
-  - `DB_BACKUP` / `DB_RESTORE` — create/restore gzipped SQL dumps (BASE64 transfer, audit log written).
-  - `SET_DROP_DEADLINE` — configure drop-deadline enforcement.
+- View assigned sections, see roster and component-wise grades, record component scores, export/import grades (CSV), compute final grades, save section data, receive notifications, change password.
 
-- Enrollment rules & business logic
-  - Enrollment status uses `Registered` vs `Dropped` semantics.
-  - Capacity checks, duplicate registration prevention, and drop-deadline checks are enforced in the service/DAO layers.
+Administrator
 
-## Server Implementation Notes
+- Toggle maintenance mode (global ON/OFF), set drop deadline, create/update courses/sections/users, DB backup/restore (gzipped), send notifications, other admin operations.
 
-- DAOs separate SQL from services. Notable DAOs: `AuthDAO`, `CourseDAO`, `EnrollmentDAO`, `InstructorDAO`, `EnrollmentDAO`.
-- `AuthDAO` now reads/writes `last_login`, `failed_attempts`, `locked_until`.
-- `MysqldumpBackupService` implements DB backup/restore and writes audit entries to `db_backup_audit.log`.
+## Client (erp-client) — Key details
 
-## Client: Key Features
+- UI: Java Swing with FlatLaf themes (light/dark). Dashboards for Student, Instructor and Admin.
+- Client APIs: located in `erp-client/src/main/java/edu/univ/erp/api/` (e.g., `AuthAPI`, `StudentAPI`, `InstructorAPI`, `AdminAPI`) — wrappers around the socket protocol, returning domain objects via Gson.
+- ClientContext: centralized user/context holder for current session.
+- UI navigation: PanelSlider / FormManager (student & instructor) drives in-app navigation for forms.
 
-- Swing-based desktop client with the following UI components:
-  - Login page that calls `AuthAPI.login()` and navigates to role-specific dashboard.
-  - `AdminDashboardFrame`, `InstructorDashboardFrame`, and `StudentDashboardFrame` — main navigation hubs.
-  - Preview frames: `CatalogPreviewFrame`, `GradesPreviewFrame`, `RosterPreviewFrame`, `Transcript` download support, etc.
-- Client-side API helpers in `erp-client/src/main/java/edu/univ/erp/api/*` wrap the socket protocol and use Gson for JSON parsing:
-  - `AuthAPI`, `StudentAPI`, `InstructorAPI`, `AdminAPI` — convenience methods that send commands and parse `SUCCESS` JSON payloads.
-- File transfer handling: the client decodes `FILE_DOWNLOAD:...:BASE64:<payload>` responses and writes files locally.
-- The client now displays `lastLogin` timestamp returned by the server in the dashboards.
+File transfers: client decodes `FILE_DOWNLOAD` payloads and writes files locally (transcript, CSV exports, DB backup files when admin downloads them).
+
+## Dashboard Integration: `dashboardcmds` (contract)
+
+This project includes a small integration contract for the dashboard detailed view under `erp-client/src/main/java/edu/univ/erp/ui/*/forms/dashboardcmds/README.md`.
+
+Summary:
+
+- Entry points: prefer an event-bus to post `OpenDashboardEvent` with `{ gaugeId, metadata }`.
+- Backend endpoints needed:
+  - `GET /api/dashboard/summary` — top-level gauge data
+  - `GET /api/dashboard/gauges/{gaugeId}` — detailed gauge payload
+  - `GET /api/dashboard/notifications?limit=3`
+  - `GET /api/dashboard/deadlines?from=...&to=...`
+  - WebSocket topic `/topic/dashboard/updates` (push updates)
+
+Frontend notes:
+
+- Always fetch data off the EDT and render on EDT when ready.
+- Provide mock JSON under `erp-client/data/mock/dashboard/` for frontend dev (recommended).
+
+## MVC Mapping & Where to Look
+
+- Views (Swing forms): `erp-client/src/main/java/edu/univ/erp/ui/*/forms/*` (DashboardForm, RegisterCoursesForm, MyGradesForm, etc.)
+- Client controllers / actions: `erp-client/src/main/java/edu/univ/erp/ui/actions/*` (StudentActions, InstructorActions, AdminActions)
+- Client transport adapters: `erp-client/src/main/java/edu/univ/erp/api/*` and `ClientRequest` for socket I/O
+- Server router & handlers: `erp-server/src/main/java/edu/univ/erp/server/ClientHandler.java`
+- Server services: `erp-server/src/main/java/edu/univ/erp/service/*`
+- DAOs: `erp-server/src/main/java/edu/univ/erp/dao/*`
+
+Table models: many forms embed `AbstractTableModel` implementations inside the form files (e.g., `GradesTableModel` inside `MyGradesForm`). These table models use domain objects from `edu.univ.erp.domain`.
 
 ## Data & Schema Notes
 
-- `users_auth` table stores `user_id`, `username`, `password_hash`, `role`, `failed_attempts`, `locked_until`, and `last_login` (TIMESTAMP DEFAULT CURRENT_TIMESTAMP in seed schema).
-- Enrollment and course-related tables are accessed across DAOs and support capacity and status semantics.
+- `users_auth` table contains `user_id`, `username`, `password_hash`, `role`, `failed_attempts`, `locked_until`, `last_login`.
+- `settings` table stores configuration keys (e.g., `MAINTENANCE_MODE`, `ADMIN_EMAIL`, SMTP settings).
 
-## Build & Run
+## Maintenance Mode & Notifications
 
-1. Build server and client (from repository root):
+- Admins can toggle maintenance mode via `TOGGLE_MAINTENANCE:ON|OFF` or `CHECK_MAINTENANCE` command.
+- Client includes a `MaintenanceModeManager` that polls server (`CHECK_MAINTENANCE`) and shows a toast notification in dashboards when maintenance is active. Notifications reappear on window focus and form switches (cooldown enforced to avoid spam).
 
-```cmd
-cd erp-server
-mvn -DskipTests package
+If you need the maintenance notification to behave differently (no reappearance after manual close, or only show once per session), see `erp-client/src/main/java/edu/univ/erp/ui/components/MaintenanceModeManager.java` and `ToastNotification.java`.
 
-cd ..\erp-client
-mvn -DskipTests package
-```
+## SMTP / Email (Password Reset & Admin notifications)
 
-2. Run server (run `ServerMain` from `erp-server` module or execute the generated jar in `erp-server/target`).
+Settings keys (in `settings` table):
 
-3. Run client (run the launcher/main in `erp-client` or execute the generated client JAR).
+- `ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_STARTTLS`
 
-## Example commands (quick smoke tests)
-
-- Login: `LOGIN:alice:password`
-- Fetch catalog: `GET_CATALOG`
-- Register (student): `REGISTER:studentId:sectionId`
-
-Expect `SUCCESS:` or `ERROR:` responses. File responses return `FILE_DOWNLOAD:...:BASE64:<payload>` which the client decodes.
-
-## Troubleshooting & Notes
-
-- The client UI previously could freeze if long-running network calls were performed on the EDT. The codebase contains network APIs that must be invoked off the EDT; see `ui/handlers` where blocking calls are wrapped for UI usage.
-- Socket read timeouts are configured via system property `erp.socketReadTimeoutMs` (default 300000 ms). The server sets socket read timeouts for connections.
-
-
-## SMTP / Admin email setup (password-reset notifications)
-
-The server sends password-reset notifications to a configured administrator email address. These values are read from the `settings` table in the ERP database. You can configure them directly in the DB or via the admin-only server command `SET_ADMIN_EMAIL:email` (requires an authenticated admin).
-
-Required settings (keys stored in `settings.setting_key`):
-
-- `ADMIN_EMAIL` — the address that receives password-reset notifications.
-- `SMTP_HOST` — SMTP server hostname (required for sending email).
-- `SMTP_PORT` — SMTP server port (common: `587`).
-- `SMTP_USER` / `SMTP_PASS` — credentials if your SMTP server requires authentication.
-- `SMTP_FROM` — optional From address used for outbound mail.
-- `SMTP_STARTTLS` — set to `true` to enable STARTTLS (common when using port 587).
-
-Quick SQL (MySQL) — upsert the settings (replace with your values):
+Example SQL upsert (MySQL):
 
 ```sql
 INSERT INTO settings (setting_key, setting_value) VALUES ('ADMIN_EMAIL','admin@example.com')
   ON DUPLICATE KEY UPDATE setting_value='admin@example.com';
-
-INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_HOST','smtp.example.com')
-  ON DUPLICATE KEY UPDATE setting_value='smtp.example.com';
-
-INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_PORT','587')
-  ON DUPLICATE KEY UPDATE setting_value='587';
-
-INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_USER','smtp_user')
-  ON DUPLICATE KEY UPDATE setting_value='smtp_user';
-
-INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_PASS','smtp_pass')
-  ON DUPLICATE KEY UPDATE setting_value='smtp_pass';
-
-INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_FROM','noreply@example.com')
-  ON DUPLICATE KEY UPDATE setting_value='noreply@example.com';
-
-INSERT INTO settings (setting_key, setting_value) VALUES ('SMTP_STARTTLS','true')
-  ON DUPLICATE KEY UPDATE setting_value='true';
 ```
 
-Run from Windows `cmd.exe` with the MySQL CLI (example using defaults from `DBConnector`):
+## Testing, Troubleshooting & Notes
 
-```cmd
-mysql -u erp_user -p -h localhost erp_db -e "INSERT INTO settings (setting_key,setting_value) VALUES ('ADMIN_EMAIL','admin@example.com') ON DUPLICATE KEY UPDATE setting_value='admin@example.com';"
+- Run the server and client from IDE for faster debugging. Use breakpoints in `ClientHandler` and `ClientRequest` to inspect protocol exchanges.
+- If the client UI blocks, check for network calls executed on the EDT. Wrap blocking calls inside `SwingWorker` or `ExecutorService` tasks.
+- Socket timeouts: configure `erp.socketReadTimeoutMs` system property as needed.
+
+## Code Statistics
+
+You can generate a lines-of-code summary using [cloc](https://github.com/AlDanial/cloc):
+
+```powershell
+choco install cloc   # or download binary
+cd "c:\ROAD TO SDE\iiitd\third sem\AP project\Ap_project"
+cloc .
 ```
 
-Or combine multiple inserts in one `-e` string (be careful with quoting). After inserting, verify:
+## Contributing
 
-```sql
-SELECT setting_value FROM settings WHERE setting_key='ADMIN_EMAIL';
+1. Fork the repo, create a feature branch, and open a PR to `main`.
+2. Keep changes focused and include unit tests for server-side logic where applicable.
+3. Update this README or docs under `docs/` if you add or change major features.
+
+## Appendix: Common Commands & Examples
+
+- Build server: `mvn -f erp-server -DskipTests package`
+- Run server (exec): `mvn -f erp-server exec:java`
+- Build client: `mvn -f erp-client -DskipTests package`
+- Run client: `mvn -f erp-client exec:java`
+
+### Protocol quick tests (netcat or telnet)
+
+```text
+# Connect to server (replace host/port as needed)
+nc localhost 7000
+LOGIN:student_1:password
 ```
-
-Provider-specific notes
-- Mailtrap (development/testing): use Mailtrap SMTP credentials. Mailtrap captures emails in a web UI so you don't send real mail.
-  - SMTP_HOST: `smtp.mailtrap.io`, SMTP_PORT: `587`, SMTP_USER/PASS: from Mailtrap inbox, SMTP_STARTTLS: `true`.
-
-- Gmail (production/testing with App Passwords): use an App Password (recommended) if your account has 2FA.
-  - SMTP_HOST: `smtp.gmail.com`, SMTP_PORT: `587`, SMTP_USER: your Gmail address, SMTP_PASS: App password, SMTP_STARTTLS: `true`.
-  - Do not enable "less secure apps" in production; prefer App Passwords.
-
-- Office365 / Outlook:
-  - SMTP_HOST: `smtp.office365.com`, SMTP_PORT: `587`, SMTP_STARTTLS: `true`.
-
-Testing the flow
-- Start the server with Maven so dependencies are on the classpath (this includes the Jakarta Mail library we added):
-
-```cmd
-mvn -f "c:\Users\sahni\Documents\GitHub\Ap_project\erp-server" exec:java
-```
-
-
-
-## Where to look in the codebase (entry points)
-
-- Server router & handlers: `erp-server/src/main/java/edu/univ/erp/server/ClientHandler.java`
-- Authentication: `erp-server/src/main/java/edu/univ/erp/service/auth/AuthService.java` and `dao/auth/AuthDAO.java`
-- Student logic: `erp-server/src/main/java/edu/univ/erp/service/student/StudentService.java`
-- Instructor logic: `erp-server/src/main/java/edu/univ/erp/service/instructor/InstructorService.java`
-- Admin & backup: `erp-server/src/main/java/edu/univ/erp/service/admin/MysqldumpBackupService.java` and `service/admin/AdminService.java`
-- Client UI: `erp-client/src/main/java/edu/univ/erp/ui` and handlers in `ui/handlers`.
-- Client APIs: `erp-client/src/main/java/edu/univ/erp/api`.
 
 ---
 
+If you'd like, I can:
+
+- Add a `docs/DEVELOPER_GUIDE.md` with step-by-step debugging tips.
+- Add mock JSON files for dashboard endpoints under `erp-client/data/mock/dashboard/`.
+- Create a small script to run cloc and save the output to `docs/code-stats.txt` and add it to CI.
+
+Tell me which add-on you'd like and I'll add it next.
+
+## Documentation Index
+
+- docs/README.md — master index
+- docs/ARCHITECTURE.md — architecture overview
+- docs/SERVER_GUIDE.md — server request routing, services, DAOs
+- docs/CLIENT_GUIDE.md — client UI, APIs, navigation
+- docs/PROTOCOL.md — TCP command protocol reference
+- docs/SETUP_RUNBOOK.md — prerequisites, DB, build/run (PowerShell)
+- docs/DB_SCHEMA.md — tables and schema notes
+- docs/SECURITY.md — security practices
+- docs/MAINTENANCE_MODE.md — maintenance behavior & customization
+- docs/TESTING_TROUBLESHOOTING.md — tests and common issues
+- docs/CODE_STYLE.md — code style guidelines
+- docs/CONTRIBUTING.md — contribution workflow
+
+```cmd
+
+```
