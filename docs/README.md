@@ -13,4 +13,3 @@ Use this index to navigate the full documentation set.
 - Testing & Troubleshooting: `TESTING_TROUBLESHOOTING.md`
 - Contributing & Code Style: `CONTRIBUTING.md`, `CODE_STYLE.md`
 
-Tip: Most docs include copy-paste-ready PowerShell commands for Windows.

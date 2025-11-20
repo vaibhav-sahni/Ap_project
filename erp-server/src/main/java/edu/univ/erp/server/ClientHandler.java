@@ -40,7 +40,7 @@ private final SettingDAO settingDAO = new SettingDAO();
 private final InstructorService instructorService = new InstructorService();
 private final AdminService adminService = new AdminService();
 
-  // Per-connection authenticated user (replaces global SessionManager usage inside this handler)
+  // Per-connection authenticated user 
   private edu.univ.erp.domain.UserAuth currentUser = null;
 
   // ----------------- Session / Authorization helpers -----------------
@@ -58,11 +58,11 @@ private final AdminService adminService = new AdminService();
     }
   }
 
-  private void requireSameUserOrAdmin(edu.univ.erp.domain.UserAuth current, int userId) throws Exception {
-    if (current.getUserId() != userId) {
-      requireAdmin(current);
-    }
-  }
+  // private void requireSameUserOrAdmin(edu.univ.erp.domain.UserAuth current, int userId) throws Exception {
+  //   if (current.getUserId() != userId) {
+  //     requireAdmin(current);
+  //   }
+  // }
 
 
 public ClientHandler(Socket socket) { this.clientSocket = socket; }
@@ -207,9 +207,7 @@ public ClientHandler(Socket socket) { this.clientSocket = socket; }
     }
   }
   
-    // ----------------------------------------------------------------------
-  // --- NEW HANDLERS: INSTRUCTOR FUNCTIONALITY ---------------------------
-  // ----------------------------------------------------------------------
+  
 
     /**
      * Handles GET_INSTRUCTOR_SECTIONS. Fetches all sections taught by the instructor.
@@ -486,12 +484,6 @@ private String handleCreateSection(String[] parts) throws Exception {
     // The summary may contain newlines; encode as JSON string so the single-line protocol is preserved
     return "SUCCESS:" + gson.toJson(summary);
   }
-
-    
-    
-  // ----------------------------------------------------------------------
-  // --- EXISTING HANDLERS (UNCHANGED) ------------------------------------
-  // ----------------------------------------------------------------------
   
   private String handleDownloadTranscript(String[] parts) throws Exception {
    if (parts.length < 2) throw new Exception("Missing user ID for transcript request.");
@@ -558,9 +550,8 @@ private String handleCreateSection(String[] parts) throws Exception {
   double cgpa = studentService.computeCgpa(userId);
   double creditsEarned = studentService.computeTotalCreditsEarned(userId);
 
-  // suppressed info log for CGPA requests to reduce verbosity
 
-    // Build JSON manually to avoid Gson edge-cases with local classes or null serialization.
+    // Build JSON manually 
     StringBuilder sb = new StringBuilder();
     sb.append('{');
     sb.append("\"cgpa\":");
@@ -853,7 +844,7 @@ private String handleToggleMaintenance(String[] parts) throws Exception {
 
   boolean on = parts[1].equalsIgnoreCase("ON");
   adminService.toggleMaintenance(on);
-  // Best-effort: create a broadcast notification announcing maintenance mode change
+  //create a broadcast notification announcing maintenance mode change
   try {
     String title = on ? "Maintenance mode ON" : "Maintenance mode OFF";
     String message = on

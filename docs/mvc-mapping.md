@@ -41,7 +41,7 @@ TableModels & domain usage
 	+ `edu.univ.erp.domain.Grade`
 	+ `edu.univ.erp.domain.EnrollmentRecord`
 
-End-to-end example: Registering for a course
+ example: Registering for a course
 
 1. View: User clicks "Register" in `RegisterCoursesForm` (client view).
 2. Action: `RegisterCoursesForm` calls `StudentActions.registerCourse(userId, sectionId)` (client controller wrapper).
@@ -53,40 +53,14 @@ End-to-end example: Registering for a course
 8. Response: `ClientHandler` returns a single-line protocol response such as `SUCCESS:Successfully registered` or `ERROR:Section is full` (or a structured `FILE_DOWNLOAD:` payload for files).
 9. Client: `ClientRequest` receives the raw response, `StudentAPI` parses it into domain objects or throws an exception; `StudentActions` reports the result back to the view which updates UI and/or shows messages.
 
-Protocol notes (tokens you will see)
+Protocol
 
 + `SUCCESS:<payload>` — success with optional payload (JSON, plain string, or base64-encoded file payload in the `FILE_DOWNLOAD` form).
 + `ERROR:<message>` — server-side error or business rule violation.
 + `FILE_DOWNLOAD:<content_type>:<filename>:<payload>` — used for file responses; the client parses and handles accordingly (base64 or raw content depending on implementation).
 
-Mermaid diagram
 
-+ See `docs/mvc-mapping.mmd` for a visual diagram of the flow. It now includes file paths, client table models note, and server domain model nodes.
 
-Assessment & recommendations
-
-+ Strengths:
-	+ Clear separation: views handle presentation, server services encapsulate business rules, DAOs encapsulate persistence.
-	+ Client API adapters centralize protocol handling and parsing.
-+ Improvements to consider:
-	+ Replace ad-hoc colon-delimited protocol with a line-delimited JSON envelope to avoid fragile string escaping and simplify payloads.
-	+ Add typed error codes or a small JSON error envelope (e.g., `{code: "NOT_AUTH", message: "..."}`) so the client can reliably react to different error conditions.
-	+ Extract frequently-reused UI table helpers (`ModernTable`, `LeftPaddedCellRenderer`) into a shared UI util package to reduce duplication.
-	+ Add interfaces for action classes and dependency-inject `StudentAPI` to enable easier unit testing of UI controllers.
-
-Files added/updated
-
-+ `docs/mvc-mapping.mmd` — Mermaid diagram (now includes file paths and domain model notes).
-+ `docs/mvc-mapping.md` — this file (updated to include table model details and protocol notes).
-
-Next steps
-
-+ I can (pick one):
-	+ Add a Legend to the Mermaid diagram showing protocol tokens and examples.
-	+ Extract `ModernTable` into `erp-client/src/main/java/edu/univ/erp/ui/components/ModernTable.java` and update usages.
-	+ Create a short PR with these docs and recommended TODOs.
-
-Which would you like me to do next?
 
 
 

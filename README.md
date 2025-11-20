@@ -202,46 +202,15 @@ INSERT INTO settings (setting_key, setting_value) VALUES ('ADMIN_EMAIL','admin@e
 - If the client UI blocks, check for network calls executed on the EDT. Wrap blocking calls inside `SwingWorker` or `ExecutorService` tasks.
 - Socket timeouts: configure `erp.socketReadTimeoutMs` system property as needed.
 
-## Code Statistics
 
-You can generate a lines-of-code summary using [cloc](https://github.com/AlDanial/cloc):
 
-```powershell
-choco install cloc   # or download binary
-cd "c:\ROAD TO SDE\iiitd\third sem\AP project\Ap_project"
-cloc .
-```
-
-## Contributing
-
-1. Fork the repo, create a feature branch, and open a PR to `main`.
-2. Keep changes focused and include unit tests for server-side logic where applicable.
-3. Update this README or docs under `docs/` if you add or change major features.
-
-## Appendix: Common Commands & Examples
+## Appendix:
 
 - Build server: `mvn -f erp-server -DskipTests package`
 - Run server (exec): `mvn -f erp-server exec:java`
 - Build client: `mvn -f erp-client -DskipTests package`
 - Run client: `mvn -f erp-client exec:java`
 
-### Protocol quick tests (netcat or telnet)
-
-```text
-# Connect to server (replace host/port as needed)
-nc localhost 7000
-LOGIN:student_1:password
-```
-
----
-
-If you'd like, I can:
-
-- Add a `docs/DEVELOPER_GUIDE.md` with step-by-step debugging tips.
-- Add mock JSON files for dashboard endpoints under `erp-client/data/mock/dashboard/`.
-- Create a small script to run cloc and save the output to `docs/code-stats.txt` and add it to CI.
-
-Tell me which add-on you'd like and I'll add it next.
 
 ## Documentation Index
 

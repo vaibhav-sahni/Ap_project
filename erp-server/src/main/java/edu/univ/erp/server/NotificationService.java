@@ -6,15 +6,13 @@ import edu.univ.erp.dao.notification.NotificationDAO;
 import edu.univ.erp.domain.Notification;
 
 /**
- * Thin service wrapper for notifications. Provides convenience methods
- * used by other server components. This keeps higher-level code decoupled
- * from DAO method names.
+ * service wrapper for notifications.
  */
 public class NotificationService {
 	private final NotificationDAO dao = new NotificationDAO();
 
 	/**
-	 * Convenience method to create a notification. If recipientId is null or 0,
+	 * If recipientId is null or 0,
 	 * the notification is treated as broadcast (ALL). Otherwise recipient type
 	 * defaults to STUDENT.
 	 */

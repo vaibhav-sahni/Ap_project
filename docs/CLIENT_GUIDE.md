@@ -43,5 +43,4 @@ if (resp.startsWith("FILE_DOWNLOAD:")) {
 
 ## Threading
 
-- Perform socket IO off-EDT (SwingWorker or ExecutorService).
 - Wrap UI updates in `SwingUtilities.invokeLater`.

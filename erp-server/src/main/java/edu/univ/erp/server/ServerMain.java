@@ -10,8 +10,6 @@ public class ServerMain {
     private static final Logger LOGGER = Logger.getLogger(ServerMain.class.getName());
 
     public static void main(String[] args) {
-        // (ANSI log formatter removed) Keep default handlers/formatters
-        // register shutdown hook to close pooled datasources
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOGGER.info("SERVER LOG: Shutting down, closing DB pools...");
             try { edu.univ.erp.dao.db.DBConnector.shutdown(); } catch (Exception ex) { LOGGER.log(Level.WARNING, "Failed to shutdown DBConnector", ex); }

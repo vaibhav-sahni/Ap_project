@@ -72,7 +72,7 @@ FILE_DOWNLOAD:text/html:transcript.html:BASE64:PD94bWwgdmVyc2lvbj0iMS4wIj8+PGh0b
 ## Error Handling
 
 - Always check for `ERROR:` prefix before parsing payloads.
-- Keep commands single-line; use BASE64 for binary/multi-line data.
+- Kept commands single-line; use BASE64 for binary/multi-line data.
 
 ## Client Snippet (Java)
 
