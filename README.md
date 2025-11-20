@@ -141,24 +141,6 @@ Administrator
 
 File transfers: client decodes `FILE_DOWNLOAD` payloads and writes files locally (transcript, CSV exports, DB backup files when admin downloads them).
 
-## Dashboard Integration: `dashboardcmds` (contract)
-
-This project includes a small integration contract for the dashboard detailed view under `erp-client/src/main/java/edu/univ/erp/ui/*/forms/dashboardcmds/README.md`.
-
-Summary:
-
-- Entry points: prefer an event-bus to post `OpenDashboardEvent` with `{ gaugeId, metadata }`.
-- Backend endpoints needed:
-  - `GET /api/dashboard/summary` — top-level gauge data
-  - `GET /api/dashboard/gauges/{gaugeId}` — detailed gauge payload
-  - `GET /api/dashboard/notifications?limit=3`
-  - `GET /api/dashboard/deadlines?from=...&to=...`
-  - WebSocket topic `/topic/dashboard/updates` (push updates)
-
-Frontend notes:
-
-- Always fetch data off the EDT and render on EDT when ready.
-- Provide mock JSON under `erp-client/data/mock/dashboard/` for frontend dev (recommended).
 
 ## MVC Mapping & Where to Look
 
