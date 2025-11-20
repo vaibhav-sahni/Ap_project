@@ -180,9 +180,10 @@ INSERT INTO settings (setting_key, setting_value) VALUES ('ADMIN_EMAIL','admin@e
 
 ## Testing, Troubleshooting & Notes
 
-- Run the server and client from IDE for faster debugging. Use breakpoints in `ClientHandler` and `ClientRequest` to inspect protocol exchanges.
-- If the client UI blocks, check for network calls executed on the EDT. Wrap blocking calls inside `SwingWorker` or `ExecutorService` tasks.
-- Socket timeouts: configure `erp.socketReadTimeoutMs` system property as needed.
+- All the required tests are running as per the requirement documentation.
+- If server is not in maintenance mode when a backup is created, restoring backup while in maintenance mode from the corresponding GZip will turn off maintenance mode. This is because maintenance mode data is also stored in the backed up erp. If this needs to be fixed, we can simply enforce maintenance mode as a prerequisite for making backups as well.
+- We have not used SwingWorker or worker threads. Right now the DB is small and the corresponding operations are small as well. but as the DB size grows, we should use worker threads inside all actionlisteners, particularly the ones pertaining to computation to ensure no GUI freezes.
+- Dashboard graphs reload the dashboard rather than just that element. this is fine for less elements but can be later optimized to reduce fetch lag.
 
 
 
@@ -209,6 +210,3 @@ INSERT INTO settings (setting_key, setting_value) VALUES ('ADMIN_EMAIL','admin@e
 - docs/CODE_STYLE.md — code style guidelines
 - docs/CONTRIBUTING.md — contribution workflow
 
-```cmd
-
-```
