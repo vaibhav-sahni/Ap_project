@@ -893,20 +893,17 @@ public class AdminUiHandlers {
      */
     private String normalizeDayTimeClient(String dayTime) throws Exception {
         if (dayTime == null) throw new Exception("dayTime cannot be null");
-        String s = dayTime.trim();
+        String s = dayTime.trim().replaceAll("\\s+", " ");
         if (s.isEmpty()) throw new Exception("dayTime cannot be empty");
 
-        String[] parts = s.split("\\s+", 2);
+        String[] parts = s.split(" ", 2);
         String daysPart;
         String slotPart;
         if (parts.length == 1) {
-            // No explicit days provided. We'll treat this as slot-only and require caller to provide days
-            // in the UI; however, accept it by using an empty days part (server expects days present in many flows).
-            // To avoid surprising the server, require days to be present here.
             throw new Exception("Please select days (e.g. MWF) and a time slot.");
         } else {
-            daysPart = parts[0];
-            slotPart = parts[1];
+            daysPart = parts[0].replaceAll("\\s+", "").toUpperCase();
+            slotPart = parts[1].trim();
         }
 
         // Normalize slot: accept variants like "11", "11-12", "11:30", or "11:00-12:30"
@@ -936,7 +933,7 @@ public class AdminUiHandlers {
             throw new Exception("Invalid time values in slot: " + slotPart, ex);
         }
 
-        // Validate daysPart tokens
+        // Validate daysPart tokens (use uppercase to align with server parser: M,T,W,TH,F)
         java.util.List<String> tokens = new java.util.ArrayList<>();
         for (int i = 0; i < daysPart.length(); i++) {
             char c = daysPart.charAt(i);
@@ -944,8 +941,8 @@ public class AdminUiHandlers {
             else if (c == 'W') tokens.add("W");
             else if (c == 'F') tokens.add("F");
             else if (c == 'T') {
-                if (i + 1 < daysPart.length() && daysPart.charAt(i + 1) == 'h') {
-                    tokens.add("Th"); i++; 
+                if (i + 1 < daysPart.length() && daysPart.charAt(i + 1) == 'H') {
+                    tokens.add("TH"); i++;
                 } else tokens.add("T");
             } else {
                 throw new Exception("Invalid day code character: '" + c + "' in days part: " + daysPart);

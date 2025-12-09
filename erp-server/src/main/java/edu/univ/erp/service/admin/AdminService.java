@@ -74,6 +74,11 @@ public class AdminService {
             throw new Exception("Instructor with id " + course.getInstructorId() + " does not exist.");
         }
 
+        // Reject negative capacity
+        if (course.getCapacity() < 0) {
+            throw new Exception("Section capacity cannot be negative.");
+        }
+
         // Validate day/time format for the section if provided. CourseCatalog is immutable
         // (no setters), so construct a normalized copy when needed.
         if (course.getDayTime() != null && !course.getDayTime().trim().isEmpty()) {
@@ -114,6 +119,11 @@ public class AdminService {
         if (course.getInstructorId() != 0 && !adminDAO.instructorExists(course.getInstructorId())) {
             throw new Exception("Instructor with id " + course.getInstructorId() + " does not exist.");
         }
+        
+            // Reject negative capacity
+            if (course.getCapacity() < 0) {
+                throw new Exception("Section capacity cannot be negative.");
+            }
 
         // Ensure the referenced course exists
         if (!adminDAO.courseExists(course.getCourseCode())) {
@@ -144,13 +154,14 @@ public class AdminService {
      */
     private String validateAndNormalizeDayTime(String dayTime) throws Exception {
         if (dayTime == null) throw new Exception("dayTime cannot be null");
-        String s = dayTime.trim();
+        // Normalize whitespace and uppercase for consistent parsing
+        String s = dayTime.trim().replaceAll("\\s+", " ");
         if (s.isEmpty()) throw new Exception("dayTime cannot be empty");
 
-        String[] parts = s.split("\\s+", 2);
+        String[] parts = s.split(" ", 2);
         if (parts.length < 2) throw new Exception("Invalid day/time format. Expected e.g. 'MWF 09:00-10:00'.");
-        String daysPart = parts[0];
-        String slotPart = parts[1];
+        String daysPart = parts[0].toUpperCase();
+        String slotPart = parts[1].trim();
 
         // Normalize and validate slot. Accept several friendly formats such as:
         //  - "11" -> treated as 11:00-12:00
@@ -191,19 +202,27 @@ public class AdminService {
         java.util.List<String> tokens = new java.util.ArrayList<>();
         for (int i = 0; i < daysPart.length(); i++) {
             char c = daysPart.charAt(i);
-            if (c == 'M') tokens.add("M");
-            else if (c == 'W') tokens.add("W");
-            else if (c == 'F') tokens.add("F");
-            else if (c == 'T') {
-                // Could be T or Th
-                if (i + 1 < daysPart.length() && daysPart.charAt(i + 1) == 'h') {
-                    tokens.add("Th");
-                    i++; // skip 'h'
-                } else {
-                    tokens.add("T");
-                }
-            } else {
-                throw new Exception("Invalid day code character: '" + c + "' in days part: " + daysPart);
+            switch (c) {
+                case 'M':
+                    tokens.add("M");
+                    break;
+                case 'W':
+                    tokens.add("W");
+                    break;
+                case 'F':
+                    tokens.add("F");
+                    break;
+                case 'T':
+                    // Could be T or TH
+                    if (i + 1 < daysPart.length() && daysPart.charAt(i + 1) == 'H') {
+                        tokens.add("TH");
+                        i++; // skip 'H'
+                    } else {
+                        tokens.add("T");
+                    }
+                    break;
+                default:
+                    throw new Exception("Invalid day code character: '" + c + "' in days part: " + daysPart);
             }
         }
         if (tokens.isEmpty()) throw new Exception("No day codes found in days part: " + daysPart);

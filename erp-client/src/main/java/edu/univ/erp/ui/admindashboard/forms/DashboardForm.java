@@ -622,14 +622,14 @@ public class DashboardForm extends SimpleForm {
         btnCreate.addActionListener(a -> {
             String course = (String) courseDropdown.getSelectedItem();
             String instructor = (String) instrDropdown.getSelectedItem();
-            // Collect selected weekdays
-            java.util.List<String> selDays = new java.util.ArrayList<>();
-            if (cbMon.isSelected()) selDays.add("M");
-            if (cbTue.isSelected()) selDays.add("T");
-            if (cbWed.isSelected()) selDays.add("W");
-            if (cbThu.isSelected()) selDays.add("Th");
-            if (cbFri.isSelected()) selDays.add("F");
-            String day = String.join("/", selDays);
+            // Collect selected weekdays into a compact code (e.g., MWF or TTh)
+            StringBuilder dayBuilder = new StringBuilder();
+            if (cbMon.isSelected()) dayBuilder.append("M");
+            if (cbTue.isSelected()) dayBuilder.append("T");
+            if (cbWed.isSelected()) dayBuilder.append("W");
+            if (cbThu.isSelected()) dayBuilder.append("Th");
+            if (cbFri.isSelected()) dayBuilder.append("F");
+            String day = dayBuilder.toString();
             String time = (String) timeCombo.getSelectedItem();
             String dt = (day == null ? "" : day.trim()) + " " + (time == null ? "" : time.trim());
             dt = dt.trim();
